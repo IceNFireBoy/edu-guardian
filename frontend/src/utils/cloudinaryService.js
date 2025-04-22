@@ -119,38 +119,100 @@ export const fetchNotesByContext = async (context = {}) => {
     }
     
     if (context.topic) {
-      tags.push(`topic_${context.topic.toLowerCase().replace(/\s+/g, '_')}`);
+      const sanitizedTopic = context.topic.toLowerCase().replace(/\s+/g, '_');
+      tags.push(`topic_${sanitizedTopic}`);
     }
     
-    // Create a search expression
-    const expression = tags.length > 0 
-      ? `tags=${tags.join(' AND tags=')}`
-      : 'resource_type=image';
+    // Create a search expression - if no tags, return all resources
+    let expression;
     
-    // Search URL
-    const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/search?expression=${encodeURIComponent(expression)}`;
+    // Handle case with no filters - return all resources
+    if (tags.length === 0) {
+      expression = 'resource_type:image OR resource_type:raw';
+    } else {
+      // Join tags with AND operator for precise filtering
+      expression = tags.map(tag => `tags:${tag}`).join(' AND ');
+    }
+    
+    // Search URL with proper encoding
+    const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/search?expression=${encodeURIComponent(expression)}&max_results=100`;
+    
+    // Log the URL for debugging (remove in production)
+    console.log('Cloudinary search URL:', url);
     
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Basic ${btoa(`${API_KEY}:`)}`
+        'Authorization': `Basic ${btoa(`${API_KEY}:`)}`,
+        'Content-Type': 'application/json'
       }
     });
     
     if (!response.ok) {
-      throw new Error('Failed to fetch notes: ' + response.statusText);
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch notes: ${response.status} ${response.statusText}. ${errorText}`);
     }
     
     const data = await response.json();
+    
+    // Process the response to ensure consistent results
     return data.resources || [];
   } catch (error) {
     console.error('Error fetching notes from Cloudinary:', error);
-    throw error;
+    
+    // Return empty array instead of throwing error for more graceful UI handling
+    return [];
   }
+};
+
+/**
+ * Mock function to get dummy notes when Cloudinary is not configured
+ * This is useful for development and testing purposes
+ */
+export const getDummyNotes = () => {
+  return [
+    {
+      asset_id: "dummy1",
+      public_id: "notes/algebra_basics",
+      format: "pdf",
+      resource_type: "raw",
+      secure_url: "https://via.placeholder.com/400x300?text=Algebra+Notes",
+      tags: ["grade_11", "sem_1", "subject_mathematics", "topic_algebra"],
+      context: {
+        caption: "Algebra Fundamentals - Chapter 1",
+        alt: "Complete notes covering basic algebraic operations and equations"
+      }
+    },
+    {
+      asset_id: "dummy2",
+      public_id: "notes/cellular_biology",
+      format: "jpg",
+      resource_type: "image",
+      secure_url: "https://via.placeholder.com/400x300?text=Biology+Notes",
+      tags: ["grade_11", "sem_1", "subject_biology", "topic_cells"],
+      context: {
+        caption: "Cell Structure and Function",
+        alt: "Detailed notes on cell organelles and their functions"
+      }
+    },
+    {
+      asset_id: "dummy3",
+      public_id: "notes/world_war_2",
+      format: "pdf",
+      resource_type: "raw", 
+      secure_url: "https://via.placeholder.com/400x300?text=History+Notes",
+      tags: ["grade_12", "sem_2", "subject_history", "topic_world_war_2"],
+      context: {
+        caption: "World War II: Causes and Effects",
+        alt: "Comprehensive study notes on WWII with timelines and key events"
+      }
+    }
+  ];
 };
 
 // Export default object with methods
 export default {
   uploadNote,
-  fetchNotesByContext
+  fetchNotesByContext,
+  getDummyNotes
 };

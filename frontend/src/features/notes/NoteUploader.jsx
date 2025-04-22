@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
-import { FaArrowRight, FaArrowLeft, FaCloudUploadAlt, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { FaArrowRight, FaArrowLeft, FaCloudUploadAlt, FaCheckCircle, FaTimesCircle, FaFilePdf, FaImage } from 'react-icons/fa';
+import { useDropzone } from 'react-dropzone';
 import cloudinaryService from '../../utils/cloudinaryService';
 import { useStreak } from '../../hooks/useStreak';
 
@@ -11,7 +12,7 @@ const Step1Form = ({ register, errors, subjects }) => (
     <div>
       <label className="block text-gray-700 dark:text-gray-300 mb-2">Grade Level</label>
       <select 
-        className="input"
+        className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
         {...register('grade', { required: 'Grade is required' })}
       >
         <option value="">Select Grade</option>
@@ -24,7 +25,7 @@ const Step1Form = ({ register, errors, subjects }) => (
     <div>
       <label className="block text-gray-700 dark:text-gray-300 mb-2">Semester</label>
       <select 
-        className="input"
+        className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
         {...register('semester', { required: 'Semester is required' })}
       >
         <option value="">Select Semester</option>
@@ -37,7 +38,7 @@ const Step1Form = ({ register, errors, subjects }) => (
     <div>
       <label className="block text-gray-700 dark:text-gray-300 mb-2">Quarter</label>
       <select 
-        className="input"
+        className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
         {...register('quarter', { required: 'Quarter is required' })}
       >
         <option value="">Select Quarter</option>
@@ -52,7 +53,7 @@ const Step1Form = ({ register, errors, subjects }) => (
     <div>
       <label className="block text-gray-700 dark:text-gray-300 mb-2">Subject</label>
       <select 
-        className="input"
+        className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
         {...register('subject', { required: 'Subject is required' })}
       >
         <option value="">Select Subject</option>
@@ -67,7 +68,7 @@ const Step1Form = ({ register, errors, subjects }) => (
       <label className="block text-gray-700 dark:text-gray-300 mb-2">Topic</label>
       <input 
         type="text" 
-        className="input"
+        className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
         placeholder="E.g., Polynomials, French Revolution"
         {...register('topic', { required: 'Topic is required' })}
       />
@@ -79,23 +80,61 @@ const Step1Form = ({ register, errors, subjects }) => (
 const Step2Form = ({ register, errors, formData, setFileData }) => {
   const [fileName, setFileName] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
+  const [fileError, setFileError] = useState('');
   
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFileName(file.name);
-      setFileData(file);
-      
-      // Create a preview for images
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPreviewUrl(reader.result);
-        };
-        reader.readAsDataURL(file);
+  // Handle file drop with react-dropzone
+  const onDrop = useCallback(acceptedFiles => {
+    if (acceptedFiles.length === 0) {
+      return;
+    }
+    
+    const file = acceptedFiles[0];
+    setFileError('');
+    setFileName(file.name);
+    setFileData(file);
+    
+    // Create a preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setPreviewUrl('');
+    }
+  }, [setFileData]);
+  
+  const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
+    onDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png']
+    },
+    maxFiles: 1,
+    multiple: false,
+    onDropRejected: (fileRejections) => {
+      const error = fileRejections[0]?.errors[0];
+      if (error?.code === 'file-invalid-type') {
+        setFileError('Invalid file type. Only PDF, JPG, and PNG files are allowed.');
+      } else if (error?.code === 'too-many-files') {
+        setFileError('Only one file can be uploaded at a time.');
       } else {
-        setPreviewUrl('');
+        setFileError('There was an error with the uploaded file.');
       }
+    }
+  });
+  
+  // Determine the file type icon
+  const getFileIcon = () => {
+    if (!fileName) return <FaCloudUploadAlt className="text-primary dark:text-primary-light text-4xl mb-2" />;
+    
+    const extension = fileName.split('.').pop().toLowerCase();
+    if (extension === 'pdf') {
+      return <FaFilePdf className="text-red-500 text-4xl mb-2" />;
+    } else {
+      return <FaImage className="text-blue-500 text-4xl mb-2" />;
     }
   };
   
@@ -105,7 +144,7 @@ const Step2Form = ({ register, errors, formData, setFileData }) => {
         <label className="block text-gray-700 dark:text-gray-300 mb-2">Title</label>
         <input 
           type="text" 
-          className="input"
+          className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
           placeholder="E.g., Algebra Notes - Chapter 5"
           {...register('title', { required: 'Title is required' })}
         />
@@ -115,35 +154,46 @@ const Step2Form = ({ register, errors, formData, setFileData }) => {
       <div>
         <label className="block text-gray-700 dark:text-gray-300 mb-2">Description</label>
         <textarea 
-          className="input min-h-24"
+          className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 min-h-24"
           placeholder="A brief description of your notes"
           {...register('description')}
         />
       </div>
       
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-        <input 
-          type="file" 
-          id="file" 
-          accept=".pdf,.jpg,.jpeg,.png" 
-          className="hidden"
-          onChange={handleFileChange}
-          required
-        />
-        <label htmlFor="file" className="cursor-pointer">
+      <div>
+        <label className="block text-gray-700 dark:text-gray-300 mb-2">Upload File</label>
+        <div 
+          {...getRootProps()} 
+          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+            isDragActive 
+              ? 'border-primary bg-primary/5' 
+              : 'border-gray-300 dark:border-gray-600 hover:border-primary dark:hover:border-primary-light'
+          }`}
+        >
+          <input {...getInputProps()} />
           <div className="flex flex-col items-center">
-            <FaCloudUploadAlt className="text-primary text-4xl mb-2" />
-            <p className="text-gray-600 dark:text-gray-300 mb-2">
-              {fileName ? fileName : "Click to upload PDF or image file"}
-            </p>
-            <p className="text-sm text-gray-500">
-              Supported formats: PDF, JPG, PNG
-            </p>
+            {getFileIcon()}
+            
+            {isDragActive ? (
+              <p className="text-primary dark:text-primary-light">Drop the file here...</p>
+            ) : (
+              <>
+                <p className="text-gray-700 dark:text-gray-300 mb-2">
+                  {fileName 
+                    ? `Selected: ${fileName}` 
+                    : "Drag and drop your file here, or click to browse"}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Supported formats: PDF, JPG, PNG
+                </p>
+              </>
+            )}
           </div>
-        </label>
+        </div>
+        {fileError && <p className="text-red-500 mt-1">{fileError}</p>}
         
         {previewUrl && (
-          <div className="mt-4 border rounded-lg overflow-hidden">
+          <div className="mt-4 border rounded-lg overflow-hidden dark:border-gray-600">
             <img 
               src={previewUrl} 
               alt="Preview" 
@@ -158,40 +208,40 @@ const Step2Form = ({ register, errors, formData, setFileData }) => {
 
 const Step3Review = ({ formData, fileData }) => (
   <div className="space-y-6">
-    <h3 className="text-lg font-semibold mb-4">Review Your Submission</h3>
+    <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-100">Review Your Submission</h3>
     
-    <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
+    <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
       <div>
-        <p className="text-gray-500 text-sm">Grade</p>
-        <p className="font-medium">Grade {formData.grade}</p>
-      </div>
-      <div>
-        <p className="text-gray-500 text-sm">Semester</p>
-        <p className="font-medium">{formData.semester === '1' ? '1st' : '2nd'} Semester</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Grade</p>
+        <p className="font-medium text-gray-800 dark:text-gray-100">Grade {formData.grade}</p>
       </div>
       <div>
-        <p className="text-gray-500 text-sm">Quarter</p>
-        <p className="font-medium">Q{formData.quarter}</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Semester</p>
+        <p className="font-medium text-gray-800 dark:text-gray-100">{formData.semester === '1' ? '1st' : '2nd'} Semester</p>
       </div>
       <div>
-        <p className="text-gray-500 text-sm">Subject</p>
-        <p className="font-medium">{formData.subject}</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Quarter</p>
+        <p className="font-medium text-gray-800 dark:text-gray-100">Q{formData.quarter}</p>
+      </div>
+      <div>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Subject</p>
+        <p className="font-medium text-gray-800 dark:text-gray-100">{formData.subject}</p>
       </div>
       <div className="col-span-2">
-        <p className="text-gray-500 text-sm">Topic</p>
-        <p className="font-medium">{formData.topic}</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Topic</p>
+        <p className="font-medium text-gray-800 dark:text-gray-100">{formData.topic}</p>
       </div>
       <div className="col-span-2">
-        <p className="text-gray-500 text-sm">Title</p>
-        <p className="font-medium">{formData.title}</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Title</p>
+        <p className="font-medium text-gray-800 dark:text-gray-100">{formData.title}</p>
       </div>
       <div className="col-span-2">
-        <p className="text-gray-500 text-sm">Description</p>
-        <p className="font-medium">{formData.description || "No description provided"}</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Description</p>
+        <p className="font-medium text-gray-800 dark:text-gray-100">{formData.description || "No description provided"}</p>
       </div>
       <div className="col-span-2">
-        <p className="text-gray-500 text-sm">File</p>
-        <p className="font-medium">{fileData ? fileData.name : "No file selected"}</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">File</p>
+        <p className="font-medium text-gray-800 dark:text-gray-100">{fileData ? fileData.name : "No file selected"}</p>
       </div>
     </div>
   </div>
@@ -213,10 +263,10 @@ const SuccessModal = ({ isOpen, onClose, quote }) => (
           className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 max-w-md w-full"
         >
           <div className="text-center">
-            <div className="inline-flex items-center justify-center p-2 bg-green-100 rounded-full mb-4">
-              <FaCheckCircle className="text-green-500 text-4xl" />
+            <div className="inline-flex items-center justify-center p-2 bg-green-100 dark:bg-green-900/30 rounded-full mb-4">
+              <FaCheckCircle className="text-green-500 dark:text-green-400 text-4xl" />
             </div>
-            <h3 className="text-2xl font-bold mb-2">Upload Successful!</h3>
+            <h3 className="text-2xl font-bold mb-2 text-gray-800 dark:text-gray-100">Upload Successful!</h3>
             <p className="text-gray-600 dark:text-gray-300 mb-6">
               {quote}
             </p>
@@ -312,7 +362,7 @@ const NoteUploader = () => {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Donate Your Notes</h1>
+        <h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-gray-100">Donate Your Notes</h1>
         <p className="text-gray-600 dark:text-gray-300">
           Share your knowledge and help others succeed in their academic journey.
         </p>
@@ -326,7 +376,7 @@ const NoteUploader = () => {
               className={`rounded-full h-10 w-10 flex items-center justify-center border-2 ${
                 step >= i
                   ? "border-primary bg-primary text-white"
-                  : "border-gray-300 text-gray-400"
+                  : "border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500"
               }`}
             >
               {i}
@@ -334,7 +384,7 @@ const NoteUploader = () => {
             {i < 3 && (
               <div
                 className={`flex-1 h-1 mx-2 ${
-                  step > i ? "bg-primary" : "bg-gray-300"
+                  step > i ? "bg-primary" : "bg-gray-300 dark:bg-gray-700"
                 }`}
               />
             )}
@@ -376,7 +426,7 @@ const NoteUploader = () => {
           )}
           
           {error && (
-            <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-lg flex items-center">
+            <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg flex items-center">
               <FaTimesCircle className="mr-2" />
               {error}
             </div>
@@ -386,7 +436,7 @@ const NoteUploader = () => {
             {step > 1 && (
               <button
                 type="button"
-                className="btn bg-gray-200 text-gray-800 hover:bg-gray-300 flex items-center"
+                className="btn bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center"
                 onClick={prevStep}
               >
                 <FaArrowLeft className="mr-2" /> Back

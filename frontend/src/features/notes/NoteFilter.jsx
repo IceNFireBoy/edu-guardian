@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { FaFilter, FaSearch, FaBookOpen, FaDownload, FaShare } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaFilter, FaSearch, FaBookOpen, FaDownload, FaShare, FaExclamationTriangle } from 'react-icons/fa';
 import cloudinaryService from '../../utils/cloudinaryService';
 import { useStreak } from '../../hooks/useStreak';
 
@@ -36,7 +36,7 @@ const NoteCard = ({ note, onView }) => {
       </div>
       
       <div className="p-4">
-        <h3 className="font-semibold text-lg mb-1">
+        <h3 className="font-semibold text-lg mb-1 text-gray-800 dark:text-gray-100">
           {note.context?.caption || 'Untitled Note'}
         </h3>
         
@@ -44,7 +44,7 @@ const NoteCard = ({ note, onView }) => {
           {note.tags?.map((tag, index) => (
             <span 
               key={index}
-              className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
+              className="px-2 py-1 bg-primary/10 text-primary dark:text-primary-light text-xs rounded-full"
             >
               {tag.replace(/_/g, ' ').replace(/^(grade|sem|quarter|subject|topic)_/, '')}
             </span>
@@ -58,16 +58,16 @@ const NoteCard = ({ note, onView }) => {
         <div className="flex justify-between items-center">
           <button
             onClick={handleView}
-            className="text-primary hover:text-primary-dark text-sm font-medium flex items-center"
+            className="text-primary dark:text-primary-light hover:text-primary-dark text-sm font-medium flex items-center"
           >
             <FaBookOpen className="mr-1" /> View Note
           </button>
           
           <div className="flex space-x-2">
-            <button className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+            <button className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
               <FaDownload />
             </button>
-            <button className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+            <button className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
               <FaShare />
             </button>
           </div>
@@ -101,8 +101,8 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
   
   return (
     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 mb-6">
-      <h2 className="text-xl font-semibold mb-4 flex items-center">
-        <FaFilter className="mr-2 text-primary" /> Filter Notes
+      <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-800 dark:text-gray-100">
+        <FaFilter className="mr-2 text-primary dark:text-primary-light" /> Filter Notes
       </h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -112,7 +112,7 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
             name="grade"
             value={filters.grade}
             onChange={handleChange}
-            className="input"
+            className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
           >
             <option value="">All Grades</option>
             <option value="11">Grade 11</option>
@@ -126,7 +126,7 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
             name="semester"
             value={filters.semester}
             onChange={handleChange}
-            className="input"
+            className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
           >
             <option value="">All Semesters</option>
             <option value="1">1st Semester</option>
@@ -140,7 +140,7 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
             name="quarter"
             value={filters.quarter}
             onChange={handleChange}
-            className="input"
+            className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
           >
             <option value="">All Quarters</option>
             <option value="1">Q1</option>
@@ -156,7 +156,7 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
             name="subject"
             value={filters.subject}
             onChange={handleChange}
-            className="input"
+            className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
           >
             <option value="">All Subjects</option>
             {subjects.map((subject) => (
@@ -174,9 +174,9 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
             value={filters.topic}
             onChange={handleChange}
             placeholder="Search by topic..."
-            className="input pl-10"
+            className="input pl-10 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
           />
-          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
         </div>
       </div>
       
@@ -192,79 +192,98 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
   );
 };
 
+// Empty state component
+const EmptyState = ({ hasFilters }) => (
+  <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-lg shadow-md">
+    <FaBookOpen className="text-5xl text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+    <h3 className="text-xl font-semibold mb-2 text-gray-800 dark:text-gray-100">
+      {hasFilters ? "No Notes Found" : "Start Exploring Notes"}
+    </h3>
+    <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto">
+      {hasFilters 
+        ? "No notes match your selected filters. Try adjusting your search criteria or upload some notes to get started." 
+        : "Use the filters above to find specific notes, or browse all available notes."}
+    </p>
+  </div>
+);
+
 // Note Detail Modal
 const NoteDetailModal = ({ note, isOpen, onClose }) => {
   if (!isOpen || !note) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-    >
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.8, opacity: 0 }}
-        className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-      >
-        <div className="p-4 border-b dark:border-slate-700 flex justify-between items-center">
-          <h3 className="text-xl font-bold">{note.context?.caption || 'Untitled Note'}</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
           >
-            &times;
-          </button>
-        </div>
-        
-        <div className="flex-1 overflow-auto p-4">
-          {note.resource_type === 'image' ? (
-            <img 
-              src={note.secure_url} 
-              alt={note.context?.alt || 'Note content'} 
-              className="max-w-full mx-auto" 
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <a 
-                href={note.secure_url} 
-                target="_blank" 
-                rel="noreferrer"
-                className="btn btn-primary"
+            <div className="p-4 border-b dark:border-slate-700 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{note.context?.caption || 'Untitled Note'}</h3>
+              <button
+                onClick={onClose}
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-2xl"
               >
-                View PDF
-              </a>
-            </div>
-          )}
-        </div>
-        
-        <div className="p-4 border-t dark:border-slate-700">
-          <div className="flex justify-between items-center">
-            <div className="flex space-x-2">
-              {note.tags?.map((tag, index) => (
-                <span 
-                  key={index}
-                  className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
-                >
-                  {tag.replace(/_/g, ' ').replace(/^(grade|sem|quarter|subject|topic)_/, '')}
-                </span>
-              ))}
+                &times;
+              </button>
             </div>
             
-            <div className="flex space-x-3">
-              <button className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center">
-                <FaDownload className="mr-1" /> Download
-              </button>
-              <button className="btn btn-primary flex items-center">
-                <FaShare className="mr-1" /> Share
-              </button>
+            <div className="flex-1 overflow-auto p-4">
+              {note.resource_type === 'image' ? (
+                <img 
+                  src={note.secure_url} 
+                  alt={note.context?.alt || 'Note content'} 
+                  className="max-w-full mx-auto" 
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <a 
+                    href={note.secure_url} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="btn btn-primary"
+                  >
+                    View PDF
+                  </a>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
+            
+            <div className="p-4 border-t dark:border-slate-700">
+              <div className="flex justify-between items-center">
+                <div className="flex flex-wrap gap-2">
+                  {note.tags?.map((tag, index) => (
+                    <span 
+                      key={index}
+                      className="px-2 py-1 bg-primary/10 text-primary dark:text-primary-light text-xs rounded-full"
+                    >
+                      {tag.replace(/_/g, ' ').replace(/^(grade|sem|quarter|subject|topic)_/, '')}
+                    </span>
+                  ))}
+                </div>
+                
+                <div className="flex space-x-3">
+                  <button className="btn bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center">
+                    <FaDownload className="mr-1" /> Download
+                  </button>
+                  <button className="btn btn-primary flex items-center">
+                    <FaShare className="mr-1" /> Share
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 
@@ -282,6 +301,7 @@ const NoteFilter = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedNote, setSelectedNote] = useState(null);
+  const [hasFiltersApplied, setHasFiltersApplied] = useState(false);
   
   // Fetch notes when component mounts
   useEffect(() => {
@@ -293,16 +313,33 @@ const NoteFilter = () => {
     setError(null);
     
     try {
+      // Check if any filters are applied
+      const hasFilters = Object.values(filters).some(value => value !== '');
+      setHasFiltersApplied(hasFilters);
+      
       // Filter only by non-empty values
       const filterContext = Object.fromEntries(
         Object.entries(filters).filter(([_, value]) => value !== '')
       );
       
-      const fetchedNotes = await cloudinaryService.fetchNotesByContext(filterContext);
+      // If Cloudinary is not configured properly, use dummy data
+      let fetchedNotes = [];
+      if (!import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || !import.meta.env.VITE_CLOUDINARY_API_KEY) {
+        console.log('Using dummy notes as Cloudinary is not configured');
+        fetchedNotes = cloudinaryService.getDummyNotes();
+      } else {
+        fetchedNotes = await cloudinaryService.fetchNotesByContext(filterContext);
+      }
+      
       setNotes(fetchedNotes);
+      
+      // If no notes and filters applied, show specific message
+      if (fetchedNotes.length === 0 && hasFilters) {
+        setError("No notes match your selected filters.");
+      }
     } catch (err) {
-      setError("Failed to fetch notes: " + (err.message || "Unknown error"));
-      console.error("Fetch error:", err);
+      console.error("Error fetching notes:", err);
+      setError("Failed to fetch notes. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -316,10 +353,12 @@ const NoteFilter = () => {
     setSelectedNote(null);
   };
   
+  const hasAnyFilters = Object.values(filters).some(value => value !== '');
+  
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">My Notes</h1>
+        <h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-gray-100">My Notes</h1>
         <p className="text-gray-600 dark:text-gray-300">
           Browse through available notes or filter to find what you need.
         </p>
@@ -331,23 +370,20 @@ const NoteFilter = () => {
         onSubmit={fetchNotes} 
       />
       
+      {error && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 p-4 rounded-lg mb-6 flex items-center">
+          <FaExclamationTriangle className="mr-2 text-yellow-600 dark:text-yellow-400" />
+          <span>{error}</span>
+        </div>
+      )}
+      
       {loading ? (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-300">Loading notes...</p>
         </div>
-      ) : error ? (
-        <div className="bg-red-100 text-red-700 p-4 rounded-lg">
-          {error}
-        </div>
       ) : notes.length === 0 ? (
-        <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-lg shadow-md">
-          <FaBookOpen className="text-5xl text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2">No Notes Found</h3>
-          <p className="text-gray-600 dark:text-gray-300">
-            Try adjusting your filters or upload some notes to get started.
-          </p>
-        </div>
+        <EmptyState hasFilters={hasAnyFilters} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {notes.map((note) => (
