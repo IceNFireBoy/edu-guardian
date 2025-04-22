@@ -8,6 +8,7 @@ import MyNotes from './pages/MyNotes';
 import Donate from './pages/Donate';
 import Progress from './pages/Progress';
 import Settings from './pages/Settings';
+import Leaderboard from './pages/Leaderboard';
 
 // Layout components
 import Sidebar from './components/layout/Sidebar';
@@ -45,20 +46,19 @@ function App() {
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-900'}`}>
-      <div className="flex">
-        <Sidebar />
-        <div className="flex-1 overflow-auto" style={{ height: '100vh' }}>
-          <Header toggleDarkMode={toggleDarkMode} />
-          <main className="container mx-auto px-4 py-6">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/my-notes" element={<MyNotes />} />
-              <Route path="/donate" element={<Donate />} />
-              <Route path="/progress" element={<Progress />} />
-              <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
-            </Routes>
-          </main>
-        </div>
+      <Sidebar />
+      <div className="flex flex-col min-h-screen md:ml-64">
+        <Header toggleDarkMode={toggleDarkMode} />
+        <main className="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/my-notes" element={<MyNotes />} />
+            <Route path="/donate" element={<Donate />} />
+            <Route path="/progress" element={<Progress />} />
+            <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+          </Routes>
+        </main>
       </div>
     </div>
   );

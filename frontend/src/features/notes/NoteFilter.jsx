@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaFilter, FaSearch, FaBookOpen, FaDownload, FaShare, FaExclamationTriangle } from 'react-icons/fa';
+import { FaFilter, FaSearch, FaBookOpen, FaDownload, FaShare, FaExclamationTriangle, FaRobot, FaStar } from 'react-icons/fa';
 import cloudinaryService from '../../utils/cloudinaryService';
 import { useStreak } from '../../hooks/useStreak';
+import AISummarizer from '../../components/notes/AISummarizer';
+import StarRating from '../../components/notes/StarRating';
 
 // Note Card Component
 const NoteCard = ({ note, onView }) => {
   const { recordActivity } = useStreak();
+  const averageRating = getAverageRating(note.asset_id);
   
   const handleView = () => {
     // Record the view activity for XP
@@ -63,18 +66,37 @@ const NoteCard = ({ note, onView }) => {
             <FaBookOpen className="mr-1" /> View Note
           </button>
           
-          <div className="flex space-x-2">
-            <button className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-              <FaDownload />
-            </button>
-            <button className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-              <FaShare />
-            </button>
+          <div className="flex items-center">
+            <StarRating noteId={note.asset_id} size="small" readOnly={true} initialRating={averageRating} />
           </div>
         </div>
       </div>
     </motion.div>
   );
+};
+
+// Helper function to get average rating
+const getAverageRating = (noteId) => {
+  try {
+    const ratingsData = localStorage.getItem('note_ratings') || '{}';
+    const ratings = JSON.parse(ratingsData);
+    return ratings[noteId] || 0;
+  } catch (e) {
+    console.error('Error getting average rating:', e);
+    return 0;
+  }
+};
+
+// Helper function to save rating
+const saveRating = (noteId, rating) => {
+  try {
+    const ratingsData = localStorage.getItem('note_ratings') || '{}';
+    const ratings = JSON.parse(ratingsData);
+    ratings[noteId] = rating;
+    localStorage.setItem('note_ratings', JSON.stringify(ratings));
+  } catch (e) {
+    console.error('Error saving rating:', e);
+  }
 };
 
 // Filter Form Component
@@ -107,12 +129,14 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
-          <label className="block text-gray-700 dark:text-gray-300 mb-2">Grade</label>
+          <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="grade-select">Grade</label>
           <select 
+            id="grade-select"
             name="grade"
             value={filters.grade}
             onChange={handleChange}
             className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+            aria-label="Select grade"
           >
             <option value="">All Grades</option>
             <option value="11">Grade 11</option>
@@ -121,12 +145,14 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
         </div>
         
         <div>
-          <label className="block text-gray-700 dark:text-gray-300 mb-2">Semester</label>
+          <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="semester-select">Semester</label>
           <select 
+            id="semester-select"
             name="semester"
             value={filters.semester}
             onChange={handleChange}
             className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+            aria-label="Select semester"
           >
             <option value="">All Semesters</option>
             <option value="1">1st Semester</option>
@@ -135,12 +161,14 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
         </div>
         
         <div>
-          <label className="block text-gray-700 dark:text-gray-300 mb-2">Quarter</label>
+          <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="quarter-select">Quarter</label>
           <select 
+            id="quarter-select"
             name="quarter"
             value={filters.quarter}
             onChange={handleChange}
             className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+            aria-label="Select quarter"
           >
             <option value="">All Quarters</option>
             <option value="1">Q1</option>
@@ -151,12 +179,14 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
         </div>
         
         <div>
-          <label className="block text-gray-700 dark:text-gray-300 mb-2">Subject</label>
+          <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="subject-select">Subject</label>
           <select 
+            id="subject-select"
             name="subject"
             value={filters.subject}
             onChange={handleChange}
             className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+            aria-label="Select subject"
           >
             <option value="">All Subjects</option>
             {subjects.map((subject) => (
@@ -175,6 +205,7 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
             onChange={handleChange}
             placeholder="Search by topic..."
             className="input pl-10 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+            aria-label="Search by topic"
           />
           <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
         </div>
@@ -184,6 +215,7 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
         <button
           onClick={onSubmit}
           className="btn btn-primary"
+          aria-label="Apply filters"
         >
           Apply Filters
         </button>
@@ -209,7 +241,15 @@ const EmptyState = ({ hasFilters }) => (
 
 // Note Detail Modal
 const NoteDetailModal = ({ note, isOpen, onClose }) => {
+  const [showSummarizer, setShowSummarizer] = useState(false);
+  
   if (!isOpen || !note) return null;
+  
+  const handleRatingChange = (newRating) => {
+    saveRating(note.asset_id, newRating);
+  };
+  
+  const noteContent = note.context?.alt || "This note doesn't have enough content for summarization.";
 
   return (
     <AnimatePresence>
@@ -219,6 +259,9 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="note-modal-title"
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -227,10 +270,16 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
             className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
           >
             <div className="p-4 border-b dark:border-slate-700 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{note.context?.caption || 'Untitled Note'}</h3>
+              <h3 
+                id="note-modal-title" 
+                className="text-xl font-bold text-gray-800 dark:text-gray-100"
+              >
+                {note.context?.caption || 'Untitled Note'}
+              </h3>
               <button
                 onClick={onClose}
                 className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-2xl"
+                aria-label="Close modal"
               >
                 &times;
               </button>
@@ -258,7 +307,7 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
             </div>
             
             <div className="p-4 border-t dark:border-slate-700">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center mb-4">
                 <div className="flex flex-wrap gap-2">
                   {note.tags?.map((tag, index) => (
                     <span 
@@ -269,6 +318,24 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
                     </span>
                   ))}
                 </div>
+                
+                <div>
+                  <StarRating 
+                    noteId={note.asset_id} 
+                    initialRating={getAverageRating(note.asset_id)}
+                    onRatingChange={handleRatingChange}
+                    size="medium"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <button 
+                  className="btn flex items-center bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50"
+                  onClick={() => setShowSummarizer(true)}
+                >
+                  <FaRobot className="mr-2" /> AI Summarize
+                </button>
                 
                 <div className="flex space-x-3">
                   <button className="btn bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center">
@@ -283,6 +350,14 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
           </motion.div>
         </motion.div>
       )}
+      
+      {/* AI Summarizer */}
+      <AISummarizer
+        isOpen={showSummarizer}
+        onClose={() => setShowSummarizer(false)}
+        noteContent={noteContent}
+        noteTitle={note?.context?.caption}
+      />
     </AnimatePresence>
   );
 };
@@ -301,7 +376,9 @@ const NoteFilter = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedNote, setSelectedNote] = useState(null);
-  const [hasFiltersApplied, setHasFiltersApplied] = useState(false);
+  
+  // Derived state
+  const hasFiltersApplied = Object.values(filters).some(value => value !== '');
   
   // Fetch notes when component mounts
   useEffect(() => {
@@ -313,10 +390,6 @@ const NoteFilter = () => {
     setError(null);
     
     try {
-      // Check if any filters are applied
-      const hasFilters = Object.values(filters).some(value => value !== '');
-      setHasFiltersApplied(hasFilters);
-      
       // Filter only by non-empty values
       const filterContext = Object.fromEntries(
         Object.entries(filters).filter(([_, value]) => value !== '')
@@ -334,7 +407,7 @@ const NoteFilter = () => {
       setNotes(fetchedNotes);
       
       // If no notes and filters applied, show specific message
-      if (fetchedNotes.length === 0 && hasFilters) {
+      if (fetchedNotes.length === 0 && hasFiltersApplied) {
         setError("No notes match your selected filters.");
       }
     } catch (err) {
@@ -353,8 +426,6 @@ const NoteFilter = () => {
     setSelectedNote(null);
   };
   
-  const hasAnyFilters = Object.values(filters).some(value => value !== '');
-  
   return (
     <div>
       <div className="mb-8">
@@ -371,7 +442,7 @@ const NoteFilter = () => {
       />
       
       {error && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 p-4 rounded-lg mb-6 flex items-center">
+        <div className="bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 p-4 rounded-lg mb-6 flex items-center" role="alert">
           <FaExclamationTriangle className="mr-2 text-yellow-600 dark:text-yellow-400" />
           <span>{error}</span>
         </div>
@@ -383,7 +454,7 @@ const NoteFilter = () => {
           <p className="mt-4 text-gray-600 dark:text-gray-300">Loading notes...</p>
         </div>
       ) : notes.length === 0 ? (
-        <EmptyState hasFilters={hasAnyFilters} />
+        <EmptyState hasFilters={hasFiltersApplied} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {notes.map((note) => (

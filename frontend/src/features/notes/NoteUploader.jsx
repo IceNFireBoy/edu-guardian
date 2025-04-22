@@ -362,7 +362,7 @@ const NoteUploader = () => {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-gray-100">Donate Your Notes</h1>
+        <h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-gray-100">Upload Notes</h1>
         <p className="text-gray-600 dark:text-gray-300">
           Share your knowledge and help others succeed in their academic journey.
         </p>
