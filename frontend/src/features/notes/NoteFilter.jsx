@@ -1,103 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaFilter, FaSearch, FaBookOpen, FaDownload, FaShare, FaExclamationTriangle, FaRobot, FaStar } from 'react-icons/fa';
+import { FaFilter, FaSearch, FaBookOpen, FaDownload, FaShare, FaExclamationTriangle, FaRobot, FaStar, FaLightbulb } from 'react-icons/fa';
 import cloudinaryService from '../../utils/cloudinaryService';
 import { useStreak } from '../../hooks/useStreak';
 import AISummarizer from '../../components/notes/AISummarizer';
-import StarRating from '../../components/notes/StarRating';
-
-// Note Card Component
-const NoteCard = ({ note, onView }) => {
-  const { recordActivity } = useStreak();
-  const averageRating = getAverageRating(note.asset_id);
-  
-  const handleView = () => {
-    // Record the view activity for XP
-    recordActivity('VIEW_NOTE');
-    
-    // Call the parent handler
-    onView(note);
-  };
-
-  return (
-    <motion.div
-      whileHover={{ y: -5 }}
-      className="bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden"
-    >
-      <div className="h-40 overflow-hidden bg-gray-100 dark:bg-slate-700">
-        {note.resource_type === 'image' ? (
-          <img 
-            src={note.secure_url} 
-            alt={note.context?.alt || 'Note preview'} 
-            className="w-full h-full object-cover" 
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <FaBookOpen className="text-4xl text-gray-400 dark:text-gray-500" />
-          </div>
-        )}
-      </div>
-      
-      <div className="p-4">
-        <h3 className="font-semibold text-lg mb-1 text-gray-800 dark:text-gray-100">
-          {note.context?.caption || 'Untitled Note'}
-        </h3>
-        
-        <div className="flex flex-wrap gap-1 mb-3">
-          {note.tags?.map((tag, index) => (
-            <span 
-              key={index}
-              className="px-2 py-1 bg-primary/10 text-primary dark:text-primary-light text-xs rounded-full"
-            >
-              {tag.replace(/_/g, ' ').replace(/^(grade|sem|quarter|subject|topic)_/, '')}
-            </span>
-          ))}
-        </div>
-        
-        <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-          {note.context?.alt || 'No description available'}
-        </p>
-        
-        <div className="flex justify-between items-center">
-          <button
-            onClick={handleView}
-            className="text-primary dark:text-primary-light hover:text-primary-dark text-sm font-medium flex items-center"
-          >
-            <FaBookOpen className="mr-1" /> View Note
-          </button>
-          
-          <div className="flex items-center">
-            <StarRating noteId={note.asset_id} size="small" readOnly={true} initialRating={averageRating} />
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-// Helper function to get average rating
-const getAverageRating = (noteId) => {
-  try {
-    const ratingsData = localStorage.getItem('note_ratings') || '{}';
-    const ratings = JSON.parse(ratingsData);
-    return ratings[noteId] || 0;
-  } catch (e) {
-    console.error('Error getting average rating:', e);
-    return 0;
-  }
-};
-
-// Helper function to save rating
-const saveRating = (noteId, rating) => {
-  try {
-    const ratingsData = localStorage.getItem('note_ratings') || '{}';
-    const ratings = JSON.parse(ratingsData);
-    ratings[noteId] = rating;
-    localStorage.setItem('note_ratings', JSON.stringify(ratings));
-  } catch (e) {
-    console.error('Error saving rating:', e);
-  }
-};
+import FlashcardGenerator from '../../components/FlashcardGenerator';
+import FilterTags from '../../components/ui/FilterTags';
+import NoteCard from '../../components/notes/NoteCard';
+import { useToast } from '../../components/ui/Toast';
 
 // Filter Form Component
 const FilterForm = ({ filters, setFilters, onSubmit }) => {
@@ -242,14 +152,67 @@ const EmptyState = ({ hasFilters }) => (
 // Note Detail Modal
 const NoteDetailModal = ({ note, isOpen, onClose }) => {
   const [showSummarizer, setShowSummarizer] = useState(false);
+  const [showFlashcards, setShowFlashcards] = useState(false);
+  const { error } = useToast();
   
   if (!isOpen || !note) return null;
   
   const handleRatingChange = (newRating) => {
-    saveRating(note.asset_id, newRating);
+    try {
+      // Save rating to localStorage
+      const ratingsData = localStorage.getItem('note_ratings') || '{}';
+      const ratings = JSON.parse(ratingsData);
+      ratings[note.asset_id || note._id] = newRating;
+      localStorage.setItem('note_ratings', JSON.stringify(ratings));
+    } catch (err) {
+      console.error('Error saving rating:', err);
+      error('Failed to save rating. Please try again.');
+    }
   };
   
-  const noteContent = note.context?.alt || "This note doesn't have enough content for summarization.";
+  // Get a shareable link for the note
+  const getShareableLink = () => {
+    // Create a URL with the note ID as a parameter
+    const baseUrl = window.location.origin;
+    const noteId = note.asset_id || note._id;
+    return `${baseUrl}/view-note?id=${noteId}`;
+  };
+  
+  // Handle sharing functionality
+  const handleShare = () => {
+    const shareLink = getShareableLink();
+    
+    // Try to use the Web Share API if available
+    if (navigator.share) {
+      navigator.share({
+        title: note.title || note.context?.caption || 'Shared Note',
+        text: 'Check out this note from EduGuardian!',
+        url: shareLink
+      }).catch(err => {
+        console.error('Error sharing:', err);
+        // Fallback to copying to clipboard
+        copyToClipboard(shareLink);
+      });
+    } else {
+      // Fallback to copying to clipboard
+      copyToClipboard(shareLink);
+    }
+  };
+  
+  // Copy text to clipboard
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        alert('Link copied to clipboard!');
+      })
+      .catch(err => {
+        console.error('Failed to copy:', err);
+        error('Failed to copy link. Please try again.');
+      });
+  };
+  
+  const noteContent = note.description || note.context?.alt || "This note doesn't have enough content for processing.";
+  const noteTitle = note.title || note.context?.caption || "Untitled Note";
 
   return (
     <AnimatePresence>
@@ -274,7 +237,7 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
                 id="note-modal-title" 
                 className="text-xl font-bold text-gray-800 dark:text-gray-100"
               >
-                {note.context?.caption || 'Untitled Note'}
+                {noteTitle}
               </h3>
               <button
                 onClick={onClose}
@@ -286,21 +249,21 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
             </div>
             
             <div className="flex-1 overflow-auto p-4">
-              {note.resource_type === 'image' ? (
+              {note.resource_type === 'image' || note.fileType === 'image' ? (
                 <img 
-                  src={note.secure_url} 
-                  alt={note.context?.alt || 'Note content'} 
+                  src={note.secure_url || note.fileUrl} 
+                  alt={noteTitle} 
                   className="max-w-full mx-auto" 
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <a 
-                    href={note.secure_url} 
+                    href={note.secure_url || note.fileUrl} 
                     target="_blank" 
                     rel="noreferrer"
                     className="btn btn-primary"
                   >
-                    View PDF
+                    View File
                   </a>
                 </div>
               )}
@@ -309,39 +272,60 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
             <div className="p-4 border-t dark:border-slate-700">
               <div className="flex justify-between items-center mb-4">
                 <div className="flex flex-wrap gap-2">
-                  {note.tags?.map((tag, index) => (
-                    <span 
-                      key={index}
-                      className="px-2 py-1 bg-primary/10 text-primary dark:text-primary-light text-xs rounded-full"
-                    >
-                      {tag.replace(/_/g, ' ').replace(/^(grade|sem|quarter|subject|topic)_/, '')}
-                    </span>
-                  ))}
+                  {(note.tags || []).map((tag, index) => {
+                    const tagValue = typeof tag === 'string' 
+                      ? tag.replace(/_/g, ' ').replace(/^(grade|sem|quarter|subject|topic)_/, '')
+                      : tag;
+                    
+                    return (
+                      <span 
+                        key={index}
+                        className="px-2 py-1 bg-primary/10 text-primary dark:text-primary-light text-xs rounded-full"
+                      >
+                        {tagValue}
+                      </span>
+                    );
+                  })}
                 </div>
                 
                 <div>
                   <StarRating 
-                    noteId={note.asset_id} 
-                    initialRating={getAverageRating(note.asset_id)}
+                    noteId={note.asset_id || note._id} 
+                    initialRating={getAverageRating(note.asset_id || note._id)}
                     onRatingChange={handleRatingChange}
                     size="medium"
                   />
                 </div>
               </div>
               
-              <div className="flex justify-between items-center">
-                <button 
-                  className="btn flex items-center bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50"
-                  onClick={() => setShowSummarizer(true)}
-                >
-                  <FaRobot className="mr-2" /> AI Summarize
-                </button>
+              <div className="flex flex-wrap gap-3 justify-between items-center">
+                <div className="flex flex-wrap gap-3">
+                  <button 
+                    className="btn flex items-center bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50"
+                    onClick={() => setShowSummarizer(true)}
+                  >
+                    <FaRobot className="mr-2" /> AI Summarize
+                  </button>
+                  
+                  <button 
+                    className="btn flex items-center bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/50"
+                    onClick={() => setShowFlashcards(true)}
+                  >
+                    <FaLightbulb className="mr-2" /> Generate Flashcards
+                  </button>
+                </div>
                 
                 <div className="flex space-x-3">
-                  <button className="btn bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center">
+                  <button 
+                    className="btn bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center"
+                    onClick={() => window.open(note.secure_url || note.fileUrl, '_blank')}
+                  >
                     <FaDownload className="mr-1" /> Download
                   </button>
-                  <button className="btn btn-primary flex items-center">
+                  <button 
+                    className="btn btn-primary flex items-center"
+                    onClick={handleShare}
+                  >
                     <FaShare className="mr-1" /> Share
                   </button>
                 </div>
@@ -356,10 +340,30 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
         isOpen={showSummarizer}
         onClose={() => setShowSummarizer(false)}
         noteContent={noteContent}
-        noteTitle={note?.context?.caption}
+        noteTitle={noteTitle}
+      />
+      
+      {/* Flashcard Generator */}
+      <FlashcardGenerator
+        isOpen={showFlashcards}
+        onClose={() => setShowFlashcards(false)}
+        noteContent={noteContent}
+        noteTitle={noteTitle}
       />
     </AnimatePresence>
   );
+};
+
+// Helper function to get average rating from localStorage
+const getAverageRating = (noteId) => {
+  try {
+    const ratingsData = localStorage.getItem('note_ratings') || '{}';
+    const ratings = JSON.parse(ratingsData);
+    return ratings[noteId] || 0;
+  } catch (e) {
+    console.error('Error getting average rating:', e);
+    return 0;
+  }
 };
 
 // Main NoteFilter Component
@@ -376,6 +380,7 @@ const NoteFilter = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedNote, setSelectedNote] = useState(null);
+  const toast = useToast();
   
   // Derived state
   const hasFiltersApplied = Object.values(filters).some(value => value !== '');
@@ -384,6 +389,13 @@ const NoteFilter = () => {
   useEffect(() => {
     fetchNotes();
   }, []);
+  
+  // Remove a single filter
+  const removeFilter = (key) => {
+    setFilters(prev => ({ ...prev, [key]: '' }));
+    // Automatically apply the filter change if we're removing a filter
+    setTimeout(() => fetchNotes(), 0);
+  };
   
   const fetchNotes = async () => {
     setLoading(true);
@@ -395,6 +407,34 @@ const NoteFilter = () => {
         Object.entries(filters).filter(([_, value]) => value !== '')
       );
       
+      // Try to fetch from backend API first if available
+      try {
+        // Build query string from filters
+        const queryParams = new URLSearchParams();
+        Object.entries(filterContext).forEach(([key, value]) => {
+          queryParams.append(key, value);
+        });
+        
+        const response = await fetch(`/api/notes/filter?${queryParams.toString()}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.notes) {
+            setNotes(data.notes);
+            // If no notes and filters applied, show specific message
+            if (data.notes.length === 0 && hasFiltersApplied) {
+              setError("No notes match your selected filters.");
+            }
+            setLoading(false);
+            return;
+          }
+        }
+        // If backend API fails, fall back to Cloudinary or dummy data
+      } catch (apiError) {
+        console.log('Backend API not available, using fallback data source');
+        // Continue with fallback methods
+      }
+      
       // If Cloudinary is not configured properly, use dummy data
       let fetchedNotes = [];
       if (!import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || !import.meta.env.VITE_CLOUDINARY_API_KEY) {
@@ -402,6 +442,13 @@ const NoteFilter = () => {
         fetchedNotes = cloudinaryService.getDummyNotes();
       } else {
         fetchedNotes = await cloudinaryService.fetchNotesByContext(filterContext);
+        
+        // Add additional validation and error handling
+        if (!Array.isArray(fetchedNotes)) {
+          console.error('Invalid response from Cloudinary:', fetchedNotes);
+          toast.error('Error fetching notes: Invalid response from server');
+          fetchedNotes = cloudinaryService.getDummyNotes();
+        }
       }
       
       setNotes(fetchedNotes);
@@ -413,6 +460,7 @@ const NoteFilter = () => {
     } catch (err) {
       console.error("Error fetching notes:", err);
       setError("Failed to fetch notes. Please try again later.");
+      toast.error('Error fetching notes: ' + (err.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -441,6 +489,12 @@ const NoteFilter = () => {
         onSubmit={fetchNotes} 
       />
       
+      {/* Filter Tags */}
+      <FilterTags 
+        filters={filters} 
+        onRemoveFilter={removeFilter} 
+      />
+      
       {error && (
         <div className="bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 p-4 rounded-lg mb-6 flex items-center" role="alert">
           <FaExclamationTriangle className="mr-2 text-yellow-600 dark:text-yellow-400" />
@@ -459,7 +513,7 @@ const NoteFilter = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {notes.map((note) => (
             <NoteCard 
-              key={note.asset_id} 
+              key={note.asset_id || note._id} 
               note={note} 
               onView={handleViewNote} 
             />

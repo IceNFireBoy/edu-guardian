@@ -1,0 +1,204 @@
+[
+  {
+    "_id": "5d7a514b5d2c12c7449be060",
+    "title": "Advanced Calculus Formulas",
+    "description": "A comprehensive guide to calculus formulas and concepts for university level mathematics.",
+    "fileUrl": "https://res.cloudinary.com/demo-cloudinary/raw/upload/v1631234567/notes/calculus-guide.pdf",
+    "fileType": "pdf",
+    "fileSize": 2456789,
+    "subject": "mathematics",
+    "grade": "undergraduate",
+    "tags": ["calculus", "differentiation", "integration", "math formulas"],
+    "viewCount": 450,
+    "downloadCount": 120,
+    "averageRating": 4.8,
+    "ratings": [
+      {
+        "user": "5d7a514b5d2c12c7449be042",
+        "rating": 5,
+        "comment": "Extremely helpful for my calculus exam!",
+        "createdAt": "2023-04-20T15:30:00.000Z"
+      },
+      {
+        "user": "5d7a514b5d2c12c7449be043",
+        "rating": 4,
+        "comment": "Good coverage of topics, but could use more examples.",
+        "createdAt": "2023-05-01T10:45:00.000Z"
+      }
+    ],
+    "aiSummary": "This document contains comprehensive formulas and explanations for advanced calculus concepts including limits, derivatives, integrals, sequences, series, and multivariable calculus. Each section includes theoretical background, key formulas, and practical applications.",
+    "flashcards": [
+      {
+        "question": "What is the definition of a limit?",
+        "answer": "The limit of a function f(x) as x approaches a value c is the value L that f(x) gets arbitrarily close to as x gets arbitrarily close to c.",
+        "difficulty": "medium"
+      },
+      {
+        "question": "State the chain rule for differentiation",
+        "answer": "If y = f(g(x)), then dy/dx = (df/dg) × (dg/dx)",
+        "difficulty": "easy"
+      }
+    ],
+    "user": "5d7a514b5d2c12c7449be041",
+    "isPublic": true,
+    "createdAt": "2023-03-15T09:00:00.000Z"
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be061",
+    "title": "Introduction to Python Programming",
+    "description": "A beginner's guide to Python programming with examples and exercises.",
+    "fileUrl": "https://res.cloudinary.com/demo-cloudinary/raw/upload/v1631234567/notes/python-guide.pdf",
+    "fileType": "pdf",
+    "fileSize": 1845623,
+    "subject": "computer science",
+    "grade": "high school",
+    "tags": ["python", "programming", "beginners", "coding"],
+    "viewCount": 780,
+    "downloadCount": 345,
+    "averageRating": 4.5,
+    "ratings": [
+      {
+        "user": "5d7a514b5d2c12c7449be042",
+        "rating": 5,
+        "comment": "Perfect introduction for beginners!",
+        "createdAt": "2023-04-25T14:20:00.000Z"
+      },
+      {
+        "user": "5d7a514b5d2c12c7449be044",
+        "rating": 4,
+        "comment": "Well-explained concepts with good examples.",
+        "createdAt": "2023-05-05T11:30:00.000Z"
+      }
+    ],
+    "aiSummary": "This guide introduces Python programming fundamentals including variables, data types, control structures, functions, and basic algorithms. The document includes code examples, explanations, and hands-on exercises designed for beginners with no prior programming experience.",
+    "flashcards": [
+      {
+        "question": "What is a variable in Python?",
+        "answer": "A variable is a named location in memory that stores a value.",
+        "difficulty": "easy"
+      },
+      {
+        "question": "How do you define a function in Python?",
+        "answer": "Functions are defined using the 'def' keyword followed by the function name, parameters in parentheses, and a colon.",
+        "difficulty": "medium"
+      }
+    ],
+    "user": "5d7a514b5d2c12c7449be043",
+    "isPublic": true,
+    "createdAt": "2023-02-20T10:30:00.000Z"
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be062",
+    "title": "Organic Chemistry Reactions",
+    "description": "Summary of key organic chemistry reactions and mechanisms for undergraduate students.",
+    "fileUrl": "https://res.cloudinary.com/demo-cloudinary/raw/upload/v1631234567/notes/organic-chem.pdf",
+    "fileType": "pdf",
+    "fileSize": 3254178,
+    "subject": "chemistry",
+    "grade": "undergraduate",
+    "tags": ["organic chemistry", "reactions", "mechanisms", "synthesis"],
+    "viewCount": 320,
+    "downloadCount": 98,
+    "averageRating": 4.7,
+    "ratings": [
+      {
+        "user": "5d7a514b5d2c12c7449be043",
+        "rating": 5,
+        "comment": "Saved me during my organic chemistry finals!",
+        "createdAt": "2023-05-12T16:45:00.000Z"
+      }
+    ],
+    "aiSummary": "This document provides a comprehensive overview of organic chemistry reactions including nucleophilic substitution, elimination, addition, and rearrangement reactions. Each section details reaction mechanisms, conditions, stereochemistry considerations, and practical applications in synthesis.",
+    "flashcards": [
+      {
+        "question": "What is the SN2 reaction mechanism?",
+        "answer": "A bimolecular nucleophilic substitution where the nucleophile attacks from the back side of the leaving group, resulting in inversion of stereochemistry.",
+        "difficulty": "medium"
+      },
+      {
+        "question": "What is Markovnikov's rule?",
+        "answer": "In the addition of HX to an unsymmetrical alkene, the hydrogen adds to the carbon with more hydrogen substituents (less substituted carbon).",
+        "difficulty": "hard"
+      }
+    ],
+    "user": "5d7a514b5d2c12c7449be044",
+    "isPublic": true,
+    "createdAt": "2023-04-10T11:15:00.000Z"
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be063",
+    "title": "Shakespeare's Macbeth Analysis",
+    "description": "Literary analysis of themes, characters, and symbolism in Shakespeare's Macbeth.",
+    "fileUrl": "https://res.cloudinary.com/demo-cloudinary/raw/upload/v1631234567/notes/macbeth-analysis.docx",
+    "fileType": "doc",
+    "fileSize": 1243689,
+    "subject": "literature",
+    "grade": "high school",
+    "tags": ["shakespeare", "macbeth", "literary analysis", "tragedy"],
+    "viewCount": 210,
+    "downloadCount": 75,
+    "averageRating": 4.3,
+    "ratings": [
+      {
+        "user": "5d7a514b5d2c12c7449be042",
+        "rating": 4,
+        "comment": "Great insights into the themes of the play.",
+        "createdAt": "2023-05-20T09:30:00.000Z"
+      }
+    ],
+    "aiSummary": "This analysis explores Shakespeare's Macbeth through examination of major themes including ambition, guilt, supernatural elements, and fate versus free will. The document includes character analysis, symbolic interpretation, and discussion of historical context that influenced the work.",
+    "flashcards": [
+      {
+        "question": "What is the main theme of Macbeth?",
+        "answer": "The corrupting nature of unchecked ambition and its destructive consequences.",
+        "difficulty": "easy"
+      },
+      {
+        "question": "What role do the witches play in Macbeth?",
+        "answer": "The witches serve as catalysts for action, representing fate and the supernatural. They plant the idea of kingship in Macbeth's mind through their prophecies.",
+        "difficulty": "medium"
+      }
+    ],
+    "user": "5d7a514b5d2c12c7449be041",
+    "isPublic": true,
+    "createdAt": "2023-03-05T13:45:00.000Z"
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be064",
+    "title": "Quantum Physics Fundamentals",
+    "description": "Introduction to quantum mechanics principles and mathematical foundations.",
+    "fileUrl": "https://res.cloudinary.com/demo-cloudinary/raw/upload/v1631234567/notes/quantum-physics.pdf",
+    "fileType": "pdf",
+    "fileSize": 4567823,
+    "subject": "physics",
+    "grade": "graduate",
+    "tags": ["quantum mechanics", "physics", "wave functions", "uncertainty principle"],
+    "viewCount": 185,
+    "downloadCount": 62,
+    "averageRating": 4.9,
+    "ratings": [
+      {
+        "user": "5d7a514b5d2c12c7449be043",
+        "rating": 5,
+        "comment": "Exceptional explanation of complex quantum concepts.",
+        "createdAt": "2023-06-01T15:15:00.000Z"
+      }
+    ],
+    "aiSummary": "This document provides foundational knowledge of quantum physics including wave-particle duality, uncertainty principle, Schrödinger equation, and quantum measurement theory. Mathematical formulations are presented alongside conceptual explanations and experimental evidence that supports quantum theory.",
+    "flashcards": [
+      {
+        "question": "What is Heisenberg's Uncertainty Principle?",
+        "answer": "It states that it is impossible to simultaneously know the exact position and momentum of a particle. The more precisely one is measured, the less precisely the other can be known.",
+        "difficulty": "hard"
+      },
+      {
+        "question": "What is wave-particle duality?",
+        "answer": "The concept that every particle or quantum entity exhibits both wave-like and particle-like properties.",
+        "difficulty": "medium"
+      }
+    ],
+    "user": "5d7a514b5d2c12c7449be044",
+    "isPublic": true,
+    "createdAt": "2023-05-18T10:00:00.000Z"
+  }
+] 

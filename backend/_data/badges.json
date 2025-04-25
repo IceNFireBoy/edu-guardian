@@ -1,0 +1,170 @@
+[
+  {
+    "_id": "5d7a514b5d2c12c7449be042",
+    "name": "First Upload",
+    "description": "Uploaded your first note to share with the community",
+    "icon": "fa-upload",
+    "category": "achievement",
+    "requirements": {
+      "uploadCount": 1
+    },
+    "xpReward": 50,
+    "rarity": "common",
+    "isActive": true,
+    "displayOrder": 1
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be043",
+    "name": "Study Novice",
+    "description": "Reached level 5 in your academic journey",
+    "icon": "fa-graduation-cap",
+    "category": "level",
+    "requirements": {
+      "level": 5
+    },
+    "xpReward": 100,
+    "rarity": "common",
+    "isActive": true,
+    "displayOrder": 2
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be044",
+    "name": "Study Apprentice",
+    "description": "Reached level 10 in your academic journey",
+    "icon": "fa-graduation-cap",
+    "category": "level",
+    "requirements": {
+      "level": 10
+    },
+    "xpReward": 200,
+    "rarity": "uncommon",
+    "isActive": true,
+    "displayOrder": 3
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be045",
+    "name": "Study Master",
+    "description": "Reached level 20 in your academic journey",
+    "icon": "fa-crown",
+    "category": "level",
+    "requirements": {
+      "level": 20
+    },
+    "xpReward": 500,
+    "rarity": "rare",
+    "isActive": true,
+    "displayOrder": 4
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be046",
+    "name": "Dedicated Learner",
+    "description": "Maintained a 3-day streak of activity",
+    "icon": "fa-fire",
+    "category": "streak",
+    "requirements": {
+      "streakDays": 3
+    },
+    "xpReward": 30,
+    "rarity": "common",
+    "isActive": true,
+    "displayOrder": 5
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be047",
+    "name": "Knowledge Contributor",
+    "description": "Uploaded 10 notes to share with the community",
+    "icon": "fa-book",
+    "category": "achievement",
+    "requirements": {
+      "uploadCount": 10
+    },
+    "xpReward": 200,
+    "rarity": "uncommon",
+    "isActive": true,
+    "displayOrder": 6
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be048",
+    "name": "Academic Scholar",
+    "description": "Uploaded 50 notes to share with the community",
+    "icon": "fa-university",
+    "category": "achievement",
+    "requirements": {
+      "uploadCount": 50
+    },
+    "xpReward": 500,
+    "rarity": "rare",
+    "isActive": true,
+    "displayOrder": 7
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be049",
+    "name": "Social Learner",
+    "description": "Rated 10 notes from other users",
+    "icon": "fa-star",
+    "category": "social",
+    "requirements": {
+      "ratingCount": 10
+    },
+    "xpReward": 100,
+    "rarity": "common",
+    "isActive": true,
+    "displayOrder": 8
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be050",
+    "name": "Flashcard Creator",
+    "description": "Created 20 flashcards for your notes",
+    "icon": "fa-sticky-note",
+    "category": "achievement",
+    "requirements": {
+      "flashcardCount": 20
+    },
+    "xpReward": 150,
+    "rarity": "uncommon",
+    "isActive": true,
+    "displayOrder": 9
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be051",
+    "name": "Perfect Week",
+    "description": "Maintained a 7-day streak of activity",
+    "icon": "fa-calendar-check",
+    "category": "streak",
+    "requirements": {
+      "streakDays": 7
+    },
+    "xpReward": 100,
+    "rarity": "uncommon",
+    "isActive": true,
+    "displayOrder": 10
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be052",
+    "name": "Verified Scholar",
+    "description": "Verified your email address",
+    "icon": "fa-check-circle",
+    "category": "achievement",
+    "requirements": {
+      "emailVerified": true
+    },
+    "xpReward": 20,
+    "rarity": "common",
+    "isActive": true,
+    "displayOrder": 11
+  },
+  {
+    "_id": "5d7a514b5d2c12c7449be053",
+    "name": "Subject Master",
+    "description": "Completed 100% of a subject",
+    "icon": "fa-medal",
+    "category": "achievement",
+    "requirements": {
+      "subjectProgress": 100
+    },
+    "xpReward": 300,
+    "rarity": "rare",
+    "isActive": true,
+    "displayOrder": 12
+  }
+] 
