@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import { ToastProvider } from './components/ui/Toast';
+import toast from 'react-hot-toast';
 
 // Pages
 import HomePage from './pages/Home';
@@ -16,34 +17,80 @@ import Badges from './pages/Badges';
 // Layout components
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
+import CookieConsent from './components/ui/CookieConsent';
+import OfflineDetector from './components/ui/OfflineDetector';
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
 
+  // Check if localStorage is available
+  useEffect(() => {
+    const checkStorage = () => {
+      try {
+        localStorage.setItem('storage_test', 'test');
+        localStorage.removeItem('storage_test');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    };
+
+    if (!checkStorage()) {
+      // Show error if localStorage is not available
+      setTimeout(() => {
+        toast.error(
+          'Local storage is not available. Some features may not work properly. Please enable cookies and local storage in your browser settings.',
+          { duration: 8000 }
+        );
+      }, 1000);
+    }
+  }, []);
+
   // Initialize dark mode from localStorage on load
   useEffect(() => {
-    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-    setDarkMode(savedDarkMode);
-    
-    // Apply dark mode class to html element
-    if (savedDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
+    try {
+      const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+      setDarkMode(savedDarkMode);
+      
+      // Apply dark mode class to html element
+      if (savedDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (error) {
+      console.error('Failed to access localStorage for dark mode:', error);
+      // Default to light mode if localStorage fails
       document.documentElement.classList.remove('dark');
     }
   }, []);
 
   // Toggle dark mode
   const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode.toString());
-    
-    // Toggle dark class on html element for Tailwind dark mode
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    try {
+      const newDarkMode = !darkMode;
+      setDarkMode(newDarkMode);
+      localStorage.setItem('darkMode', newDarkMode.toString());
+      
+      // Toggle dark class on html element for Tailwind dark mode
+      if (newDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (error) {
+      console.error('Failed to save dark mode preference:', error);
+      toast.error('Failed to save your theme preference. Please check your browser settings.');
+      
+      // Still toggle the UI state
+      const newDarkMode = !darkMode;
+      setDarkMode(newDarkMode);
+      
+      if (newDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
     }
   };
 
@@ -74,6 +121,7 @@ function App() {
             },
           },
         }} />
+        <OfflineDetector />
         <Sidebar />
         <div className="flex flex-col min-h-screen md:ml-64">
           <Header toggleDarkMode={toggleDarkMode} />
@@ -89,6 +137,7 @@ function App() {
             </Routes>
           </main>
         </div>
+        <CookieConsent />
       </div>
     </ToastProvider>
   );

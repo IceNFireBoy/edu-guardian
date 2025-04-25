@@ -20,6 +20,10 @@ const createFallbackToast = () => {
   };
 };
 
+// Get API base URL from environment variable or use fallback
+const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
+console.log('Using API base URL:', API_BASE || '(none - using relative URL)');
+
 // Filter Form Component
 const FilterForm = ({ filters, setFilters, onSubmit }) => {
   // List of subjects
@@ -453,11 +457,18 @@ const NoteFilter = () => {
           queryParams.append(key, value);
         });
         
-        const response = await fetch(`/api/notes/filter?${queryParams.toString()}`);
+        // Use API_BASE if available, otherwise use relative URL
+        const apiUrl = API_BASE 
+          ? `${API_BASE}/api/notes/filter?${queryParams.toString()}`
+          : `/api/notes/filter?${queryParams.toString()}`;
+        
+        console.log('Fetching notes from:', apiUrl);
+        const response = await fetch(apiUrl);
         
         if (response.ok) {
           const data = await response.json();
           if (data.success && Array.isArray(data.notes)) {
+            console.log('Fetched notes from API:', data.notes.length);
             setNotes(data.notes || []);
             // If no notes and filters applied, show specific message
             if ((data.notes || []).length === 0 && hasFiltersApplied) {
@@ -465,11 +476,15 @@ const NoteFilter = () => {
             }
             setLoading(false);
             return;
+          } else {
+            console.warn('API returned invalid format:', data);
           }
+        } else {
+          console.warn(`API request failed with status: ${response.status}`);
         }
         // If backend API fails, fall back to Cloudinary or dummy data
       } catch (apiError) {
-        console.log('Backend API not available, using fallback data source:', apiError);
+        console.warn('Backend API not available, using fallback data source:', apiError);
         // Continue with fallback methods
       }
       
@@ -485,10 +500,11 @@ const NoteFilter = () => {
           if (!cloudinaryService || typeof cloudinaryService.fetchNotesByContext !== 'function') {
             console.error('Cloudinary service not properly configured');
             toast.error('Error: Note service configuration issue');
-            fetchedNotes = [];
+            fetchedNotes = cloudinaryService.getDummyNotes();
           } else {
             // Attempt to fetch from Cloudinary
             fetchedNotes = await cloudinaryService.fetchNotesByContext(filterContext);
+            console.log('Fetched notes from Cloudinary:', Array.isArray(fetchedNotes) ? fetchedNotes.length : 'invalid response');
             
             // Add additional validation 
             if (!Array.isArray(fetchedNotes)) {
