@@ -46,6 +46,38 @@ npm run dev
 npm start
 ```
 
+## Frontend Integration
+
+### API Endpoint Updates
+
+⚠️ **Important:** All frontend API calls must use the `/api/v1/` prefix:
+
+```javascript
+// INCORRECT - Old endpoint format
+fetch('/api/notes')
+
+// CORRECT - New endpoint format
+fetch('/api/v1/notes')
+```
+
+Example of a correct API call:
+```javascript
+// Example: Fetching notes with filter
+fetch('/api/v1/notes?subject=mathematics&grade=undergraduate')
+  .then(response => response.json())
+  .then(data => console.log(data));
+
+// Example: Creating a note (with authentication)
+fetch('/api/v1/notes', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify(noteData)
+})
+```
+
 ## Database Seeding
 
 To seed the database with sample users, notes, and badges:
