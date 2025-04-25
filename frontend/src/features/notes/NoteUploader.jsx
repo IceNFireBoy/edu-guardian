@@ -5,6 +5,7 @@ import { FaArrowRight, FaArrowLeft, FaCloudUploadAlt, FaCheckCircle, FaTimesCirc
 import { useDropzone } from 'react-dropzone';
 import cloudinaryService from '../../utils/cloudinaryService';
 import { useStreak } from '../../hooks/useStreak';
+import { toast } from 'react-hot-toast';
 
 // Form step components
 const Step1Form = ({ register, errors, subjects }) => (
@@ -340,11 +341,19 @@ const NoteUploader = () => {
     setError(null);
     
     try {
-      // Upload the file to Cloudinary
-      await cloudinaryService.uploadNote(fileData, formData);
+      // Show uploading status feedback
+      toast.success('Starting upload process...', { id: 'upload-toast' });
+      
+      // Upload the file to Cloudinary via our service
+      const uploadResult = await cloudinaryService.uploadNote(fileData, formData);
+      
+      console.log('Upload successful:', uploadResult);
       
       // Record activity for XP
       recordActivity('UPLOAD_NOTE');
+      
+      // Update toast with success
+      toast.success('Note uploaded successfully!', { id: 'upload-toast' });
       
       // Show success modal
       setShowSuccess(true);
@@ -352,8 +361,13 @@ const NoteUploader = () => {
       // Reset form
       // resetForm();
     } catch (err) {
-      setError("Upload failed: " + (err.message || "Unknown error"));
       console.error("Upload error:", err);
+      
+      // Show error toast
+      toast.error('Upload failed: ' + (err.message || "Unknown error"), { id: 'upload-toast' });
+      
+      // Set error message in UI
+      setError("Upload failed: " + (err.message || "Unknown error") + ". Please try again.");
     } finally {
       setIsUploading(false);
     }

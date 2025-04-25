@@ -161,11 +161,19 @@ const EmptyState = ({ hasFilters }) => (
         ? "No notes match your selected filters. Try adjusting your search criteria or upload some notes to get started." 
         : "Use the filters above to find specific notes, or browse all available notes."}
     </p>
-    {hasFilters && (
-      <div className="mt-4">
-        <a href="/donate" className="btn btn-primary inline-block">Upload New Notes</a>
-      </div>
-    )}
+    <div className="mt-4 flex flex-col sm:flex-row gap-3 justify-center">
+      {hasFilters && (
+        <button 
+          onClick={() => window.location.href = '/my-notes'} 
+          className="btn bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+        >
+          Clear All Filters
+        </button>
+      )}
+      <a href="/donate" className="btn btn-primary inline-block">
+        Upload New Notes
+      </a>
+    </div>
   </div>
 );
 
@@ -459,28 +467,42 @@ const NoteFilter = () => {
         
         // Use API_BASE if available, otherwise use relative URL
         const apiUrl = API_BASE 
-          ? `${API_BASE}/api/notes/filter?${queryParams.toString()}`
-          : `/api/notes/filter?${queryParams.toString()}`;
+          ? `${API_BASE}/api/v1/notes?${queryParams.toString()}`
+          : `/api/v1/notes?${queryParams.toString()}`;
         
         console.log('Fetching notes from:', apiUrl);
         const response = await fetch(apiUrl);
         
         if (response.ok) {
           const data = await response.json();
-          if (data.success && Array.isArray(data.notes)) {
-            console.log('Fetched notes from API:', data.notes.length);
-            setNotes(data.notes || []);
-            // If no notes and filters applied, show specific message
-            if ((data.notes || []).length === 0 && hasFiltersApplied) {
-              console.log("No notes found matching filters:", filterContext);
-            }
-            setLoading(false);
-            return;
+          
+          // Handle the API response format - check if data has a 'data' property (new API format)
+          // or if it's an array directly (old format)
+          let notesArray = [];
+          
+          if (data.success && Array.isArray(data.data)) {
+            notesArray = data.data;
+            console.log(`Fetched ${notesArray.length} notes from API (new format)`);
+          } else if (Array.isArray(data)) {
+            notesArray = data;
+            console.log(`Fetched ${notesArray.length} notes from API (old format)`);
           } else {
-            console.warn('API returned invalid format:', data);
+            console.warn('API returned unexpected data format:', data);
           }
+          
+          setNotes(notesArray || []);
+          
+          // If no notes and filters applied, show specific message
+          if ((notesArray || []).length === 0 && hasFiltersApplied) {
+            console.log("No notes found matching filters:", filterContext);
+          }
+          
+          setLoading(false);
+          return;
         } else {
           console.warn(`API request failed with status: ${response.status}`);
+          const errorText = await response.text();
+          console.error('API error details:', errorText);
         }
         // If backend API fails, fall back to Cloudinary or dummy data
       } catch (apiError) {

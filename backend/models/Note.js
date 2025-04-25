@@ -29,16 +29,51 @@ const NoteSchema = new mongoose.Schema({
   subject: {
     type: String,
     required: [true, 'Please add a subject'],
-    enum: ['mathematics', 'physics', 'chemistry', 'biology', 'computer science', 
-           'literature', 'history', 'geography', 'economics', 'business', 'arts', 
-           'music', 'physical education', 'foreign languages', 'other']
+    trim: true,
+    enum: [
+      'Mathematics', 
+      'Physics', 
+      'Chemistry', 
+      'Biology', 
+      'History', 
+      'Geography', 
+      'English', 
+      'Literature', 
+      'Computer Science',
+      'Economics',
+      'Business Studies'
+    ]
   },
   grade: {
     type: String,
-    enum: ['primary', 'middle school', 'high school', 'undergraduate', 'graduate', 'professional'],
-    required: [true, 'Please specify grade level']
+    required: [true, 'Please add a grade'],
+    enum: ['11', '12']
   },
-  tags: [String],
+  semester: {
+    type: String,
+    required: [true, 'Please add a semester'],
+    enum: ['1', '2']
+  },
+  quarter: {
+    type: String,
+    required: [true, 'Please add a quarter'],
+    enum: ['1', '2', '3', '4']
+  },
+  topic: {
+    type: String,
+    required: [true, 'Please add a topic'],
+    trim: true
+  },
+  publicId: {
+    type: String
+  },
+  assetId: {
+    type: String
+  },
+  tags: {
+    type: [String],
+    default: []
+  },
   viewCount: {
     type: Number,
     default: 0
@@ -49,26 +84,20 @@ const NoteSchema = new mongoose.Schema({
   },
   ratings: [
     {
-      user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-      },
-      rating: {
+      value: {
         type: Number,
         min: 1,
         max: 5
       },
-      comment: String,
-      createdAt: {
-        type: Date,
-        default: Date.now
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
       }
     }
   ],
   averageRating: {
     type: Number,
-    min: [1, 'Rating must be at least 1'],
-    max: [5, 'Rating cannot be more than 5']
+    default: 0
   },
   aiSummary: {
     type: String,
@@ -114,23 +143,17 @@ NoteSchema.methods.getAverageRating = function() {
   if (this.ratings.length === 0) return null;
   
   const sum = this.ratings.reduce((total, item) => {
-    return total + item.rating;
+    return total + item.value;
   }, 0);
   
   this.averageRating = Math.round((sum / this.ratings.length) * 10) / 10;
   return this.averageRating;
 };
 
-// Indexes for better querying
+// Create indexes for better query performance
+NoteSchema.index({ subject: 1, grade: 1, semester: 1, quarter: 1 });
+NoteSchema.index({ topic: 'text', title: 'text', description: 'text' });
 NoteSchema.index({ slug: 1 });
-NoteSchema.index({ subject: 1, grade: 1 });
-NoteSchema.index({ tags: 1 });
 NoteSchema.index({ user: 1 });
-NoteSchema.index({ 
-  title: 'text', 
-  description: 'text', 
-  tags: 'text',
-  subject: 'text'
-});
 
 module.exports = mongoose.model('Note', NoteSchema); 

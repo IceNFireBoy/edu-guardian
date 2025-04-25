@@ -61,8 +61,13 @@ app.use(limiter);
 // Prevent http param pollution
 app.use(hpp());
 
-// Enable CORS
-app.use(cors());
+// Enable CORS with configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'https://eduguardian.netlify.app',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Set static folder
 app.use(express.static(path.join(__dirname, 'public')));

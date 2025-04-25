@@ -7,24 +7,84 @@ const User = require('../models/User');
 // @route   GET /api/v1/notes
 // @access  Public
 exports.getNotes = asyncHandler(async (req, res, next) => {
-  res.status(200).json(res.advancedResults);
+  // Copy query object
+  const queryObj = { ...req.query };
+
+  // Fields to exclude from filtering
+  const excludedFields = ['page', 'sort', 'limit', 'fields'];
+  excludedFields.forEach(field => delete queryObj[field]);
+
+  // Create filter object
+  const filter = {};
+  
+  // Add query parameters to filter
+  if (queryObj.grade) filter.grade = queryObj.grade;
+  if (queryObj.subject) filter.subject = queryObj.subject;
+  if (queryObj.semester) filter.semester = queryObj.semester;
+  if (queryObj.quarter) filter.quarter = queryObj.quarter;
+  if (queryObj.topic) {
+    // For topic, we use a partial match
+    filter.topic = new RegExp(queryObj.topic, 'i');
+  }
+  
+  // Handle text search
+  if (queryObj.search) {
+    filter.$text = { $search: queryObj.search };
+  }
+
+  // Get total count for pagination
+  const total = await Note.countDocuments(filter);
+
+  // Pagination
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 100;
+  const startIndex = (page - 1) * limit;
+  const endIndex = page * limit;
+
+  // Query with pagination
+  const notes = await Note.find(filter)
+    .skip(startIndex)
+    .limit(limit)
+    .sort(req.query.sort || '-createdAt');
+
+  // Pagination result
+  const pagination = {};
+
+  if (endIndex < total) {
+    pagination.next = {
+      page: page + 1,
+      limit
+    };
+  }
+
+  if (startIndex > 0) {
+    pagination.prev = {
+      page: page - 1,
+      limit
+    };
+  }
+
+  res.status(200).json({
+    success: true,
+    count: notes.length,
+    pagination,
+    total,
+    data: notes
+  });
 });
 
 // @desc    Get single note
 // @route   GET /api/v1/notes/:id
 // @access  Public
 exports.getNote = asyncHandler(async (req, res, next) => {
-  const note = await Note.findById(req.params.id).populate({
-    path: 'user',
-    select: 'name username profileImage'
-  });
+  const note = await Note.findById(req.params.id);
 
   if (!note) {
     return next(new ErrorResponse(`Note not found with id of ${req.params.id}`, 404));
   }
 
   // Increment view count
-  note.viewCount += 1;
+  note.viewCount = (note.viewCount || 0) + 1;
   await note.save();
 
   res.status(200).json({
@@ -35,32 +95,51 @@ exports.getNote = asyncHandler(async (req, res, next) => {
 
 // @desc    Create new note
 // @route   POST /api/v1/notes
-// @access  Private
+// @access  Public (would typically be Private with auth)
 exports.createNote = asyncHandler(async (req, res, next) => {
-  // Add user to req.body
-  req.body.user = req.user.id;
+  const { 
+    title, 
+    description, 
+    subject, 
+    grade, 
+    semester, 
+    quarter, 
+    topic, 
+    fileUrl, 
+    fileType,
+    publicId,
+    assetId,
+    tags
+  } = req.body;
 
-  // Create note
-  const note = await Note.create(req.body);
+  // Validate required fields
+  if (!title || !subject || !grade || !fileUrl) {
+    return next(new ErrorResponse('Please provide all required fields', 400));
+  }
 
-  // Update user's activity
-  await User.findByIdAndUpdate(req.user.id, {
-    $inc: { xp: 10 }
+  // Create note with all metadata
+  const note = await Note.create({
+    title,
+    description,
+    subject,
+    grade,
+    semester,
+    quarter,
+    topic,
+    fileUrl,
+    fileType: fileType || 'unknown',
+    publicId,
+    assetId,
+    tags,
+    // If authenticated, would add: user: req.user.id
   });
 
-  // Add activity record
-  req.user.addActivity('upload', `Uploaded note: ${note.title}`, 10);
-  await req.user.save();
-
-  res.status(201).json({
-    success: true,
-    data: note
-  });
+  res.status(201).json(note);
 });
 
 // @desc    Update note
 // @route   PUT /api/v1/notes/:id
-// @access  Private
+// @access  Private (would require auth)
 exports.updateNote = asyncHandler(async (req, res, next) => {
   let note = await Note.findById(req.params.id);
 
@@ -68,10 +147,10 @@ exports.updateNote = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Note not found with id of ${req.params.id}`, 404));
   }
 
-  // Make sure user is note owner
-  if (note.user.toString() !== req.user.id && req.user.role !== 'admin') {
-    return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this note`, 401));
-  }
+  // Make sure user owns the note (if authenticated)
+  // if (note.user.toString() !== req.user.id && req.user.role !== 'admin') {
+  //   return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this note`, 401));
+  // }
 
   note = await Note.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
@@ -86,7 +165,7 @@ exports.updateNote = asyncHandler(async (req, res, next) => {
 
 // @desc    Delete note
 // @route   DELETE /api/v1/notes/:id
-// @access  Private
+// @access  Private (would require auth)
 exports.deleteNote = asyncHandler(async (req, res, next) => {
   const note = await Note.findById(req.params.id);
 
@@ -94,12 +173,12 @@ exports.deleteNote = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Note not found with id of ${req.params.id}`, 404));
   }
 
-  // Make sure user is note owner
-  if (note.user.toString() !== req.user.id && req.user.role !== 'admin') {
-    return next(new ErrorResponse(`User ${req.user.id} is not authorized to delete this note`, 401));
-  }
+  // Make sure user owns the note (if authenticated)
+  // if (note.user.toString() !== req.user.id && req.user.role !== 'admin') {
+  //   return next(new ErrorResponse(`User ${req.user.id} is not authorized to delete this note`, 401));
+  // }
 
-  await note.deleteOne();
+  await note.remove();
 
   res.status(200).json({
     success: true,
@@ -136,11 +215,11 @@ exports.getMyNotes = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Rate note
+// @desc    Add rating to note
 // @route   POST /api/v1/notes/:id/ratings
-// @access  Private
+// @access  Private (would require auth)
 exports.addRating = asyncHandler(async (req, res, next) => {
-  const { rating, comment } = req.body;
+  const { rating } = req.body;
 
   // Validate rating
   if (!rating || rating < 1 || rating > 5) {
@@ -153,40 +232,32 @@ exports.addRating = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Note not found with id of ${req.params.id}`, 404));
   }
 
-  // Check if user already rated this note
+  // Add rating
+  // In a real auth system, you'd use the user's ID from req.user
+  const userId = '60f1a5c5c9e4b42d8c9e4b42'; // Dummy user ID
+  
+  // Check if user already rated
   const existingRatingIndex = note.ratings.findIndex(
-    r => r.user.toString() === req.user.id
+    r => r.user && r.user.toString() === userId
   );
 
-  if (existingRatingIndex !== -1) {
+  if (existingRatingIndex >= 0) {
     // Update existing rating
-    note.ratings[existingRatingIndex].rating = rating;
-    note.ratings[existingRatingIndex].comment = comment || '';
+    note.ratings[existingRatingIndex].value = rating;
   } else {
     // Add new rating
     note.ratings.push({
-      user: req.user.id,
-      rating,
-      comment: comment || ''
+      value: rating,
+      user: userId
     });
-
-    // Add XP to note creator (but not if self-rating)
-    if (note.user.toString() !== req.user.id) {
-      const noteOwner = await User.findById(note.user);
-      noteOwner.xp += 2;
-      noteOwner.addActivity('earn_xp', 'Someone rated your note', 2);
-      await noteOwner.save();
-    }
-
-    // Add activity for the rater
-    req.user.addActivity('rate', `Rated note: ${note.title}`, 1);
-    req.user.xp += 1;
-    await req.user.save();
   }
 
   // Calculate average rating
-  note.getAverageRating();
-  
+  if (note.ratings.length > 0) {
+    const sum = note.ratings.reduce((total, item) => total + item.value, 0);
+    note.averageRating = sum / note.ratings.length;
+  }
+
   await note.save();
 
   res.status(200).json({

@@ -6,9 +6,10 @@
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const API_KEY = import.meta.env.VITE_CLOUDINARY_API_KEY;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 /**
- * Uploads a file to Cloudinary with metadata tags
+ * Uploads a file to Cloudinary with metadata tags and then saves to backend
  * 
  * @param {File} file - The file to upload
  * @param {Object} metadata - Metadata for the file, like grade, subject, etc.
@@ -19,16 +20,18 @@ export const uploadNote = async (file, metadata) => {
     throw new Error('File is required');
   }
   
-  if (!CLOUD_NAME || !API_KEY || !UPLOAD_PRESET) {
+  if (!CLOUD_NAME || !UPLOAD_PRESET) {
     throw new Error('Cloudinary configuration missing. Check environment variables.');
   }
   
   try {
-    // Create a FormData instance
+    // Step 1: Upload to Cloudinary
+    console.log('Starting Cloudinary upload...');
+    
+    // Create a FormData instance for Cloudinary
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', UPLOAD_PRESET);
-    formData.append('api_key', API_KEY);
     
     // Add relevant tags for filtering
     const tags = [];
@@ -71,34 +74,113 @@ export const uploadNote = async (file, metadata) => {
     formData.append('context', JSON.stringify(context));
     
     // Upload to Cloudinary
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, {
+    const cloudinaryResponse = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, {
       method: 'POST',
       body: formData
     });
     
-    if (!response.ok) {
-      throw new Error('Upload failed: ' + response.statusText);
+    if (!cloudinaryResponse.ok) {
+      throw new Error('Cloudinary upload failed: ' + cloudinaryResponse.statusText);
     }
     
-    return await response.json();
+    const cloudinaryData = await cloudinaryResponse.json();
+    console.log('Cloudinary upload successful:', cloudinaryData.secure_url);
+    
+    // Step 2: Save to backend
+    if (BACKEND_URL) {
+      console.log('Saving to backend...');
+      try {
+        const backendResponse = await fetch(`${BACKEND_URL}/api/v1/notes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            title: metadata.title,
+            description: metadata.description || '',
+            subject: metadata.subject,
+            grade: metadata.grade,
+            semester: metadata.semester,
+            quarter: metadata.quarter,
+            topic: metadata.topic,
+            fileUrl: cloudinaryData.secure_url,
+            fileType: file.type.split('/')[1] || 'unknown',
+            publicId: cloudinaryData.public_id,
+            assetId: cloudinaryData.asset_id,
+            tags: tags
+          })
+        });
+        
+        if (!backendResponse.ok) {
+          console.error('Backend save failed but Cloudinary upload was successful');
+          // We'll still return the Cloudinary data even if backend save fails
+          return cloudinaryData;
+        }
+        
+        const backendData = await backendResponse.json();
+        console.log('Backend save successful:', backendData);
+        
+        // Return combined data
+        return {
+          ...cloudinaryData,
+          _id: backendData._id // Add MongoDB ID
+        };
+      } catch (backendError) {
+        console.error('Backend save error:', backendError);
+        // Still return Cloudinary data even if backend fails
+        return cloudinaryData;
+      }
+    } else {
+      // No backend URL configured, just return Cloudinary data
+      return cloudinaryData;
+    }
   } catch (error) {
-    console.error('Error uploading to Cloudinary:', error);
+    console.error('Error in upload process:', error);
     throw error;
   }
 };
 
 /**
- * Fetches notes from Cloudinary based on context
+ * Fetches notes from backend with filters or falls back to Cloudinary
  * 
  * @param {Object} context - Filter criteria like grade, semester, subject, etc.
  * @returns {Promise<Array>} Matching notes
  */
 export const fetchNotesByContext = async (context = {}) => {
-  if (!CLOUD_NAME || !API_KEY) {
-    throw new Error('Cloudinary configuration missing. Check environment variables.');
-  }
-  
   try {
+    // Try to fetch from backend first if available
+    if (BACKEND_URL) {
+      try {
+        // Build query string from context object
+        const queryParams = new URLSearchParams();
+        Object.entries(context).forEach(([key, value]) => {
+          if (value) queryParams.append(key, value);
+        });
+        
+        const url = `${BACKEND_URL}/api/v1/notes?${queryParams.toString()}`;
+        console.log('Fetching notes from backend:', url);
+        
+        const response = await fetch(url);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Fetched notes from backend:', data.length || 'none');
+          return Array.isArray(data) ? data : [];
+        }
+        
+        console.warn('Backend request failed, falling back to Cloudinary');
+      } catch (backendError) {
+        console.error('Backend fetch error, falling back to Cloudinary:', backendError);
+        // Continue to Cloudinary fallback below
+      }
+    }
+    
+    // Fallback to Cloudinary if backend fetch fails or is not configured
+    if (!CLOUD_NAME || !API_KEY) {
+      console.warn('Cloudinary configuration missing, using dummy data');
+      return getDummyNotes();
+    }
+    
     // Construct tags for filtering
     const tags = [];
     
@@ -137,8 +219,7 @@ export const fetchNotesByContext = async (context = {}) => {
     // Search URL with proper encoding
     const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/search?expression=${encodeURIComponent(expression)}&max_results=100`;
     
-    // Log the URL for debugging (remove in production)
-    console.log('Cloudinary search URL:', url);
+    console.log('Fetching notes from Cloudinary:', url);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -158,7 +239,7 @@ export const fetchNotesByContext = async (context = {}) => {
     // Process the response to ensure consistent results
     return data.resources || [];
   } catch (error) {
-    console.error('Error fetching notes from Cloudinary:', error);
+    console.error('Error fetching notes:', error);
     
     // Return empty array instead of throwing error for more graceful UI handling
     return [];
