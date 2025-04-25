@@ -86,6 +86,14 @@ const UserSchema = new mongoose.Schema({
       }
     }
   ],
+  currentStreak: {
+    type: Number,
+    default: 0
+  },
+  longestStreak: {
+    type: Number,
+    default: 0
+  },
   activity: [
     {
       action: {
@@ -201,11 +209,18 @@ UserSchema.methods.updateStreak = function() {
   if (diffDays === 1) {
     // User was active yesterday, increment streak
     this.streak.count += 1;
+    this.currentStreak += 1;
   } else if (diffDays > 1) {
     // User missed a day, reset streak
     this.streak.count = 1;
+    this.currentStreak = 1;
   }
   // If diffDays is 0, user was already active today, don't change streak
+  
+  // Update longest streak if current streak is longer
+  if (this.currentStreak > this.longestStreak) {
+    this.longestStreak = this.currentStreak;
+  }
   
   this.streak.lastActive = now;
   return this.streak.count;
@@ -232,6 +247,35 @@ UserSchema.methods.addActivity = function(action, description = '', xpEarned = 0
   }
   
   return this.activity[0];
+};
+
+// Add badge to user
+UserSchema.methods.addBadge = async function(badgeId) {
+  // Check if user already has this badge
+  const hasBadge = this.badges.some(badgeObj => 
+    badgeObj.badge.toString() === badgeId.toString()
+  );
+  
+  if (hasBadge) {
+    return null; // User already has this badge
+  }
+  
+  // Add badge to user's collection
+  const newBadge = {
+    badge: badgeId,
+    earnedAt: new Date()
+  };
+  
+  this.badges.push(newBadge);
+  
+  return newBadge;
+};
+
+// Check if user has a specific badge
+UserSchema.methods.hasBadge = function(badgeId) {
+  return this.badges.some(badgeObj => 
+    badgeObj.badge.toString() === badgeId.toString()
+  );
 };
 
 module.exports = mongoose.model('User', UserSchema); 

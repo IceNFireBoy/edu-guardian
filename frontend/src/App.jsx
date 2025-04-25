@@ -9,6 +9,7 @@ import Donate from './pages/Donate';
 import Progress from './pages/Progress';
 import Settings from './pages/Settings';
 import Leaderboard from './pages/Leaderboard';
+import Badges from './pages/Badges';
 
 // Layout components
 import Sidebar from './components/layout/Sidebar';
@@ -57,6 +58,7 @@ function App() {
             <Route path="/progress" element={<Progress />} />
             <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/badges" element={<Badges />} />
           </Routes>
         </main>
       </div>

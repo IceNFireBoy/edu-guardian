@@ -297,19 +297,13 @@ exports.addBadge = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Badge not found with id of ${badgeId}`, 404));
   }
 
-  // Check if user already has this badge
+  // Get user and add badge using the model method
   const user = await User.findById(req.user.id);
-  const hasBadge = user.badges.some(b => b.badge.toString() === badgeId);
-
-  if (hasBadge) {
+  const newBadge = await user.addBadge(badgeId);
+  
+  if (!newBadge) {
     return next(new ErrorResponse('User already has this badge', 400));
   }
-
-  // Add badge to user
-  user.badges.push({
-    badge: badgeId,
-    earnedAt: Date.now()
-  });
 
   // Add XP reward
   user.xp += badge.xpReward;
@@ -322,10 +316,25 @@ exports.addBadge = asyncHandler(async (req, res, next) => {
   
   await user.save();
 
+  // Return the populated badge
+  const populatedUser = await User.findById(req.user.id)
+    .populate({
+      path: 'badges.badge',
+      match: { _id: badgeId },
+      select: 'name description icon category rarity xpReward'
+    });
+
+  const earnedBadge = populatedUser.badges.find(
+    b => b.badge && b.badge._id.toString() === badgeId
+  );
+
   res.status(200).json({
     success: true,
     data: {
-      badge,
+      badge: earnedBadge ? {
+        ...earnedBadge.badge.toObject(),
+        earnedAt: earnedBadge.earnedAt
+      } : badge,
       currentXp: user.xp,
       currentLevel: user.level
     }

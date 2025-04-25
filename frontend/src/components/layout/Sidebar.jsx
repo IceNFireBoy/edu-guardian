@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaHome, FaBook, FaUpload, FaChartLine, FaCog, FaBars, FaTimes, FaTrophy } from 'react-icons/fa';
+import { FaHome, FaBook, FaUpload, FaChartLine, FaCog, FaBars, FaTimes, FaTrophy, FaAward } from 'react-icons/fa';
 
 const Sidebar = () => {
   const location = useLocation();
@@ -25,6 +25,7 @@ const Sidebar = () => {
     { path: '/', icon: <FaHome size={20} />, label: 'Dashboard' },
     { path: '/my-notes', icon: <FaBook size={20} />, label: 'My Notes' },
     { path: '/donate', icon: <FaUpload size={20} />, label: 'Upload Notes' },
+    { path: '/badges', icon: <FaAward size={20} />, label: 'Badges' },
     { path: '/leaderboard', icon: <FaTrophy size={20} />, label: 'Leaderboard' },
     { path: '/progress', icon: <FaChartLine size={20} />, label: 'Progress' },
     { path: '/settings', icon: <FaCog size={20} />, label: 'Settings' }

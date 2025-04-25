@@ -1,12 +1,13 @@
 const express = require('express');
 const {
-  getBadges,
+  getAllBadges,
   getBadge,
   createBadge,
   updateBadge,
   deleteBadge,
   getBadgesByCategory,
-  getBadgesByRarity
+  getBadgesByRarity,
+  checkBadgeEligibility
 } = require('../controllers/badgeController');
 
 const Badge = require('../models/Badge');
@@ -19,10 +20,13 @@ const router = express.Router();
 router.route('/category/:category').get(getBadgesByCategory);
 router.route('/rarity/:rarity').get(getBadgesByRarity);
 
+// Protected routes
+router.route('/check-eligibility').get(protect, checkBadgeEligibility);
+
 // Public & protected routes
 router
   .route('/')
-  .get(advancedResults(Badge), getBadges)
+  .get(advancedResults(Badge), getAllBadges)
   .post(protect, authorize('admin'), createBadge);
 
 router
