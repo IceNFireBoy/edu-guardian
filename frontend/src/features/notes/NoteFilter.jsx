@@ -9,6 +9,17 @@ import FilterTags from '../../components/ui/FilterTags';
 import NoteCard from '../../components/notes/NoteCard';
 import { useToast } from '../../components/ui/Toast';
 
+// Fallback toast implementation
+const createFallbackToast = () => {
+  return {
+    showToast: (message) => console.log('Toast message:', message),
+    success: (message) => console.log('Success:', message),
+    error: (message) => console.error('Error:', message),
+    info: (message) => console.info('Info:', message),
+    removeToast: () => {}
+  };
+};
+
 // Filter Form Component
 const FilterForm = ({ filters, setFilters, onSubmit }) => {
   // List of subjects
@@ -146,6 +157,11 @@ const EmptyState = ({ hasFilters }) => (
         ? "No notes match your selected filters. Try adjusting your search criteria or upload some notes to get started." 
         : "Use the filters above to find specific notes, or browse all available notes."}
     </p>
+    {hasFilters && (
+      <div className="mt-4">
+        <a href="/donate" className="btn btn-primary inline-block">Upload New Notes</a>
+      </div>
+    )}
   </div>
 );
 
@@ -377,17 +393,39 @@ const NoteFilter = () => {
   });
   
   const [notes, setNotes] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedNote, setSelectedNote] = useState(null);
-  const toast = useToast();
+  const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Add fallback for toast in case the Toast component isn't properly set up
+  let toastFromContext;
+  try {
+    toastFromContext = useToast();
+  } catch (err) {
+    console.warn('Toast context not available, using fallback');
+    toastFromContext = createFallbackToast();
+  }
+  const toast = toastFromContext;
   
   // Derived state
   const hasFiltersApplied = Object.values(filters).some(value => value !== '');
   
   // Fetch notes when component mounts
   useEffect(() => {
-    fetchNotes();
+    const initialFetch = async () => {
+      try {
+        await fetchNotes();
+        setIsInitialized(true);
+      } catch (err) {
+        console.error("Initial fetch error:", err);
+        setError("Failed to load notes. Please refresh the page and try again.");
+        setLoading(false);
+        setIsInitialized(true);
+      }
+    };
+    
+    initialFetch();
   }, []);
   
   // Remove a single filter
@@ -419,11 +457,11 @@ const NoteFilter = () => {
         
         if (response.ok) {
           const data = await response.json();
-          if (data.success && data.notes) {
-            setNotes(data.notes);
+          if (data.success && Array.isArray(data.notes)) {
+            setNotes(data.notes || []);
             // If no notes and filters applied, show specific message
-            if (data.notes.length === 0 && hasFiltersApplied) {
-              setError("No notes match your selected filters.");
+            if ((data.notes || []).length === 0 && hasFiltersApplied) {
+              console.log("No notes found matching filters:", filterContext);
             }
             setLoading(false);
             return;
@@ -431,47 +469,97 @@ const NoteFilter = () => {
         }
         // If backend API fails, fall back to Cloudinary or dummy data
       } catch (apiError) {
-        console.log('Backend API not available, using fallback data source');
+        console.log('Backend API not available, using fallback data source:', apiError);
         // Continue with fallback methods
       }
       
       // If Cloudinary is not configured properly, use dummy data
       let fetchedNotes = [];
+      
       if (!import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || !import.meta.env.VITE_CLOUDINARY_API_KEY) {
         console.log('Using dummy notes as Cloudinary is not configured');
         fetchedNotes = cloudinaryService.getDummyNotes();
       } else {
-        fetchedNotes = await cloudinaryService.fetchNotesByContext(filterContext);
-        
-        // Add additional validation and error handling
-        if (!Array.isArray(fetchedNotes)) {
-          console.error('Invalid response from Cloudinary:', fetchedNotes);
-          toast.error('Error fetching notes: Invalid response from server');
+        try {
+          // Make sure the cloudinaryService exists and has the fetchNotesByContext method
+          if (!cloudinaryService || typeof cloudinaryService.fetchNotesByContext !== 'function') {
+            console.error('Cloudinary service not properly configured');
+            toast.error('Error: Note service configuration issue');
+            fetchedNotes = [];
+          } else {
+            // Attempt to fetch from Cloudinary
+            fetchedNotes = await cloudinaryService.fetchNotesByContext(filterContext);
+            
+            // Add additional validation 
+            if (!Array.isArray(fetchedNotes)) {
+              console.error('Invalid response from Cloudinary:', fetchedNotes);
+              toast.error('Error fetching notes: Invalid response format');
+              fetchedNotes = cloudinaryService.getDummyNotes();
+            }
+          }
+        } catch (cloudinaryError) {
+          console.error('Error fetching from Cloudinary:', cloudinaryError);
+          toast.error('Cloudinary fetch error: ' + (cloudinaryError.message || 'Unknown error'));
           fetchedNotes = cloudinaryService.getDummyNotes();
         }
       }
       
-      setNotes(fetchedNotes);
+      setNotes(fetchedNotes || []);
       
       // If no notes and filters applied, show specific message
-      if (fetchedNotes.length === 0 && hasFiltersApplied) {
-        setError("No notes match your selected filters.");
+      if ((fetchedNotes || []).length === 0 && hasFiltersApplied) {
+        console.log("No notes found matching filters:", filterContext);
       }
     } catch (err) {
       console.error("Error fetching notes:", err);
       setError("Failed to fetch notes. Please try again later.");
       toast.error('Error fetching notes: ' + (err.message || 'Unknown error'));
+      // Set empty array to prevent rendering issues
+      setNotes([]);
     } finally {
       setLoading(false);
     }
   };
   
   const handleViewNote = (note) => {
+    if (!note) {
+      console.error("Attempted to view undefined note");
+      toast.error("Cannot view this note. Data is missing.");
+      return;
+    }
     setSelectedNote(note);
   };
   
   const closeNoteDetail = () => {
     setSelectedNote(null);
+  };
+  
+  // Safe render method to prevent common JSX errors
+  const renderNotes = () => {
+    try {
+      if (!notes || !Array.isArray(notes) || notes.length === 0) {
+        return <EmptyState hasFilters={hasFiltersApplied} />;
+      }
+      
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {notes.map((note) => note && (
+            <NoteCard 
+              key={note.asset_id || note._id || `note-${Math.random()}`} 
+              note={note} 
+              onView={handleViewNote} 
+            />
+          ))}
+        </div>
+      );
+    } catch (renderError) {
+      console.error("Error rendering notes:", renderError);
+      return (
+        <div className="bg-red-50 dark:bg-red-900/30 p-4 rounded-lg">
+          <p className="text-red-600 dark:text-red-300">Error displaying notes. Please try again.</p>
+        </div>
+      );
+    }
   };
   
   return (
@@ -507,25 +595,17 @@ const NoteFilter = () => {
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-300">Loading notes...</p>
         </div>
-      ) : notes.length === 0 ? (
-        <EmptyState hasFilters={hasFiltersApplied} />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {notes.map((note) => (
-            <NoteCard 
-              key={note.asset_id || note._id} 
-              note={note} 
-              onView={handleViewNote} 
-            />
-          ))}
-        </div>
+        renderNotes()
       )}
       
-      <NoteDetailModal 
-        note={selectedNote} 
-        isOpen={!!selectedNote} 
-        onClose={closeNoteDetail} 
-      />
+      {selectedNote && (
+        <NoteDetailModal 
+          note={selectedNote} 
+          isOpen={!!selectedNote} 
+          onClose={closeNoteDetail} 
+        />
+      )}
     </div>
   );
 };
