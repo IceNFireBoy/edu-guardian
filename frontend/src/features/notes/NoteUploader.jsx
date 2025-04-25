@@ -90,6 +90,7 @@ const Step2Form = ({ register, errors, formData, setFileData }) => {
     }
     
     const file = acceptedFiles[0];
+    console.log("[Frontend] File selected:", file?.name);
     setFileError('');
     setFileName(file.name);
     setFileData(file);
@@ -343,11 +344,13 @@ const NoteUploader = () => {
     try {
       // Show uploading status feedback
       toast.success('Starting upload process...', { id: 'upload-toast' });
+      console.log("[Frontend] Starting upload to Cloudinary...");
       
       // Upload the file to Cloudinary via our service
       const uploadResult = await cloudinaryService.uploadNote(fileData, formData);
       
-      console.log('Upload successful:', uploadResult);
+      console.log("[Frontend] Uploaded to Cloudinary. Secure URL:", uploadResult.secure_url);
+      console.log("[Frontend] Sent note data to backend for MongoDB saving.");
       
       // Record activity for XP
       recordActivity('UPLOAD_NOTE');

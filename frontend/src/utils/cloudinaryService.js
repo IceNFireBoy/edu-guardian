@@ -1,3 +1,5 @@
+import { debug } from '../components/DebugPanel';
+
 /**
  * Cloudinary Service for uploading and fetching notes
  */
@@ -21,12 +23,13 @@ export const uploadNote = async (file, metadata) => {
   }
   
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
+    debug('[Frontend] Cloudinary configuration missing. Check environment variables.');
     throw new Error('Cloudinary configuration missing. Check environment variables.');
   }
   
   try {
     // Step 1: Upload to Cloudinary
-    console.log('Starting Cloudinary upload...');
+    debug('[Frontend] Starting Cloudinary upload process for file: ' + file.name);
     
     // Create a FormData instance for Cloudinary
     const formData = new FormData();
@@ -74,21 +77,23 @@ export const uploadNote = async (file, metadata) => {
     formData.append('context', JSON.stringify(context));
     
     // Upload to Cloudinary
+    debug('[Frontend] Sending file to Cloudinary API...');
     const cloudinaryResponse = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, {
       method: 'POST',
       body: formData
     });
     
     if (!cloudinaryResponse.ok) {
+      debug('[Frontend] Cloudinary upload failed: ' + cloudinaryResponse.statusText);
       throw new Error('Cloudinary upload failed: ' + cloudinaryResponse.statusText);
     }
     
     const cloudinaryData = await cloudinaryResponse.json();
-    console.log('Cloudinary upload successful:', cloudinaryData.secure_url);
+    debug('[Frontend] Cloudinary upload successful. Secure URL: ' + cloudinaryData.secure_url);
     
     // Step 2: Save to backend
     if (BACKEND_URL) {
-      console.log('Saving to backend...');
+      debug('[Frontend] Sending note metadata to backend API...');
       try {
         const backendResponse = await fetch(`${BACKEND_URL}/api/v1/notes`, {
           method: 'POST',
@@ -112,13 +117,14 @@ export const uploadNote = async (file, metadata) => {
         });
         
         if (!backendResponse.ok) {
+          debug('[Frontend] Backend save failed: ' + backendResponse.statusText);
           console.error('Backend save failed but Cloudinary upload was successful');
           // We'll still return the Cloudinary data even if backend save fails
           return cloudinaryData;
         }
         
         const backendData = await backendResponse.json();
-        console.log('Backend save successful:', backendData);
+        debug('[Frontend] Backend save successful with ID: ' + backendData._id);
         
         // Return combined data
         return {
@@ -126,15 +132,18 @@ export const uploadNote = async (file, metadata) => {
           _id: backendData._id // Add MongoDB ID
         };
       } catch (backendError) {
+        debug('[Frontend] Backend save error: ' + backendError.message);
         console.error('Backend save error:', backendError);
         // Still return Cloudinary data even if backend fails
         return cloudinaryData;
       }
     } else {
+      debug('[Frontend] No backend URL configured. Skipping backend save.');
       // No backend URL configured, just return Cloudinary data
       return cloudinaryData;
     }
   } catch (error) {
+    debug('[Frontend] Error in upload process: ' + error.message);
     console.error('Error in upload process:', error);
     throw error;
   }
@@ -148,6 +157,9 @@ export const uploadNote = async (file, metadata) => {
  */
 export const fetchNotesByContext = async (context = {}) => {
   try {
+    // Log filter context
+    debug('[Frontend] Fetching notes with filters: ' + JSON.stringify(context));
+    
     // Try to fetch from backend first if available
     if (BACKEND_URL) {
       try {
@@ -158,18 +170,20 @@ export const fetchNotesByContext = async (context = {}) => {
         });
         
         const url = `${BACKEND_URL}/api/v1/notes?${queryParams.toString()}`;
-        console.log('Fetching notes from backend:', url);
+        debug('[Frontend] Fetching notes from backend: ' + url);
         
         const response = await fetch(url);
         
         if (response.ok) {
           const data = await response.json();
-          console.log('Fetched notes from backend:', data.length || 'none');
-          return Array.isArray(data) ? data : [];
+          const notes = Array.isArray(data) ? data : (data.data || []);
+          debug(`[Frontend] Successfully fetched ${notes.length} notes from backend`);
+          return notes;
         }
         
-        console.warn('Backend request failed, falling back to Cloudinary');
+        debug('[Frontend] Backend request failed, falling back to Cloudinary');
       } catch (backendError) {
+        debug('[Frontend] Backend fetch error: ' + backendError.message);
         console.error('Backend fetch error, falling back to Cloudinary:', backendError);
         // Continue to Cloudinary fallback below
       }
@@ -177,6 +191,7 @@ export const fetchNotesByContext = async (context = {}) => {
     
     // Fallback to Cloudinary if backend fetch fails or is not configured
     if (!CLOUD_NAME || !API_KEY) {
+      debug('[Frontend] Cloudinary configuration missing, using dummy data');
       console.warn('Cloudinary configuration missing, using dummy data');
       return getDummyNotes();
     }
@@ -219,7 +234,7 @@ export const fetchNotesByContext = async (context = {}) => {
     // Search URL with proper encoding
     const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/search?expression=${encodeURIComponent(expression)}&max_results=100`;
     
-    console.log('Fetching notes from Cloudinary:', url);
+    debug('[Frontend] Fetching notes from Cloudinary: ' + url);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -231,14 +246,18 @@ export const fetchNotesByContext = async (context = {}) => {
     
     if (!response.ok) {
       const errorText = await response.text();
+      debug('[Frontend] Failed to fetch notes from Cloudinary: ' + errorText);
       throw new Error(`Failed to fetch notes: ${response.status} ${response.statusText}. ${errorText}`);
     }
     
     const data = await response.json();
+    const resources = data.resources || [];
+    debug(`[Frontend] Successfully fetched ${resources.length} notes from Cloudinary`);
     
     // Process the response to ensure consistent results
-    return data.resources || [];
+    return resources;
   } catch (error) {
+    debug('[Frontend] Error fetching notes: ' + error.message);
     console.error('Error fetching notes:', error);
     
     // Return empty array instead of throwing error for more graceful UI handling

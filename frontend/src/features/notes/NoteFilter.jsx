@@ -8,6 +8,7 @@ import FlashcardGenerator from '../../components/FlashcardGenerator';
 import FilterTags from '../../components/ui/FilterTags';
 import NoteCard from '../../components/notes/NoteCard';
 import { useToast } from '../../components/ui/Toast';
+import { debug } from '../../components/DebugPanel';
 
 // Fallback toast implementation
 const createFallbackToast = () => {
@@ -457,6 +458,8 @@ const NoteFilter = () => {
         Object.entries(filters).filter(([_, value]) => value !== '')
       );
       
+      debug("[Frontend] Applying filters: " + JSON.stringify(filterContext));
+      
       // Try to fetch from backend API first if available
       try {
         // Build query string from filters
@@ -470,7 +473,7 @@ const NoteFilter = () => {
           ? `${API_BASE}/api/v1/notes?${queryParams.toString()}`
           : `/api/v1/notes?${queryParams.toString()}`;
         
-        console.log('Fetching notes from:', apiUrl);
+        debug('[Frontend] Fetching notes from API: ' + apiUrl);
         const response = await fetch(apiUrl);
         
         if (response.ok) {
@@ -482,31 +485,31 @@ const NoteFilter = () => {
           
           if (data.success && Array.isArray(data.data)) {
             notesArray = data.data;
-            console.log(`Fetched ${notesArray.length} notes from API (new format)`);
+            debug(`[Frontend] Fetched ${notesArray.length} notes from API (new format)`);
           } else if (Array.isArray(data)) {
             notesArray = data;
-            console.log(`Fetched ${notesArray.length} notes from API (old format)`);
+            debug(`[Frontend] Fetched ${notesArray.length} notes from API (old format)`);
           } else {
-            console.warn('API returned unexpected data format:', data);
+            debug('[Frontend] API returned unexpected data format: ' + JSON.stringify(data).substring(0, 100) + '...');
           }
           
           setNotes(notesArray || []);
           
           // If no notes and filters applied, show specific message
           if ((notesArray || []).length === 0 && hasFiltersApplied) {
-            console.log("No notes found matching filters:", filterContext);
+            debug("[Frontend] No notes found matching filters: " + JSON.stringify(filterContext));
           }
           
           setLoading(false);
           return;
         } else {
-          console.warn(`API request failed with status: ${response.status}`);
+          debug(`[Frontend] API request failed with status: ${response.status}`);
           const errorText = await response.text();
-          console.error('API error details:', errorText);
+          debug('[Frontend] API error details: ' + errorText);
         }
         // If backend API fails, fall back to Cloudinary or dummy data
       } catch (apiError) {
-        console.warn('Backend API not available, using fallback data source:', apiError);
+        debug('[Frontend] Backend API not available: ' + apiError.message);
         // Continue with fallback methods
       }
       
@@ -514,29 +517,30 @@ const NoteFilter = () => {
       let fetchedNotes = [];
       
       if (!import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || !import.meta.env.VITE_CLOUDINARY_API_KEY) {
-        console.log('Using dummy notes as Cloudinary is not configured');
+        debug('[Frontend] Using dummy notes as Cloudinary is not configured');
         fetchedNotes = cloudinaryService.getDummyNotes();
       } else {
         try {
           // Make sure the cloudinaryService exists and has the fetchNotesByContext method
           if (!cloudinaryService || typeof cloudinaryService.fetchNotesByContext !== 'function') {
-            console.error('Cloudinary service not properly configured');
+            debug('[Frontend] Cloudinary service not properly configured');
             toast.error('Error: Note service configuration issue');
             fetchedNotes = cloudinaryService.getDummyNotes();
           } else {
             // Attempt to fetch from Cloudinary
+            debug('[Frontend] Attempting to fetch from Cloudinary with filters: ' + JSON.stringify(filterContext));
             fetchedNotes = await cloudinaryService.fetchNotesByContext(filterContext);
-            console.log('Fetched notes from Cloudinary:', Array.isArray(fetchedNotes) ? fetchedNotes.length : 'invalid response');
+            debug('[Frontend] Cloudinary returned ' + fetchedNotes.length + ' notes');
             
             // Add additional validation 
             if (!Array.isArray(fetchedNotes)) {
-              console.error('Invalid response from Cloudinary:', fetchedNotes);
+              debug('[Frontend] Invalid response from Cloudinary - not an array');
               toast.error('Error fetching notes: Invalid response format');
               fetchedNotes = cloudinaryService.getDummyNotes();
             }
           }
         } catch (cloudinaryError) {
-          console.error('Error fetching from Cloudinary:', cloudinaryError);
+          debug('[Frontend] Error fetching from Cloudinary: ' + cloudinaryError.message);
           toast.error('Cloudinary fetch error: ' + (cloudinaryError.message || 'Unknown error'));
           fetchedNotes = cloudinaryService.getDummyNotes();
         }
@@ -546,10 +550,10 @@ const NoteFilter = () => {
       
       // If no notes and filters applied, show specific message
       if ((fetchedNotes || []).length === 0 && hasFiltersApplied) {
-        console.log("No notes found matching filters:", filterContext);
+        debug("[Frontend] No notes found in fallback source matching filters: " + JSON.stringify(filterContext));
       }
     } catch (err) {
-      console.error("Error fetching notes:", err);
+      debug("[Frontend] Error fetching notes: " + err.message);
       setError("Failed to fetch notes. Please try again later.");
       toast.error('Error fetching notes: ' + (err.message || 'Unknown error'));
       // Set empty array to prevent rendering issues

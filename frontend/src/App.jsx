@@ -19,6 +19,12 @@ import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import CookieConsent from './components/ui/CookieConsent';
 import OfflineDetector from './components/ui/OfflineDetector';
+import DebugPanel, { debug } from './components/DebugPanel';
+
+// Make debug function available globally (for console usage)
+if (typeof window !== 'undefined') {
+  window.debug = debug;
+}
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -42,7 +48,10 @@ function App() {
           'Local storage is not available. Some features may not work properly. Please enable cookies and local storage in your browser settings.',
           { duration: 8000 }
         );
+        debug('LocalStorage is not available - features may be limited');
       }, 1000);
+    } else {
+      debug('App initialized - LocalStorage is available');
     }
   }, []);
 
@@ -55,8 +64,10 @@ function App() {
       // Apply dark mode class to html element
       if (savedDarkMode) {
         document.documentElement.classList.add('dark');
+        debug('Dark mode activated from saved preference');
       } else {
         document.documentElement.classList.remove('dark');
+        debug('Light mode activated from saved preference');
       }
     } catch (error) {
       console.error('Failed to access localStorage for dark mode:', error);
@@ -71,6 +82,7 @@ function App() {
       const newDarkMode = !darkMode;
       setDarkMode(newDarkMode);
       localStorage.setItem('darkMode', newDarkMode.toString());
+      debug(`Theme toggled to ${newDarkMode ? 'dark' : 'light'} mode`);
       
       // Toggle dark class on html element for Tailwind dark mode
       if (newDarkMode) {
@@ -138,6 +150,7 @@ function App() {
           </main>
         </div>
         <CookieConsent />
+        <DebugPanel />
       </div>
     </ToastProvider>
   );

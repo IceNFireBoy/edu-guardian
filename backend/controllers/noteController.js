@@ -9,6 +9,7 @@ const User = require('../models/User');
 exports.getNotes = asyncHandler(async (req, res, next) => {
   // Copy query object
   const queryObj = { ...req.query };
+  console.log("[Backend] Filtering notes with query:", req.query);
 
   // Fields to exclude from filtering
   const excludedFields = ['page', 'sort', 'limit', 'fields'];
@@ -46,6 +47,8 @@ exports.getNotes = asyncHandler(async (req, res, next) => {
     .skip(startIndex)
     .limit(limit)
     .sort(req.query.sort || '-createdAt');
+
+  console.log("[Backend] Notes found:", notes.length);
 
   // Pagination result
   const pagination = {};
@@ -97,6 +100,7 @@ exports.getNote = asyncHandler(async (req, res, next) => {
 // @route   POST /api/v1/notes
 // @access  Public (would typically be Private with auth)
 exports.createNote = asyncHandler(async (req, res, next) => {
+  console.log("[Backend] Received note creation request:", req.body);
   const { 
     title, 
     description, 
@@ -133,6 +137,8 @@ exports.createNote = asyncHandler(async (req, res, next) => {
     tags,
     // If authenticated, would add: user: req.user.id
   });
+
+  console.log("[Backend] Note saved in MongoDB:", note);
 
   res.status(201).json(note);
 });
