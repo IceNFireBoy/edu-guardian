@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaFilter, FaSearch, FaBookOpen, FaDownload, FaShare, FaExclamationTriangle, FaRobot, FaStar, FaLightbulb } from 'react-icons/fa';
-import cloudinaryService from '../../utils/cloudinaryService';
 import { useStreak } from '../../hooks/useStreak';
 import AISummarizer from '../../components/notes/AISummarizer';
 import FlashcardGenerator from '../../components/FlashcardGenerator';
@@ -9,6 +8,7 @@ import FilterTags from '../../components/ui/FilterTags';
 import NoteCard from '../../components/notes/NoteCard';
 import { useToast } from '../../components/ui/Toast';
 import { debug } from '../../components/DebugPanel';
+import { fetchNotes } from '../../api/notes';
 
 // Fallback toast implementation
 const createFallbackToast = () => {
@@ -428,10 +428,10 @@ const NoteFilter = () => {
   useEffect(() => {
     const initialFetch = async () => {
       try {
-        await fetchNotes();
+        await fetchNotesWithFilters();
         setIsInitialized(true);
       } catch (err) {
-        console.error("Initial fetch error:", err);
+        debug("Initial fetch error: " + err.message);
         setError("Failed to load notes. Please refresh the page and try again.");
         setLoading(false);
         setIsInitialized(true);
@@ -445,10 +445,10 @@ const NoteFilter = () => {
   const removeFilter = (key) => {
     setFilters(prev => ({ ...prev, [key]: '' }));
     // Automatically apply the filter change if we're removing a filter
-    setTimeout(() => fetchNotes(), 0);
+    setTimeout(() => fetchNotesWithFilters(), 0);
   };
   
-  const fetchNotes = async () => {
+  const fetchNotesWithFilters = async () => {
     setLoading(true);
     setError(null);
     
@@ -460,47 +460,20 @@ const NoteFilter = () => {
       
       debug("[Frontend] Applying filters: " + JSON.stringify(filterContext));
       
-      // Build query string from filters
-      const queryParams = new URLSearchParams();
-      Object.entries(filterContext).forEach(([key, value]) => {
-        if (value) queryParams.append(key, value);
-      });
+      // Use the API client to fetch notes
+      const notesData = await fetchNotes(filterContext);
       
-      // Use API_BASE if available, otherwise use relative URL
-      const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/api/v1/notes?${queryParams.toString()}`;
+      setNotes(Array.isArray(notesData) ? notesData : []);
       
-      debug('[Frontend] Fetching notes from API: ' + apiUrl);
-      
-      const res = await fetch(apiUrl);
-      
-      if (!res.ok) throw new Error("Filtering fetch failed");
-      
-      const data = await res.json();
-      
-      // Handle the API response format
-      let notesArray = [];
-      
-      if (data.success && Array.isArray(data.data)) {
-        notesArray = data.data;
-      } else if (Array.isArray(data)) {
-        notesArray = data;
-      } else {
-        debug('[Frontend] API returned unexpected data format');
-        notesArray = [];
-      }
-      
-      debug(`[Frontend] Fetched ${notesArray.length} notes from API`);
-      setNotes(notesArray);
-      
-      if (notesArray.length === 0 && hasFiltersApplied) {
-        alert("No notes found for your selected filters.");
+      if (Array.isArray(notesData) && notesData.length === 0 && hasFiltersApplied) {
         debug("[Frontend] No notes found matching filters: " + JSON.stringify(filterContext));
+        toast.info("No notes found matching your filters.");
+        // Optionally: alert("No notes found for your selected filters.");
       }
-    } catch (error) {
-      debug("[Frontend] Error fetching notes: " + error.message);
-      alert(`❌ Error fetching notes: ${error.message}`);
-      console.error(error);
+    } catch (err) {
+      debug("[Frontend] Error fetching notes: " + err.message);
       setError("Failed to fetch notes. Please try again later.");
+      toast.error('Error fetching notes: ' + err.message);
       // Set empty array to prevent rendering issues
       setNotes([]);
     } finally {
@@ -561,7 +534,7 @@ const NoteFilter = () => {
       <FilterForm 
         filters={filters} 
         setFilters={setFilters} 
-        onSubmit={fetchNotes} 
+        onSubmit={fetchNotesWithFilters} 
       />
       
       {/* Filter Tags */}

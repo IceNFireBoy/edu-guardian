@@ -7,26 +7,36 @@ const User = require('../models/User');
 // @route   GET /api/v1/notes
 // @access  Public
 exports.getNotes = async (req, res) => {
-  const filter = {};
-  if (req.query.grade) filter.grade = req.query.grade;
-  if (req.query.subject) filter.subject = req.query.subject;
-  if (req.query.semester) filter.semester = req.query.semester;
-  if (req.query.quarter) filter.quarter = req.query.quarter;
-  if (req.query.topic) {
-    // For topic, we use a partial match
-    filter.topic = new RegExp(req.query.topic, 'i');
-  }
-  
-  console.log("[Backend] Filtering notes with query:", req.query);
-  console.log("[Backend] Constructed filter:", filter);
-
   try {
+    // Create filter object for MongoDB query
+    const filter = {};
+    
+    // Add query parameters to filter if they exist
+    if (req.query.grade) filter.grade = req.query.grade;
+    if (req.query.subject) filter.subject = req.query.subject;
+    if (req.query.semester) filter.semester = req.query.semester;
+    if (req.query.quarter) filter.quarter = req.query.quarter;
+    
+    // For topic, use regex for partial matching
+    if (req.query.topic) {
+      filter.topic = new RegExp(req.query.topic, 'i');
+    }
+    
+    console.log("[Backend] Filtering notes with query:", req.query);
+    console.log("[Backend] Using filter:", filter);
+    
+    // Find notes matching filter criteria
     const notes = await Note.find(filter);
-    console.log("[Backend] Notes found:", notes.length);
+    console.log("[Backend] Found", notes.length, "notes matching criteria");
+    
+    // Return notes as JSON array
     return res.status(200).json(notes);
   } catch (error) {
     console.error("MongoDB Filter Error:", error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ 
+      success: false, 
+      error: "Failed to retrieve notes. Please try again." 
+    });
   }
 };
 
@@ -54,16 +64,8 @@ exports.getNote = asyncHandler(async (req, res, next) => {
 // @route   POST /api/v1/notes
 // @access  Public (would typically be Private with auth)
 exports.createNote = async (req, res) => {
-  const { title, subject, grade, semester, quarter, topic, fileUrl } = req.body;
-  
-  console.log("[Backend] Received note creation request:", req.body);
-  
-  if (!title || !subject || !grade || !fileUrl) {
-    return res.status(400).json({ error: "Missing required fields." });
-  }
-  
   try {
-    const note = await Note.create({ 
+    const { 
       title, 
       subject, 
       grade, 
@@ -71,13 +73,46 @@ exports.createNote = async (req, res) => {
       quarter, 
       topic, 
       fileUrl 
+    } = req.body;
+    
+    console.log("[Backend] Received note creation request:", req.body);
+    
+    // Validate required fields
+    if (!title || !subject || !grade || !fileUrl) {
+      console.log("[Backend] Validation failed - missing required fields");
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing required fields. Please provide title, subject, grade, and fileUrl." 
+      });
+    }
+    
+    // Create note with metadata
+    const note = await Note.create({
+      title,
+      subject,
+      grade,
+      semester,
+      quarter,
+      topic,
+      fileUrl,
+      // Additional fields if needed
+      fileType: req.body.fileType || 'unknown',
+      tags: req.body.tags || [],
     });
     
-    console.log("[Backend] Note saved in MongoDB:", note);
-    return res.status(201).json(note);
+    console.log("[Backend] Note successfully saved in MongoDB:", note._id);
+    
+    // Return success response with created note
+    return res.status(201).json({
+      success: true,
+      data: note
+    });
   } catch (error) {
-    console.error("MongoDB Save Error:", error);
-    return res.status(500).json({ error: error.message });
+    console.error("[Backend] Error creating note:", error);
+    return res.status(500).json({ 
+      success: false, 
+      error: "Failed to save note. Please try again." 
+    });
   }
 };
 

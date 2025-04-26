@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { FaArrowRight, FaArrowLeft, FaCloudUploadAlt, FaCheckCircle, FaTimesCircle, FaFilePdf, FaImage } from 'react-icons/fa';
 import { useDropzone } from 'react-dropzone';
-import cloudinaryService from '../../utils/cloudinaryService';
 import { useStreak } from '../../hooks/useStreak';
 import { toast } from 'react-hot-toast';
+import { uploadNote } from '../../api/notes';
+import { debug } from '../../components/DebugPanel';
 
 // Form step components
 const Step1Form = ({ register, errors, subjects }) => (
@@ -341,58 +342,24 @@ const NoteUploader = () => {
     setIsUploading(true);
     setError(null);
     
-    const formDataObj = new FormData();
-    formDataObj.append("file", fileData);
-    formDataObj.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
-
     try {
-      debug("[Frontend] Starting upload to Cloudinary...");
+      debug("[Frontend] Starting upload process...");
+      toast.success('Starting upload process...', { id: 'upload-toast' });
       
-      const cloudRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/upload`,
-        { method: "POST", body: formDataObj }
-      );
-
-      if (!cloudRes.ok) throw new Error("Cloudinary upload failed");
-
-      const data = await cloudRes.json();
-      const cloudUrl = data.secure_url;
+      // Use the API client to handle the upload flow
+      await uploadNote(fileData, formData);
       
-      debug("[Frontend] Uploaded to Cloudinary. Secure URL:", cloudUrl);
-
-      const noteData = { 
-        title: formData.title, 
-        subject: formData.subject, 
-        grade: formData.grade, 
-        semester: formData.semester, 
-        quarter: formData.quarter, 
-        topic: formData.topic, 
-        fileUrl: cloudUrl 
-      };
-      
-      debug("[Frontend] Sending note data to backend:", JSON.stringify(noteData));
-
-      const backendRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v1/notes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(noteData)
-      });
-
-      if (!backendRes.ok) throw new Error("Backend save failed");
-      
-      debug("[Frontend] Note successfully saved to backend");
-
       // Record activity for XP
       recordActivity('UPLOAD_NOTE');
       
+      toast.success('Note uploaded successfully!', { id: 'upload-toast' });
       alert("✅ Note successfully uploaded!");
       setShowSuccess(true);
-      
-    } catch (error) {
-      debug("[Frontend] Error uploading note:", error.message);
-      alert(`❌ Error uploading note: ${error.message}`);
-      console.error(error);
-      setError("Upload failed: " + error.message);
+    } catch (err) {
+      debug("[Frontend] Upload failed: " + err.message);
+      setError("Upload failed: " + err.message);
+      toast.error('Upload failed: ' + err.message, { id: 'upload-toast' });
+      alert(`❌ Error uploading note: ${err.message}`);
     } finally {
       setIsUploading(false);
     }

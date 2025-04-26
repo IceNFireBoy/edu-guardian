@@ -61,9 +61,19 @@ app.use(limiter);
 // Prevent http param pollution
 app.use(hpp());
 
-// Enable CORS with configuration
+// Enable CORS with improved configuration
+const allowedOrigins = ['http://localhost:5173', 'https://eduguardian.netlify.app'];
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://eduguardian.netlify.app',
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -86,9 +96,9 @@ const PORT = process.env.PORT || 5000;
 const server = app.listen(
   PORT,
   () => {
-    const corsOrigin = process.env.FRONTEND_URL || 'https://eduguardian.netlify.app';
+    const corsOrigins = allowedOrigins.join(', ');
     console.log(`[Backend] Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`.yellow.bold);
-    console.log(`[Backend] CORS enabled for origin: ${corsOrigin}`.cyan);
+    console.log(`[Backend] CORS enabled for origins: ${corsOrigins}`.cyan);
     console.log(`[Backend] API Routes:`.green);
     console.log(`[Backend] - POST /api/v1/notes - Create new note`.gray);
     console.log(`[Backend] - GET /api/v1/notes - Get notes with filtering`.gray);
