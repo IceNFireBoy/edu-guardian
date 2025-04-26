@@ -12,7 +12,12 @@ const {
   getTopRatedNotes,
   getNotesBySubject,
   addFlashcards,
-  searchNotes
+  searchNotes,
+  uploadNoteFile,
+  getNotesByFilters,
+  rateNote,
+  incrementDownloads,
+  createFlashcard
 } = require('../controllers/noteController');
 
 const Note = require('../models/Note');
@@ -21,21 +26,29 @@ const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Public routes
+router.route('/filter').get(getNotesByFilters); // Adding filter route for public access
+
 // Special routes
+// TEMP: Keeping this protected as it's not critical for immediate functionality
 router.route('/my-notes').get(protect, getMyNotes);
 router.route('/user/:userId').get(getUserNotes);
 router.route('/top-rated').get(getTopRatedNotes);
 router.route('/subject/:subject').get(getNotesBySubject);
 router.route('/search').get(searchNotes);
+router.route('/upload').post(protect, uploadNoteFile); // Adding upload file route
 
 // Rating route
-router.route('/:id/ratings').post(protect, addRating);
+// TEMP: Keeping this protected as it's not critical for immediate functionality
+router.route('/:id/ratings').post(protect, rateNote);
 
 // Download route
-router.route('/:id/download').put(protect, downloadNote);
+// TEMP: Keeping this protected as it's not critical for immediate functionality
+router.route('/:id/download').put(protect, incrementDownloads);
 
 // Flashcards route
-router.route('/:id/flashcards').post(protect, addFlashcards);
+// TEMP: Keeping this protected as it's not critical for immediate functionality
+router.route('/:id/flashcards').post(protect, createFlashcard);
 
 // Main CRUD routes
 router
