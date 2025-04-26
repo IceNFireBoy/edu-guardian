@@ -62,41 +62,66 @@ exports.getNote = asyncHandler(async (req, res, next) => {
 
 // @desc    Create new note
 // @route   POST /api/v1/notes
-// @access  Private
+// @access  Public
 exports.createNote = asyncHandler(async (req, res) => {
-  req.body.user = req.user.id;
-
-  // Check if the note already exists for this user
-  const existingNote = await Note.findOne({
-    user: req.user.id,
-    title: req.body.title
-  });
-
-  if (existingNote) {
-    return res.status(400).json({
-      success: false,
-      message: 'You already have a note with this title'
+  try {
+    const { 
+      title, 
+      subject, 
+      grade, 
+      semester, 
+      quarter, 
+      topic, 
+      fileUrl 
+    } = req.body;
+    
+    console.log("[Backend] Received note creation request:", req.body);
+    
+    // Validate required fields
+    if (!title || !subject || !grade || !fileUrl) {
+      console.log("[Backend] Validation failed - missing required fields");
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing required fields. Please provide title, subject, grade, and fileUrl." 
+      });
+    }
+    
+    // Create note with metadata - no user association required
+    const note = await Note.create({
+      title,
+      subject,
+      grade,
+      semester,
+      quarter,
+      topic,
+      fileUrl,
+      // Additional fields if needed
+      fileType: req.body.fileType || 'unknown',
+      fileSize: req.body.fileSize || 0,
+      tags: req.body.tags || [],
+      // Set a dummy user ID or make it optional in the schema
+      user: "6507b7b1a2b49cb4d68df781" // Dummy user ID
+    });
+    
+    console.log("[Backend] Note successfully saved in MongoDB:", note._id);
+    
+    // Return success response with created note
+    return res.status(201).json({
+      success: true,
+      data: note
+    });
+  } catch (error) {
+    console.error("[Backend] Error creating note:", error);
+    return res.status(500).json({ 
+      success: false, 
+      error: "Failed to save note. Please try again." 
     });
   }
-
-  const note = await Note.create(req.body);
-
-  // Update user XP for creating a note
-  await User.findByIdAndUpdate(
-    req.user.id,
-    { $inc: { xp: 50 } },
-    { new: true }
-  );
-
-  res.status(201).json({
-    success: true,
-    data: note
-  });
 });
 
 // @desc    Update note
 // @route   PUT /api/v1/notes/:id
-// @access  Private
+// @access  Public
 exports.updateNote = asyncHandler(async (req, res) => {
   let note = await Note.findById(req.params.id);
 
@@ -107,18 +132,13 @@ exports.updateNote = asyncHandler(async (req, res) => {
     });
   }
 
-  // Make sure user is the note owner
-  if (note.user.toString() !== req.user.id) {
-    return res.status(401).json({
-      success: false,
-      message: 'Not authorized to update this note'
-    });
-  }
-
+  // No authentication check - allow anyone to update notes
   note = await Note.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true
   });
+
+  console.log("[Backend] Note updated successfully:", note._id);
 
   res.status(200).json({
     success: true,
@@ -128,7 +148,7 @@ exports.updateNote = asyncHandler(async (req, res) => {
 
 // @desc    Delete note
 // @route   DELETE /api/v1/notes/:id
-// @access  Private
+// @access  Public
 exports.deleteNote = asyncHandler(async (req, res) => {
   const note = await Note.findById(req.params.id);
 
@@ -139,15 +159,10 @@ exports.deleteNote = asyncHandler(async (req, res) => {
     });
   }
 
-  // Make sure user is the note owner
-  if (note.user.toString() !== req.user.id) {
-    return res.status(401).json({
-      success: false,
-      message: 'Not authorized to delete this note'
-    });
-  }
-
+  // No authentication check - allow anyone to delete notes
   await note.deleteOne();
+  
+  console.log("[Backend] Note deleted successfully:", req.params.id);
 
   res.status(200).json({
     success: true,
@@ -173,9 +188,12 @@ exports.getUserNotes = asyncHandler(async (req, res, next) => {
 
 // @desc    Get my notes
 // @route   GET /api/v1/notes/my-notes
-// @access  Private
+// @access  Public
 exports.getMyNotes = asyncHandler(async (req, res, next) => {
-  const notes = await Note.find({ user: req.user.id });
+  // Without authentication, return all notes since we can't identify "my" notes
+  const notes = await Note.find();
+  
+  console.log("[Backend] Returning all notes as 'my notes' since auth is disabled");
 
   res.status(200).json({
     success: true,
@@ -237,30 +255,22 @@ exports.addRating = asyncHandler(async (req, res, next) => {
 
 // @desc    Increment download count
 // @route   PUT /api/v1/notes/:id/download
-// @access  Private
-exports.downloadNote = asyncHandler(async (req, res, next) => {
+// @access  Public
+exports.incrementDownloads = asyncHandler(async (req, res) => {
   const note = await Note.findById(req.params.id);
 
   if (!note) {
-    return next(new ErrorResponse(`Note not found with id of ${req.params.id}`, 404));
+    return res.status(404).json({
+      success: false,
+      message: `Note not found with id of ${req.params.id}`
+    });
   }
 
   // Increment download count
   note.downloadCount += 1;
   await note.save();
-
-  // Add activity
-  req.user.addActivity('download', `Downloaded note: ${note.title}`, 1);
-  req.user.xp += 1;
-  await req.user.save();
-
-  // Add XP to note creator (but not if self-download)
-  if (note.user.toString() !== req.user.id) {
-    const noteOwner = await User.findById(note.user);
-    noteOwner.xp += 3;
-    noteOwner.addActivity('earn_xp', 'Someone downloaded your note', 3);
-    await noteOwner.save();
-  }
+  
+  console.log("[Backend] Note download count incremented for:", req.params.id);
 
   res.status(200).json({
     success: true,
@@ -435,7 +445,7 @@ exports.uploadNoteFile = asyncHandler(async (req, res) => {
 
 // @desc    Rate a note
 // @route   POST /api/v1/notes/:id/ratings
-// @access  Private
+// @access  Public
 exports.rateNote = asyncHandler(async (req, res) => {
   const { rating } = req.body;
 
@@ -456,9 +466,12 @@ exports.rateNote = asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if user already rated
+  // Use a dummy user ID since there's no authentication
+  const dummyUserId = "6507b7b1a2b49cb4d68df781";
+  
+  // Check if dummy user already rated
   const existingRatingIndex = note.ratings.findIndex(
-    r => r.user && r.user.toString() === req.user.id
+    r => r.user && r.user.toString() === dummyUserId
   );
 
   if (existingRatingIndex >= 0) {
@@ -468,7 +481,7 @@ exports.rateNote = asyncHandler(async (req, res) => {
     // Add new rating
     note.ratings.push({
       value: rating,
-      user: req.user.id
+      user: dummyUserId
     });
   }
 
@@ -479,52 +492,8 @@ exports.rateNote = asyncHandler(async (req, res) => {
   }
 
   await note.save();
-
-  // Add XP for rating
-  await User.findByIdAndUpdate(
-    req.user.id,
-    { $inc: { xp: 5 } },
-    { new: true }
-  );
-
-  res.status(200).json({
-    success: true,
-    data: note
-  });
-});
-
-// @desc    Increment download count
-// @route   PUT /api/v1/notes/:id/download
-// @access  Private
-exports.incrementDownloads = asyncHandler(async (req, res) => {
-  const note = await Note.findById(req.params.id);
-
-  if (!note) {
-    return res.status(404).json({
-      success: false,
-      message: `Note not found with id of ${req.params.id}`
-    });
-  }
-
-  // Increment download count
-  note.downloadCount += 1;
-  await note.save();
-
-  // Add XP for downloading
-  await User.findByIdAndUpdate(
-    req.user.id,
-    { $inc: { xp: 1 } },
-    { new: true }
-  );
-
-  // Add XP to note creator (but not if self-download)
-  if (note.user && note.user.toString() !== req.user.id) {
-    await User.findByIdAndUpdate(
-      note.user,
-      { $inc: { xp: 3 } },
-      { new: true }
-    );
-  }
+  
+  console.log("[Backend] Note rated successfully:", req.params.id, "with rating:", rating);
 
   res.status(200).json({
     success: true,
@@ -534,7 +503,7 @@ exports.incrementDownloads = asyncHandler(async (req, res) => {
 
 // @desc    Create flashcards for a note
 // @route   POST /api/v1/notes/:id/flashcards
-// @access  Private
+// @access  Public
 exports.createFlashcard = asyncHandler(async (req, res) => {
   const { flashcards } = req.body;
 
@@ -554,27 +523,14 @@ exports.createFlashcard = asyncHandler(async (req, res) => {
     });
   }
 
-  // Make sure user is note owner
-  if (note.user.toString() !== req.user.id) {
-    return res.status(401).json({
-      success: false,
-      message: 'Not authorized to add flashcards to this note'
-    });
-  }
-
+  // No authentication check - allow anyone to add flashcards
+  
   // Add new flashcards
   note.flashcards = [...note.flashcards, ...flashcards];
   
   await note.save();
-
-  // Add XP for creating flashcards (capped at 10 XP)
-  const xpEarned = Math.min(flashcards.length, 10);
   
-  await User.findByIdAndUpdate(
-    req.user.id,
-    { $inc: { xp: xpEarned } },
-    { new: true }
-  );
+  console.log("[Backend] Flashcards added to note:", req.params.id, "Count:", flashcards.length);
 
   res.status(200).json({
     success: true,
