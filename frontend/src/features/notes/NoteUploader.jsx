@@ -13,7 +13,7 @@ const Step1Form = ({ register, errors, subjects }) => (
     <div>
       <label className="block text-gray-700 dark:text-gray-300 mb-2">Grade Level</label>
       <select 
-        className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+        className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
         {...register('grade', { required: 'Grade is required' })}
       >
         <option value="">Select Grade</option>
@@ -26,7 +26,7 @@ const Step1Form = ({ register, errors, subjects }) => (
     <div>
       <label className="block text-gray-700 dark:text-gray-300 mb-2">Semester</label>
       <select 
-        className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+        className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
         {...register('semester', { required: 'Semester is required' })}
       >
         <option value="">Select Semester</option>
@@ -39,7 +39,7 @@ const Step1Form = ({ register, errors, subjects }) => (
     <div>
       <label className="block text-gray-700 dark:text-gray-300 mb-2">Quarter</label>
       <select 
-        className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+        className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
         {...register('quarter', { required: 'Quarter is required' })}
       >
         <option value="">Select Quarter</option>
@@ -54,7 +54,7 @@ const Step1Form = ({ register, errors, subjects }) => (
     <div>
       <label className="block text-gray-700 dark:text-gray-300 mb-2">Subject</label>
       <select 
-        className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+        className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
         {...register('subject', { required: 'Subject is required' })}
       >
         <option value="">Select Subject</option>
@@ -69,7 +69,7 @@ const Step1Form = ({ register, errors, subjects }) => (
       <label className="block text-gray-700 dark:text-gray-300 mb-2">Topic</label>
       <input 
         type="text" 
-        className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+        className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
         placeholder="E.g., Polynomials, French Revolution"
         {...register('topic', { required: 'Topic is required' })}
       />
@@ -146,7 +146,7 @@ const Step2Form = ({ register, errors, formData, setFileData }) => {
         <label className="block text-gray-700 dark:text-gray-300 mb-2">Title</label>
         <input 
           type="text" 
-          className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+          className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
           placeholder="E.g., Algebra Notes - Chapter 5"
           {...register('title', { required: 'Title is required' })}
         />
@@ -156,7 +156,7 @@ const Step2Form = ({ register, errors, formData, setFileData }) => {
       <div>
         <label className="block text-gray-700 dark:text-gray-300 mb-2">Description</label>
         <textarea 
-          className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 min-h-24"
+          className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 min-h-24"
           placeholder="A brief description of your notes"
           {...register('description')}
         />
@@ -166,7 +166,7 @@ const Step2Form = ({ register, errors, formData, setFileData }) => {
         <label className="block text-gray-700 dark:text-gray-300 mb-2">Upload File</label>
         <div 
           {...getRootProps()} 
-          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+          className={`border-2 border-dashed rounded-lg p-4 sm:p-8 text-center cursor-pointer transition-colors ${
             isDragActive 
               ? 'border-primary bg-primary/5' 
               : 'border-gray-300 dark:border-gray-600 hover:border-primary dark:hover:border-primary-light'
@@ -332,54 +332,76 @@ const NoteUploader = () => {
     setStep(step - 1);
   };
   
-  const onSubmit = async () => {
+  const handleUpload = async () => {
     if (!fileData) {
-      setError("Please select a file to upload");
+      alert("Please select a file first!");
       return;
     }
-    
+
     setIsUploading(true);
     setError(null);
     
+    const formDataObj = new FormData();
+    formDataObj.append("file", fileData);
+    formDataObj.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+
     try {
-      // Show uploading status feedback
-      toast.success('Starting upload process...', { id: 'upload-toast' });
-      console.log("[Frontend] Starting upload to Cloudinary...");
+      debug("[Frontend] Starting upload to Cloudinary...");
       
-      // Upload the file to Cloudinary via our service
-      const uploadResult = await cloudinaryService.uploadNote(fileData, formData);
+      const cloudRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/upload`,
+        { method: "POST", body: formDataObj }
+      );
+
+      if (!cloudRes.ok) throw new Error("Cloudinary upload failed");
+
+      const data = await cloudRes.json();
+      const cloudUrl = data.secure_url;
       
-      console.log("[Frontend] Uploaded to Cloudinary. Secure URL:", uploadResult.secure_url);
-      console.log("[Frontend] Sent note data to backend for MongoDB saving.");
+      debug("[Frontend] Uploaded to Cloudinary. Secure URL:", cloudUrl);
+
+      const noteData = { 
+        title: formData.title, 
+        subject: formData.subject, 
+        grade: formData.grade, 
+        semester: formData.semester, 
+        quarter: formData.quarter, 
+        topic: formData.topic, 
+        fileUrl: cloudUrl 
+      };
       
+      debug("[Frontend] Sending note data to backend:", JSON.stringify(noteData));
+
+      const backendRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v1/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(noteData)
+      });
+
+      if (!backendRes.ok) throw new Error("Backend save failed");
+      
+      debug("[Frontend] Note successfully saved to backend");
+
       // Record activity for XP
       recordActivity('UPLOAD_NOTE');
       
-      // Update toast with success
-      toast.success('Note uploaded successfully!', { id: 'upload-toast' });
-      
-      // Show success modal
+      alert("✅ Note successfully uploaded!");
       setShowSuccess(true);
       
-      // Reset form
-      // resetForm();
-    } catch (err) {
-      console.error("Upload error:", err);
-      
-      // Show error toast
-      toast.error('Upload failed: ' + (err.message || "Unknown error"), { id: 'upload-toast' });
-      
-      // Set error message in UI
-      setError("Upload failed: " + (err.message || "Unknown error") + ". Please try again.");
+    } catch (error) {
+      debug("[Frontend] Error uploading note:", error.message);
+      alert(`❌ Error uploading note: ${error.message}`);
+      console.error(error);
+      setError("Upload failed: " + error.message);
     } finally {
       setIsUploading(false);
     }
   };
   
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto px-4 sm:px-0">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-gray-100">Upload Notes</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-800 dark:text-gray-100">Upload Notes</h1>
         <p className="text-gray-600 dark:text-gray-300">
           Share your knowledge and help others succeed in their academic journey.
         </p>
@@ -390,7 +412,7 @@ const NoteUploader = () => {
         {[1, 2, 3].map((i) => (
           <React.Fragment key={i}>
             <div
-              className={`rounded-full h-10 w-10 flex items-center justify-center border-2 ${
+              className={`rounded-full h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center border-2 ${
                 step >= i
                   ? "border-primary bg-primary text-white"
                   : "border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500"
@@ -400,7 +422,7 @@ const NoteUploader = () => {
             </div>
             {i < 3 && (
               <div
-                className={`flex-1 h-1 mx-2 ${
+                className={`flex-1 h-1 mx-1 sm:mx-2 ${
                   step > i ? "bg-primary" : "bg-gray-300 dark:bg-gray-700"
                 }`}
               />
@@ -415,7 +437,7 @@ const NoteUploader = () => {
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -20 }}
         transition={{ duration: 0.3 }}
-        className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6"
+        className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-4 sm:p-6"
       >
         <form>
           {step === 1 && (
@@ -449,22 +471,22 @@ const NoteUploader = () => {
             </div>
           )}
           
-          <div className="mt-6 flex justify-between">
+          <div className="mt-6 flex flex-col-reverse sm:flex-row justify-between gap-3 sm:gap-0">
             {step > 1 && (
               <button
                 type="button"
-                className="btn bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center"
+                className="btn bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center"
                 onClick={prevStep}
               >
                 <FaArrowLeft className="mr-2" /> Back
               </button>
             )}
             
-            <div className="ml-auto">
+            <div className={`${step > 1 ? 'sm:ml-auto' : 'ml-auto'}`}>
               {step < 3 ? (
                 <button
                   type="button"
-                  className="btn btn-primary flex items-center"
+                  className="btn btn-primary flex items-center justify-center w-full sm:w-auto"
                   onClick={() => handleSubmit(nextStep)()}
                 >
                   Next <FaArrowRight className="ml-2" />
@@ -472,8 +494,8 @@ const NoteUploader = () => {
               ) : (
                 <button
                   type="button"
-                  className={`btn btn-primary flex items-center ${isUploading ? 'opacity-75 cursor-not-allowed' : ''}`}
-                  onClick={handleSubmit(onSubmit)}
+                  className={`btn btn-primary flex items-center justify-center w-full sm:w-auto ${isUploading ? 'opacity-75 cursor-not-allowed' : ''}`}
+                  onClick={handleUpload}
                   disabled={isUploading}
                 >
                   {isUploading ? 'Uploading...' : 'Submit'}

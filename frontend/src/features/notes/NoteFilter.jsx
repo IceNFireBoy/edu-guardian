@@ -48,12 +48,12 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
   };
   
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 mb-6">
-      <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-800 dark:text-gray-100">
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-4 sm:p-6 mb-6">
+      <h2 className="text-lg sm:text-xl font-semibold mb-4 flex items-center text-gray-800 dark:text-gray-100">
         <FaFilter className="mr-2 text-primary dark:text-primary-light" /> Filter Notes
       </h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
           <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="grade-select">Grade</label>
           <select 
@@ -61,7 +61,7 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
             name="grade"
             value={filters.grade}
             onChange={handleChange}
-            className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+            className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
             aria-label="Select grade"
           >
             <option value="">All Grades</option>
@@ -77,7 +77,7 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
             name="semester"
             value={filters.semester}
             onChange={handleChange}
-            className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+            className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
             aria-label="Select semester"
           >
             <option value="">All Semesters</option>
@@ -93,7 +93,7 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
             name="quarter"
             value={filters.quarter}
             onChange={handleChange}
-            className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+            className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
             aria-label="Select quarter"
           >
             <option value="">All Quarters</option>
@@ -111,7 +111,7 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
             name="subject"
             value={filters.subject}
             onChange={handleChange}
-            className="input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+            className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
             aria-label="Select subject"
           >
             <option value="">All Subjects</option>
@@ -130,7 +130,7 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
             value={filters.topic}
             onChange={handleChange}
             placeholder="Search by topic..."
-            className="input pl-10 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+            className="w-full input pl-10 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
             aria-label="Search by topic"
           />
           <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
@@ -140,7 +140,7 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
       <div className="mt-4 flex justify-end">
         <button
           onClick={onSubmit}
-          className="btn btn-primary"
+          className="w-full sm:w-auto btn btn-primary"
           aria-label="Apply filters"
         >
           Apply Filters
@@ -152,9 +152,9 @@ const FilterForm = ({ filters, setFilters, onSubmit }) => {
 
 // Empty state component
 const EmptyState = ({ hasFilters }) => (
-  <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-lg shadow-md">
-    <FaBookOpen className="text-5xl text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-    <h3 className="text-xl font-semibold mb-2 text-gray-800 dark:text-gray-100">
+  <div className="text-center py-8 sm:py-12 px-4 bg-white dark:bg-slate-800 rounded-lg shadow-md">
+    <FaBookOpen className="text-4xl sm:text-5xl text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+    <h3 className="text-lg sm:text-xl font-semibold mb-2 text-gray-800 dark:text-gray-100">
       {hasFilters ? "No Notes Found" : "Start Exploring Notes"}
     </h3>
     <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto">
@@ -166,12 +166,12 @@ const EmptyState = ({ hasFilters }) => (
       {hasFilters && (
         <button 
           onClick={() => window.location.href = '/my-notes'} 
-          className="btn bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+          className="w-full sm:w-auto btn bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
         >
           Clear All Filters
         </button>
       )}
-      <a href="/donate" className="btn btn-primary inline-block">
+      <a href="/donate" className="w-full sm:w-auto btn btn-primary inline-block">
         Upload New Notes
       </a>
     </div>
@@ -460,102 +460,47 @@ const NoteFilter = () => {
       
       debug("[Frontend] Applying filters: " + JSON.stringify(filterContext));
       
-      // Try to fetch from backend API first if available
-      try {
-        // Build query string from filters
-        const queryParams = new URLSearchParams();
-        Object.entries(filterContext).forEach(([key, value]) => {
-          queryParams.append(key, value);
-        });
-        
-        // Use API_BASE if available, otherwise use relative URL
-        const apiUrl = API_BASE 
-          ? `${API_BASE}/api/v1/notes?${queryParams.toString()}`
-          : `/api/v1/notes?${queryParams.toString()}`;
-        
-        debug('[Frontend] Fetching notes from API: ' + apiUrl);
-        const response = await fetch(apiUrl);
-        
-        if (response.ok) {
-          const data = await response.json();
-          
-          // Handle the API response format - check if data has a 'data' property (new API format)
-          // or if it's an array directly (old format)
-          let notesArray = [];
-          
-          if (data.success && Array.isArray(data.data)) {
-            notesArray = data.data;
-            debug(`[Frontend] Fetched ${notesArray.length} notes from API (new format)`);
-          } else if (Array.isArray(data)) {
-            notesArray = data;
-            debug(`[Frontend] Fetched ${notesArray.length} notes from API (old format)`);
-          } else {
-            debug('[Frontend] API returned unexpected data format: ' + JSON.stringify(data).substring(0, 100) + '...');
-          }
-          
-          setNotes(notesArray || []);
-          
-          // If no notes and filters applied, show specific message
-          if ((notesArray || []).length === 0 && hasFiltersApplied) {
-            debug("[Frontend] No notes found matching filters: " + JSON.stringify(filterContext));
-          }
-          
-          setLoading(false);
-          return;
-        } else {
-          debug(`[Frontend] API request failed with status: ${response.status}`);
-          const errorText = await response.text();
-          debug('[Frontend] API error details: ' + errorText);
-        }
-        // If backend API fails, fall back to Cloudinary or dummy data
-      } catch (apiError) {
-        debug('[Frontend] Backend API not available: ' + apiError.message);
-        // Continue with fallback methods
-      }
+      // Build query string from filters
+      const queryParams = new URLSearchParams();
+      Object.entries(filterContext).forEach(([key, value]) => {
+        if (value) queryParams.append(key, value);
+      });
       
-      // If Cloudinary is not configured properly, use dummy data
-      let fetchedNotes = [];
+      // Use API_BASE if available, otherwise use relative URL
+      const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/api/v1/notes?${queryParams.toString()}`;
       
-      if (!import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || !import.meta.env.VITE_CLOUDINARY_API_KEY) {
-        debug('[Frontend] Using dummy notes as Cloudinary is not configured');
-        fetchedNotes = cloudinaryService.getDummyNotes();
+      debug('[Frontend] Fetching notes from API: ' + apiUrl);
+      
+      const res = await fetch(apiUrl);
+      
+      if (!res.ok) throw new Error("Filtering fetch failed");
+      
+      const data = await res.json();
+      
+      // Handle the API response format
+      let notesArray = [];
+      
+      if (data.success && Array.isArray(data.data)) {
+        notesArray = data.data;
+      } else if (Array.isArray(data)) {
+        notesArray = data;
       } else {
-        try {
-          // Make sure the cloudinaryService exists and has the fetchNotesByContext method
-          if (!cloudinaryService || typeof cloudinaryService.fetchNotesByContext !== 'function') {
-            debug('[Frontend] Cloudinary service not properly configured');
-            toast.error('Error: Note service configuration issue');
-            fetchedNotes = cloudinaryService.getDummyNotes();
-          } else {
-            // Attempt to fetch from Cloudinary
-            debug('[Frontend] Attempting to fetch from Cloudinary with filters: ' + JSON.stringify(filterContext));
-            fetchedNotes = await cloudinaryService.fetchNotesByContext(filterContext);
-            debug('[Frontend] Cloudinary returned ' + fetchedNotes.length + ' notes');
-            
-            // Add additional validation 
-            if (!Array.isArray(fetchedNotes)) {
-              debug('[Frontend] Invalid response from Cloudinary - not an array');
-              toast.error('Error fetching notes: Invalid response format');
-              fetchedNotes = cloudinaryService.getDummyNotes();
-            }
-          }
-        } catch (cloudinaryError) {
-          debug('[Frontend] Error fetching from Cloudinary: ' + cloudinaryError.message);
-          toast.error('Cloudinary fetch error: ' + (cloudinaryError.message || 'Unknown error'));
-          fetchedNotes = cloudinaryService.getDummyNotes();
-        }
+        debug('[Frontend] API returned unexpected data format');
+        notesArray = [];
       }
       
-      setNotes(fetchedNotes || []);
+      debug(`[Frontend] Fetched ${notesArray.length} notes from API`);
+      setNotes(notesArray);
       
-      // If no notes and filters applied, show specific message
-      if ((fetchedNotes || []).length === 0 && hasFiltersApplied) {
-        debug("[Frontend] No notes found in fallback source matching filters: " + JSON.stringify(filterContext));
+      if (notesArray.length === 0 && hasFiltersApplied) {
+        alert("No notes found for your selected filters.");
+        debug("[Frontend] No notes found matching filters: " + JSON.stringify(filterContext));
       }
-    } catch (err) {
-      debug("[Frontend] Error fetching notes: " + err.message);
+    } catch (error) {
+      debug("[Frontend] Error fetching notes: " + error.message);
+      alert(`❌ Error fetching notes: ${error.message}`);
+      console.error(error);
       setError("Failed to fetch notes. Please try again later.");
-      toast.error('Error fetching notes: ' + (err.message || 'Unknown error'));
       // Set empty array to prevent rendering issues
       setNotes([]);
     } finally {
@@ -584,7 +529,7 @@ const NoteFilter = () => {
       }
       
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {notes.map((note) => note && (
             <NoteCard 
               key={note.asset_id || note._id || `note-${Math.random()}`} 
@@ -605,9 +550,9 @@ const NoteFilter = () => {
   };
   
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-gray-100">My Notes</h1>
+    <div className="px-4 sm:px-0">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-800 dark:text-gray-100">My Notes</h1>
         <p className="text-gray-600 dark:text-gray-300">
           Browse through available notes or filter to find what you need.
         </p>
@@ -634,7 +579,7 @@ const NoteFilter = () => {
       
       {loading ? (
         <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+          <div className="inline-block animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-4 border-primary border-t-transparent"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-300">Loading notes...</p>
         </div>
       ) : (

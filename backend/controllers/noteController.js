@@ -6,75 +6,29 @@ const User = require('../models/User');
 // @desc    Get all notes
 // @route   GET /api/v1/notes
 // @access  Public
-exports.getNotes = asyncHandler(async (req, res, next) => {
-  // Copy query object
-  const queryObj = { ...req.query };
-  console.log("[Backend] Filtering notes with query:", req.query);
-
-  // Fields to exclude from filtering
-  const excludedFields = ['page', 'sort', 'limit', 'fields'];
-  excludedFields.forEach(field => delete queryObj[field]);
-
-  // Create filter object
+exports.getNotes = async (req, res) => {
   const filter = {};
-  
-  // Add query parameters to filter
-  if (queryObj.grade) filter.grade = queryObj.grade;
-  if (queryObj.subject) filter.subject = queryObj.subject;
-  if (queryObj.semester) filter.semester = queryObj.semester;
-  if (queryObj.quarter) filter.quarter = queryObj.quarter;
-  if (queryObj.topic) {
+  if (req.query.grade) filter.grade = req.query.grade;
+  if (req.query.subject) filter.subject = req.query.subject;
+  if (req.query.semester) filter.semester = req.query.semester;
+  if (req.query.quarter) filter.quarter = req.query.quarter;
+  if (req.query.topic) {
     // For topic, we use a partial match
-    filter.topic = new RegExp(queryObj.topic, 'i');
+    filter.topic = new RegExp(req.query.topic, 'i');
   }
   
-  // Handle text search
-  if (queryObj.search) {
-    filter.$text = { $search: queryObj.search };
+  console.log("[Backend] Filtering notes with query:", req.query);
+  console.log("[Backend] Constructed filter:", filter);
+
+  try {
+    const notes = await Note.find(filter);
+    console.log("[Backend] Notes found:", notes.length);
+    return res.status(200).json(notes);
+  } catch (error) {
+    console.error("MongoDB Filter Error:", error);
+    return res.status(500).json({ error: error.message });
   }
-
-  // Get total count for pagination
-  const total = await Note.countDocuments(filter);
-
-  // Pagination
-  const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 100;
-  const startIndex = (page - 1) * limit;
-  const endIndex = page * limit;
-
-  // Query with pagination
-  const notes = await Note.find(filter)
-    .skip(startIndex)
-    .limit(limit)
-    .sort(req.query.sort || '-createdAt');
-
-  console.log("[Backend] Notes found:", notes.length);
-
-  // Pagination result
-  const pagination = {};
-
-  if (endIndex < total) {
-    pagination.next = {
-      page: page + 1,
-      limit
-    };
-  }
-
-  if (startIndex > 0) {
-    pagination.prev = {
-      page: page - 1,
-      limit
-    };
-  }
-
-  res.status(200).json({
-    success: true,
-    count: notes.length,
-    pagination,
-    total,
-    data: notes
-  });
-});
+};
 
 // @desc    Get single note
 // @route   GET /api/v1/notes/:id
@@ -99,49 +53,33 @@ exports.getNote = asyncHandler(async (req, res, next) => {
 // @desc    Create new note
 // @route   POST /api/v1/notes
 // @access  Public (would typically be Private with auth)
-exports.createNote = asyncHandler(async (req, res, next) => {
+exports.createNote = async (req, res) => {
+  const { title, subject, grade, semester, quarter, topic, fileUrl } = req.body;
+  
   console.log("[Backend] Received note creation request:", req.body);
-  const { 
-    title, 
-    description, 
-    subject, 
-    grade, 
-    semester, 
-    quarter, 
-    topic, 
-    fileUrl, 
-    fileType,
-    publicId,
-    assetId,
-    tags
-  } = req.body;
-
-  // Validate required fields
+  
   if (!title || !subject || !grade || !fileUrl) {
-    return next(new ErrorResponse('Please provide all required fields', 400));
+    return res.status(400).json({ error: "Missing required fields." });
   }
-
-  // Create note with all metadata
-  const note = await Note.create({
-    title,
-    description,
-    subject,
-    grade,
-    semester,
-    quarter,
-    topic,
-    fileUrl,
-    fileType: fileType || 'unknown',
-    publicId,
-    assetId,
-    tags,
-    // If authenticated, would add: user: req.user.id
-  });
-
-  console.log("[Backend] Note saved in MongoDB:", note);
-
-  res.status(201).json(note);
-});
+  
+  try {
+    const note = await Note.create({ 
+      title, 
+      subject, 
+      grade, 
+      semester, 
+      quarter, 
+      topic, 
+      fileUrl 
+    });
+    
+    console.log("[Backend] Note saved in MongoDB:", note);
+    return res.status(201).json(note);
+  } catch (error) {
+    console.error("MongoDB Save Error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
 
 // @desc    Update note
 // @route   PUT /api/v1/notes/:id
