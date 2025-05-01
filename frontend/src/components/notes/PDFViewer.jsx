@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaArrowLeft, FaClock, FaCoffee, FaPlay, FaPause, FaTimes, FaExclamationTriangle } from 'react-icons/fa';
+import { FaArrowLeft, FaClock, FaCoffee, FaPlay, FaPause, FaTimes, FaExclamationTriangle, FaFilePdf } from 'react-icons/fa';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ErrorBoundary from '../ErrorBoundary';
@@ -12,17 +12,21 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
   const [customTime, setCustomTime] = useState('');
   const [isPaused, setIsPaused] = useState(false);
   const [pdfError, setPdfError] = useState(null);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
   
   const sessionTimerRef = useRef(null);
   const breakTimerRef = useRef(null);
+  const iframeRef = useRef(null);
   const navigate = useNavigate();
   
-  // Validate props
-  const validNoteUrl = noteUrl && typeof noteUrl === 'string' && noteUrl.trim() !== '';
-  const safeNoteTitle = noteTitle && typeof noteTitle === 'string' ? noteTitle : 'Untitled Note';
+  // Validate props - with more thorough validation
+  const validNoteUrl = Boolean(noteUrl && typeof noteUrl === 'string' && noteUrl.trim() !== '');
+  const safeNoteTitle = (noteTitle && typeof noteTitle === 'string') ? noteTitle : 'Untitled Note';
   
   // Format time in HH:MM:SS
   const formatTime = (timeInSeconds) => {
+    if (typeof timeInSeconds !== 'number') return '00:00:00';
+    
     const hours = Math.floor(timeInSeconds / 3600);
     const minutes = Math.floor((timeInSeconds % 3600) / 60);
     const seconds = timeInSeconds % 60;
@@ -36,46 +40,82 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
   
   // Start session timer on component mount
   useEffect(() => {
-    sessionTimerRef.current = setInterval(() => {
-      if (!isPaused && !isBreakActive) {
-        setSessionTime(prev => prev + 1);
-      }
-    }, 1000);
-    
-    return () => {
-      if (sessionTimerRef.current) clearInterval(sessionTimerRef.current);
-      if (breakTimerRef.current) clearInterval(breakTimerRef.current);
-    };
+    try {
+      sessionTimerRef.current = setInterval(() => {
+        if (!isPaused && !isBreakActive) {
+          setSessionTime(prev => prev + 1);
+        }
+      }, 1000);
+      
+      return () => {
+        if (sessionTimerRef.current) clearInterval(sessionTimerRef.current);
+        if (breakTimerRef.current) clearInterval(breakTimerRef.current);
+      };
+    } catch (err) {
+      console.error("Error in session timer:", err);
+    }
   }, [isPaused, isBreakActive]);
   
   // Start break timer when break is active
   useEffect(() => {
-    if (isBreakActive) {
-      breakTimerRef.current = setInterval(() => {
-        setBreakTime(prev => {
-          if (prev <= 1) {
-            // End break when timer reaches 0
-            clearInterval(breakTimerRef.current);
-            setIsBreakActive(false);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (breakTimerRef.current) {
-        clearInterval(breakTimerRef.current);
+    try {
+      if (isBreakActive) {
+        breakTimerRef.current = setInterval(() => {
+          setBreakTime(prev => {
+            if (prev <= 1) {
+              // End break when timer reaches 0
+              clearInterval(breakTimerRef.current);
+              setIsBreakActive(false);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        if (breakTimerRef.current) {
+          clearInterval(breakTimerRef.current);
+        }
       }
+      
+      return () => {
+        if (breakTimerRef.current) clearInterval(breakTimerRef.current);
+      };
+    } catch (err) {
+      console.error("Error in break timer:", err);
     }
-    
-    return () => {
-      if (breakTimerRef.current) clearInterval(breakTimerRef.current);
-    };
   }, [isBreakActive]);
   
-  // Handle iframe error 
+  // Handle iframe load and error events
+  useEffect(() => {
+    const handleIframeLoad = () => {
+      console.log("PDF iframe loaded successfully");
+      setPdfLoaded(true);
+      setPdfError(null);
+    };
+    
+    const handleIframeError = () => {
+      console.error("PDF iframe failed to load");
+      setPdfError("Failed to load PDF. The file might be invalid or inaccessible.");
+      setPdfLoaded(false);
+    };
+    
+    const iframe = iframeRef.current;
+    
+    if (iframe) {
+      iframe.addEventListener('load', handleIframeLoad);
+      iframe.addEventListener('error', handleIframeError);
+      
+      return () => {
+        iframe.removeEventListener('load', handleIframeLoad);
+        iframe.removeEventListener('error', handleIframeError);
+      };
+    }
+  }, [validNoteUrl]);
+  
+  // Handle PDF errors separate from iframe events
   const handlePdfError = () => {
     setPdfError("Failed to load PDF. The file might be invalid or inaccessible.");
+    setPdfLoaded(false);
   };
   
   // Toggle pause/resume for session timer
@@ -114,6 +154,91 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
   const cancelBreak = () => {
     setIsBreakActive(false);
     setBreakTime(0);
+  };
+  
+  // Create a safe URL for the iframe
+  const getSafeUrl = () => {
+    try {
+      if (!validNoteUrl) return '';
+      
+      // Check if URL is valid and add toolbar parameter safely
+      let url = noteUrl;
+      
+      // Add toolbar parameter if URL doesn't already have parameters
+      if (url.indexOf('#') === -1) {
+        url = `${url}#toolbar=0`;
+      }
+      
+      return url;
+    } catch (err) {
+      console.error("Error creating safe URL:", err);
+      setPdfError("Failed to process PDF URL");
+      return '';
+    }
+  };
+  
+  // Render the PDF content with the appropriate fallbacks
+  const renderPDFContent = () => {
+    if (pdfError) {
+      return (
+        <div className="flex items-center justify-center h-full bg-red-50 dark:bg-red-900/30">
+          <div className="text-center p-6 max-w-md">
+            <FaExclamationTriangle className="text-red-500 dark:text-red-400 text-4xl mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">PDF Loading Error</h3>
+            <p className="text-red-600 dark:text-red-200 mb-4">{pdfError}</p>
+            <button
+              onClick={() => navigate('/my-notes')}
+              className="px-4 py-2 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+            >
+              Back to Notes
+            </button>
+          </div>
+        </div>
+      );
+    }
+    
+    if (!validNoteUrl) {
+      return (
+        <div className="flex items-center justify-center h-full bg-gray-200 dark:bg-slate-800">
+          <div className="text-center p-6 max-w-md">
+            <FaExclamationTriangle className="text-yellow-500 dark:text-yellow-400 text-4xl mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No Document Available</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              No PDF URL provided or the document is invalid.
+            </p>
+            <button
+              onClick={() => navigate('/my-notes')}
+              className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+            >
+              Back to Notes
+            </button>
+          </div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="relative w-full h-full">
+        {!pdfLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-slate-800 z-10">
+            <div className="text-center">
+              <FaFilePdf className="text-blue-500 dark:text-blue-400 text-5xl mx-auto animate-pulse mb-4" />
+              <p className="text-gray-600 dark:text-gray-300">Loading document...</p>
+            </div>
+          </div>
+        )}
+        <iframe
+          ref={iframeRef}
+          src={getSafeUrl()}
+          className="w-full h-full"
+          title={safeNoteTitle}
+          aria-label="PDF document viewer"
+          onError={handlePdfError}
+          sandbox="allow-scripts allow-same-origin"
+          loading="lazy"
+        />
+      </div>
+    );
   };
   
   return (
@@ -235,48 +360,7 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
         
         {/* PDF Viewer */}
         <div className="flex-1 overflow-hidden">
-          {pdfError && (
-            <div className="flex items-center justify-center h-full bg-red-50 dark:bg-red-900/30">
-              <div className="text-center p-6 max-w-md">
-                <FaExclamationTriangle className="text-red-500 dark:text-red-400 text-4xl mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">PDF Loading Error</h3>
-                <p className="text-red-600 dark:text-red-200 mb-4">{pdfError}</p>
-                <button
-                  onClick={() => navigate('/my-notes')}
-                  className="px-4 py-2 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
-                >
-                  Back to Notes
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {!pdfError && validNoteUrl ? (
-            <iframe
-              src={`${noteUrl}#toolbar=0`}
-              className="w-full h-full"
-              title={safeNoteTitle}
-              aria-label="PDF document viewer"
-              onError={handlePdfError}
-              sandbox="allow-scripts allow-same-origin"
-            />
-          ) : !pdfError && (
-            <div className="flex items-center justify-center h-full bg-gray-200 dark:bg-slate-800">
-              <div className="text-center p-6 max-w-md">
-                <FaExclamationTriangle className="text-yellow-500 dark:text-yellow-400 text-4xl mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No Document Available</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  No PDF URL provided or the document is invalid.
-                </p>
-                <button
-                  onClick={() => navigate('/my-notes')}
-                  className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
-                >
-                  Back to Notes
-                </button>
-              </div>
-            </div>
-          )}
+          {renderPDFContent()}
         </div>
         
         {/* Break Timer Overlay */}

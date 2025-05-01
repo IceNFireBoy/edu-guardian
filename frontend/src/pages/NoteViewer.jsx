@@ -15,12 +15,17 @@ const NoteViewer = () => {
   
   // Get note ID from URL params or search params
   const getNoteIdFromUrl = () => {
-    // First try to get from route params
-    if (noteId) return noteId;
-    
-    // Then try to get from query params
-    const searchParams = new URLSearchParams(location.search);
-    return searchParams.get('id');
+    try {
+      // First try to get from route params
+      if (noteId) return noteId;
+      
+      // Then try to get from query params
+      const searchParams = new URLSearchParams(location.search);
+      return searchParams.get('id');
+    } catch (err) {
+      console.error('Error getting note ID from URL:', err);
+      return null;
+    }
   };
   
   // Fetch note data
@@ -28,6 +33,7 @@ const NoteViewer = () => {
     const id = getNoteIdFromUrl();
     
     if (!id) {
+      console.warn('No note ID provided in URL');
       setError('No note ID provided');
       setLoading(false);
       return;
@@ -59,6 +65,7 @@ const NoteViewer = () => {
         }
         
         // If not found in localStorage, fetch from API
+        console.log('Fetching notes from API...');
         const response = await fetchNotes();
         
         if (response && response.success) {
@@ -69,6 +76,7 @@ const NoteViewer = () => {
               console.log('Note found in API response:', foundNote._id || foundNote.asset_id);
               setNote(foundNote);
             } else {
+              console.warn('Note not found in fetched data');
               setError('Note not found in collection');
             }
           } else {
@@ -88,7 +96,7 @@ const NoteViewer = () => {
     };
     
     fetchNoteData();
-  }, []);
+  }, [noteId, location.search]); // Add dependencies to rerun if the URL changes
   
   // Loading state
   if (loading) {
@@ -148,9 +156,46 @@ const NoteViewer = () => {
     );
   }
   
-  // Validate note data and get proper note URL and title
-  const noteUrl = note.secure_url || note.fileUrl || null;
-  const noteTitle = note.title || (note.context && note.context.caption) || 'Untitled Note';
+  // Validate note data and get proper note URL and title with safeguards
+  let noteUrl;
+  let noteTitle;
+  
+  try {
+    // Check for common URL properties
+    noteUrl = note.secure_url || note.fileUrl || note.url || null;
+    
+    // Further validate the URL before passing to PDFViewer
+    if (noteUrl) {
+      // Ensure it's a string
+      noteUrl = String(noteUrl);
+      
+      // Check if URL is valid
+      try {
+        // Basic URL validation
+        if (!noteUrl.startsWith('http://') && !noteUrl.startsWith('https://')) {
+          console.warn('URL does not start with http:// or https://', noteUrl);
+          
+          // Try to prepend https:// if it's missing
+          if (noteUrl.includes('cloudinary.com') || noteUrl.startsWith('//')) {
+            noteUrl = 'https:' + (noteUrl.startsWith('//') ? noteUrl : '//' + noteUrl);
+            console.log('Fixed URL to:', noteUrl);
+          }
+        }
+      } catch (urlError) {
+        console.error('Error validating URL:', urlError);
+      }
+    }
+    
+    // Get title with fallbacks
+    noteTitle = note.title || 
+               (note.context && note.context.caption) || 
+               (note.filename) || 
+               'Untitled Note';
+  } catch (err) {
+    console.error('Error processing note data:', err);
+    noteUrl = null;
+    noteTitle = 'Error Processing Note';
+  }
   
   // Extra validation - if no valid URL exists, show error
   if (!noteUrl) {
@@ -176,6 +221,8 @@ const NoteViewer = () => {
       </div>
     );
   }
+  
+  console.log('Rendering PDFViewer with:', { noteUrl, noteTitle });
   
   // Render PDFViewer within ErrorBoundary
   return (
