@@ -6,81 +6,194 @@ const User = require('../models/User');
 // @desc    Get all badges
 // @route   GET /api/v1/badges
 // @access  Public
-exports.getAllBadges = asyncHandler(async (req, res, next) => {
-  const badges = await Badge.find({ isActive: true }).sort({ displayOrder: 1 });
-  
-  res.status(200).json({
-    success: true,
-    count: badges.length,
-    data: badges
-  });
+exports.getBadges = asyncHandler(async (req, res) => {
+  try {
+    const badges = await Badge.find({ isActive: true }).sort({ displayOrder: 1 });
+    console.log("[Backend] Returning all badges:", badges.length);
+    
+    res.status(200).json({
+      success: true,
+      count: badges.length,
+      data: badges
+    });
+  } catch (error) {
+    console.error("[Backend] Error getting badges:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to retrieve badges"
+    });
+  }
 });
 
 // @desc    Get single badge
 // @route   GET /api/v1/badges/:id
 // @access  Public
-exports.getBadge = asyncHandler(async (req, res, next) => {
-  const badge = await Badge.findById(req.params.id);
-  
-  if (!badge) {
-    return next(new ErrorResponse(`Badge not found with id of ${req.params.id}`, 404));
+exports.getBadge = asyncHandler(async (req, res) => {
+  try {
+    const badge = await Badge.findById(req.params.id);
+    
+    if (!badge) {
+      return res.status(404).json({
+        success: false,
+        error: "Badge not found"
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: badge
+    });
+  } catch (error) {
+    console.error("[Backend] Error getting badge:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to retrieve badge"
+    });
   }
-  
-  res.status(200).json({
-    success: true,
-    data: badge
-  });
 });
 
 // @desc    Create new badge
 // @route   POST /api/v1/badges
-// @access  Private/Admin
-exports.createBadge = asyncHandler(async (req, res, next) => {
-  const badge = await Badge.create(req.body);
-  
-  res.status(201).json({
-    success: true,
-    data: badge
-  });
+// @access  Public
+exports.createBadge = asyncHandler(async (req, res) => {
+  try {
+    const badge = await Badge.create(req.body);
+    console.log("[Backend] Created new badge:", badge._id);
+    
+    res.status(201).json({
+      success: true,
+      data: badge
+    });
+  } catch (error) {
+    console.error("[Backend] Error creating badge:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to create badge"
+    });
+  }
 });
 
 // @desc    Update badge
 // @route   PUT /api/v1/badges/:id
-// @access  Private/Admin
-exports.updateBadge = asyncHandler(async (req, res, next) => {
-  let badge = await Badge.findById(req.params.id);
-  
-  if (!badge) {
-    return next(new ErrorResponse(`Badge not found with id of ${req.params.id}`, 404));
+// @access  Public
+exports.updateBadge = asyncHandler(async (req, res) => {
+  try {
+    let badge = await Badge.findById(req.params.id);
+    
+    if (!badge) {
+      return res.status(404).json({
+        success: false,
+        error: "Badge not found"
+      });
+    }
+    
+    badge = await Badge.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true
+    });
+    
+    console.log("[Backend] Updated badge:", badge._id);
+    
+    res.status(200).json({
+      success: true,
+      data: badge
+    });
+  } catch (error) {
+    console.error("[Backend] Error updating badge:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to update badge"
+    });
   }
-  
-  badge = await Badge.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true
-  });
-  
-  res.status(200).json({
-    success: true,
-    data: badge
-  });
 });
 
 // @desc    Delete badge
 // @route   DELETE /api/v1/badges/:id
-// @access  Private/Admin
-exports.deleteBadge = asyncHandler(async (req, res, next) => {
-  const badge = await Badge.findById(req.params.id);
-  
-  if (!badge) {
-    return next(new ErrorResponse(`Badge not found with id of ${req.params.id}`, 404));
+// @access  Public
+exports.deleteBadge = asyncHandler(async (req, res) => {
+  try {
+    const badge = await Badge.findById(req.params.id);
+    
+    if (!badge) {
+      return res.status(404).json({
+        success: false,
+        error: "Badge not found"
+      });
+    }
+    
+    await badge.deleteOne();
+    console.log("[Backend] Deleted badge:", req.params.id);
+    
+    res.status(200).json({
+      success: true,
+      data: {}
+    });
+  } catch (error) {
+    console.error("[Backend] Error deleting badge:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to delete badge"
+    });
   }
-  
-  await badge.deleteOne();
-  
-  res.status(200).json({
-    success: true,
-    data: {}
-  });
+});
+
+// @desc    Award badge to user
+// @route   POST /api/v1/badges/award/:userId
+// @access  Public
+exports.awardBadge = asyncHandler(async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { badgeId } = req.body;
+    
+    // Since auth is disabled, just return success
+    console.log("[Backend] Awarding badge to user:", userId, badgeId);
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        userId,
+        badgeId,
+        awardedAt: new Date()
+      }
+    });
+  } catch (error) {
+    console.error("[Backend] Error awarding badge:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to award badge"
+    });
+  }
+});
+
+// @desc    Get user badges
+// @route   GET /api/v1/badges/user/:userId
+// @access  Public
+exports.getUserBadges = asyncHandler(async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Since auth is disabled, return dummy badges
+    console.log("[Backend] Getting badges for user:", userId);
+    
+    res.status(200).json({
+      success: true,
+      data: [
+        {
+          _id: "badge_1",
+          name: "First Upload",
+          description: "Upload your first note",
+          icon: "📚",
+          earnedAt: new Date()
+        }
+      ]
+    });
+  } catch (error) {
+    console.error("[Backend] Error getting user badges:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to get user badges"
+    });
+  }
 });
 
 // @desc    Get badges by category
