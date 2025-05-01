@@ -335,7 +335,7 @@ const NoteUploader = () => {
   
   const handleUpload = async () => {
     if (!fileData) {
-      alert("Please select a file first!");
+      toast.error("Please select a file first!");
       return;
     }
 
@@ -344,22 +344,38 @@ const NoteUploader = () => {
     
     try {
       debug("[Frontend] Starting upload process...");
-      toast.success('Starting upload process...', { id: 'upload-toast' });
+      toast.loading('Uploading your note...', { id: 'upload-toast' });
       
       // Use the API client to handle the upload flow
-      await uploadNote(fileData, formData);
+      const result = await uploadNote(fileData, formData);
+      
+      debug("[Frontend] Upload completed successfully with result:", result);
       
       // Record activity for XP
       recordActivity('UPLOAD_NOTE');
       
       toast.success('Note uploaded successfully!', { id: 'upload-toast' });
-      alert("✅ Note successfully uploaded!");
       setShowSuccess(true);
     } catch (err) {
       debug("[Frontend] Upload failed: " + err.message);
-      setError("Upload failed: " + err.message);
-      toast.error('Upload failed: ' + err.message, { id: 'upload-toast' });
-      alert(`❌ Error uploading note: ${err.message}`);
+      
+      // Extract more helpful error message if possible
+      let errorMessage = err.message;
+      
+      if (errorMessage.includes('Failed to fetch')) {
+        errorMessage = "Cannot connect to the server. Please check your internet connection or try again later.";
+      } else if (errorMessage.includes('NetworkError')) {
+        errorMessage = "Network error. The server might be down or unreachable.";
+      } else if (errorMessage.includes('SyntaxError')) {
+        errorMessage = "Received an invalid response from the server. Please try again.";
+      } else if (errorMessage.includes('Backend save failed')) {
+        // Keep the original error since it's already meaningful
+      } else if (errorMessage.includes('Cloudinary')) {
+        errorMessage = "Failed to upload to Cloudinary. Please check your file and try again.";
+      }
+      
+      setError(errorMessage);
+      toast.error(errorMessage, { id: 'upload-toast', duration: 5000 });
     } finally {
       setIsUploading(false);
     }

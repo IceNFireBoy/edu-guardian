@@ -19,8 +19,14 @@ const NoteSchema = new mongoose.Schema({
   },
   fileType: {
     type: String,
-    enum: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'jpg', 'jpeg', 'png'],
-    required: [true, 'Please specify file type']
+    enum: [
+      'pdf', 'doc', 'docx', 'ppt', 'pptx', 
+      'xls', 'xlsx', 'txt', 'csv',
+      'jpg', 'jpeg', 'png', 'gif', 'svg', 
+      'unknown'
+    ],
+    required: [true, 'Please specify file type'],
+    default: 'unknown'
   },
   fileSize: {
     type: Number,
@@ -117,7 +123,7 @@ const NoteSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false
   },
   isPublic: {
     type: Boolean,

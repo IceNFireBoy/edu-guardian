@@ -463,12 +463,20 @@ const NoteFilter = () => {
       // Use the API client to fetch notes
       const notesData = await fetchNotes(filterContext);
       
-      setNotes(Array.isArray(notesData) ? notesData : []);
-      
-      if (Array.isArray(notesData) && notesData.length === 0 && hasFiltersApplied) {
-        debug("[Frontend] No notes found matching filters: " + JSON.stringify(filterContext));
-        toast.info("No notes found matching your filters.");
-        // Optionally: alert("No notes found for your selected filters.");
+      // Handle the response - notesData should already be the array from the data field
+      if (Array.isArray(notesData)) {
+        setNotes(notesData);
+        
+        // Show message if no notes found with filters applied
+        if (notesData.length === 0 && hasFiltersApplied) {
+          debug("[Frontend] No notes found matching filters: " + JSON.stringify(filterContext));
+          toast.info("No notes found matching your filters.");
+        }
+      } else {
+        // If not an array, log the issue and set empty array
+        debug("[Frontend] Unexpected response format: " + JSON.stringify(notesData));
+        setNotes([]);
+        toast.warning("Received unexpected data format from server");
       }
     } catch (err) {
       debug("[Frontend] Error fetching notes: " + err.message);

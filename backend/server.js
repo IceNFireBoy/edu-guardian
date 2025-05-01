@@ -5,11 +5,6 @@ const morgan = require('morgan');
 const colors = require('colors');
 const fileupload = require('express-fileupload');
 const cookieParser = require('cookie-parser');
-const mongoSanitize = require('express-mongo-sanitize');
-const helmet = require('helmet');
-const xss = require('xss-clean');
-const rateLimit = require('express-rate-limit');
-const hpp = require('hpp');
 const cors = require('cors');
 const errorHandler = require('./middleware/error');
 const connectDB = require('./config/db');
@@ -29,7 +24,8 @@ const badgeRoutes = require('./routes/badgeRoutes');
 const app = express();
 
 // Body parser
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Cookie parser
 app.use(cookieParser());
@@ -40,40 +36,16 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // File uploading
-app.use(fileupload());
+app.use(fileupload({
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max file size
+  useTempFiles: true,
+  tempFileDir: '/tmp/',
+  debug: process.env.NODE_ENV === 'development'
+}));
 
-// Sanitize data
-app.use(mongoSanitize());
-
-// Set security headers
-app.use(helmet());
-
-// Prevent XSS attacks
-app.use(xss());
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 mins
-  max: 100
-});
-app.use(limiter);
-
-// Prevent http param pollution
-app.use(hpp());
-
-// Enable CORS with improved configuration
-const allowedOrigins = ['http://localhost:5173', 'https://eduguardian.netlify.app'];
+// Enable CORS - Allow all origins in development
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -96,13 +68,22 @@ const PORT = process.env.PORT || 5000;
 const server = app.listen(
   PORT,
   () => {
-    const corsOrigins = allowedOrigins.join(', ');
     console.log(`[Backend] Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`.yellow.bold);
-    console.log(`[Backend] CORS enabled for origins: ${corsOrigins}`.cyan);
+    
+    // Log API Routes with better formatting
     console.log(`[Backend] API Routes:`.green);
-    console.log(`[Backend] - POST /api/v1/notes - Create new note`.gray);
-    console.log(`[Backend] - GET /api/v1/notes - Get notes with filtering`.gray);
-    console.log(`[Backend] - GET /api/v1/notes/:id - Get single note`.gray);
+    console.log(`[Backend] Notes API:`.cyan);
+    console.log(`[Backend] - GET    /api/v1/notes             - Get all notes (can use query filters)`.gray);
+    console.log(`[Backend] - POST   /api/v1/notes             - Create new note`.gray);
+    console.log(`[Backend] - GET    /api/v1/notes/:id         - Get single note by ID`.gray);
+    console.log(`[Backend] - PUT    /api/v1/notes/:id         - Update note`.gray);
+    console.log(`[Backend] - DELETE /api/v1/notes/:id         - Delete note`.gray);
+    console.log(`[Backend] - GET    /api/v1/notes/filter      - Filter notes by criteria`.gray);
+    console.log(`[Backend] - POST   /api/v1/notes/:id/ratings - Rate a note`.gray);
+    console.log(`[Backend] - PUT    /api/v1/notes/:id/download - Increment download count`.gray);
+    
+    // MongoDB connection status
+    console.log(`[Backend] MongoDB: Connected`.green);
   }
 );
 

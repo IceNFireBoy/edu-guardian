@@ -1,38 +1,20 @@
 const express = require('express');
 const {
-  getAllBadges,
+  getBadges,
   getBadge,
   createBadge,
   updateBadge,
   deleteBadge,
-  getBadgesByCategory,
-  getBadgesByRarity,
-  checkBadgeEligibility
+  awardBadge,
+  getUserBadges
 } = require('../controllers/badgeController');
-
-const Badge = require('../models/Badge');
-const advancedResults = require('../middleware/advancedResults');
-const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Public routes
-router.route('/category/:category').get(getBadgesByCategory);
-router.route('/rarity/:rarity').get(getBadgesByRarity);
-
-// Protected routes
-router.route('/check-eligibility').get(protect, checkBadgeEligibility);
-
-// Public & protected routes
-router
-  .route('/')
-  .get(advancedResults(Badge), getAllBadges)
-  .post(protect, authorize('admin'), createBadge);
-
-router
-  .route('/:id')
-  .get(getBadge)
-  .put(protect, authorize('admin'), updateBadge)
-  .delete(protect, authorize('admin'), deleteBadge);
+router.route('/').get(getBadges).post(createBadge);
+router.route('/award/:userId').post(awardBadge);
+router.route('/user/:userId').get(getUserBadges);
+router.route('/:id').get(getBadge).put(updateBadge).delete(deleteBadge);
 
 module.exports = router; 
