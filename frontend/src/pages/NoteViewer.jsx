@@ -5,6 +5,18 @@ import PDFViewer from '../components/notes/PDFViewer';
 import { fetchNotes } from '../api/notes';
 import ErrorBoundary from '../components/ErrorBoundary';
 
+// Utility function to ensure string values
+const ensureString = (value, defaultValue = '') => {
+  if (value === null || value === undefined) return defaultValue;
+  if (typeof value === 'string') return value;
+  try {
+    return String(value);
+  } catch (err) {
+    console.error('Error converting value to string:', err);
+    return defaultValue;
+  }
+};
+
 const NoteViewer = () => {
   const { noteId } = useParams();
   const location = useLocation();
@@ -119,7 +131,7 @@ const NoteViewer = () => {
             <FaExclamationTriangle className="text-red-500 dark:text-red-400 mr-3 mt-1 flex-shrink-0 text-xl" />
             <div>
               <h3 className="font-bold text-red-700 dark:text-red-300 mb-2">Error Loading Note</h3>
-              <p className="text-red-600 dark:text-red-200 mb-4">{error}</p>
+              <p className="text-red-600 dark:text-red-200 mb-4">{ensureString(error)}</p>
               <button 
                 onClick={() => navigate('/my-notes')} 
                 className="px-4 py-2 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
@@ -167,7 +179,7 @@ const NoteViewer = () => {
     // Further validate the URL before passing to PDFViewer
     if (noteUrl) {
       // Ensure it's a string
-      noteUrl = String(noteUrl);
+      noteUrl = ensureString(noteUrl, '');
       
       // Check if URL is valid
       try {
@@ -187,10 +199,12 @@ const NoteViewer = () => {
     }
     
     // Get title with fallbacks
-    noteTitle = note.title || 
-               (note.context && note.context.caption) || 
-               (note.filename) || 
-               'Untitled Note';
+    noteTitle = ensureString(
+      note.title || 
+      (note.context && note.context.caption) || 
+      note.filename,
+      'Untitled Note'
+    );
   } catch (err) {
     console.error('Error processing note data:', err);
     noteUrl = null;

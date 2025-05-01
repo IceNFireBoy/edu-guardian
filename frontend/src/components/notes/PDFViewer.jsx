@@ -1,8 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaArrowLeft, FaClock, FaCoffee, FaPlay, FaPause, FaTimes, FaExclamationTriangle, FaFilePdf } from 'react-icons/fa';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import ErrorBoundary from '../ErrorBoundary';
+
+// Utility function to ensure string values
+const ensureString = (value, defaultValue = '') => {
+  if (value === null || value === undefined) return defaultValue;
+  if (typeof value === 'string') return value;
+  try {
+    return String(value);
+  } catch (err) {
+    console.error('Error converting value to string:', err);
+    return defaultValue;
+  }
+};
 
 const PDFViewer = ({ noteUrl, noteTitle }) => {
   const [sessionTime, setSessionTime] = useState(0); // in seconds
@@ -21,7 +32,7 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
   
   // Validate props - with more thorough validation
   const validNoteUrl = Boolean(noteUrl && typeof noteUrl === 'string' && noteUrl.trim() !== '');
-  const safeNoteTitle = (noteTitle && typeof noteTitle === 'string') ? noteTitle : 'Untitled Note';
+  const safeNoteTitle = ensureString(noteTitle, 'Untitled Note');
   
   // Format time in HH:MM:SS
   const formatTime = (timeInSeconds) => {
@@ -185,7 +196,7 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
           <div className="text-center p-6 max-w-md">
             <FaExclamationTriangle className="text-red-500 dark:text-red-400 text-4xl mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">PDF Loading Error</h3>
-            <p className="text-red-600 dark:text-red-200 mb-4">{pdfError}</p>
+            <p className="text-red-600 dark:text-red-200 mb-4">{ensureString(pdfError)}</p>
             <button
               onClick={() => navigate('/my-notes')}
               className="px-4 py-2 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
@@ -310,11 +321,8 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
                     </button>
                     
                     {showBreakOptions && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-lg z-10"
+                      <div
+                        className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-lg z-10 fade-in"
                       >
                         <div className="p-3 border-b dark:border-slate-700">
                           <div className="flex items-center">
@@ -349,7 +357,7 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
                             Long Break (30 min)
                           </button>
                         </div>
-                      </motion.div>
+                      </div>
                     )}
                   </>
                 )}
