@@ -16,6 +16,7 @@ import Settings from './pages/Settings';
 import Leaderboard from './pages/Leaderboard';
 import Badges from './pages/Badges';
 import NoteViewer from './pages/NoteViewer';
+import TestPDFDebug from './debug/TestPDFDebug';
 
 // Layout components
 import Sidebar from './components/layout/Sidebar';
@@ -167,6 +168,9 @@ function App() {
                   <Route path="/badges" element={<Badges />} />
                   <Route path="/view-note" element={<NoteViewer />} />
                   <Route path="/view-note/:noteId" element={<NoteViewer />} />
+                  
+                  {/* Debug routes */}
+                  <Route path="/debug/test-pdf/*" element={<TestPDFDebug />} />
                 </Routes>
               </ErrorBoundary>
             </main>

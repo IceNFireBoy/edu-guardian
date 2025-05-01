@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
 import PDFViewer from '../components/notes/PDFViewer';
 import { fetchNotes } from '../api/notes';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 const NoteViewer = () => {
   const { noteId } = useParams();
@@ -39,29 +40,44 @@ const NoteViewer = () => {
         // Try to get from localStorage first
         const notesData = localStorage.getItem('notes');
         if (notesData) {
-          const parsedNotes = JSON.parse(notesData);
-          const foundNote = parsedNotes.find(n => (n._id === id || n.asset_id === id));
-          
-          if (foundNote) {
-            setNote(foundNote);
-            setLoading(false);
-            return;
+          try {
+            const parsedNotes = JSON.parse(notesData);
+            if (Array.isArray(parsedNotes)) {
+              const foundNote = parsedNotes.find(n => (n && (n._id === id || n.asset_id === id)));
+              
+              if (foundNote) {
+                console.log('Note found in localStorage:', foundNote._id || foundNote.asset_id);
+                setNote(foundNote);
+                setLoading(false);
+                return;
+              }
+            }
+          } catch (parseError) {
+            console.error('Failed to parse localStorage notes data:', parseError);
+            // Continue to API fetch if localStorage parsing fails
           }
         }
         
         // If not found in localStorage, fetch from API
         const response = await fetchNotes();
         
-        if (response.success) {
-          const foundNote = response.data.find(n => (n._id === id || n.asset_id === id));
-          
-          if (foundNote) {
-            setNote(foundNote);
+        if (response && response.success) {
+          if (Array.isArray(response.data)) {
+            const foundNote = response.data.find(n => (n && (n._id === id || n.asset_id === id)));
+            
+            if (foundNote) {
+              console.log('Note found in API response:', foundNote._id || foundNote.asset_id);
+              setNote(foundNote);
+            } else {
+              setError('Note not found in collection');
+            }
           } else {
-            setError('Note not found');
+            console.error('API response data is not an array:', response.data);
+            setError('Invalid response format from server');
           }
         } else {
-          setError(response.error || 'Failed to fetch note data');
+          console.error('API request failed:', response?.error || 'Unknown error');
+          setError(response?.error || 'Failed to fetch note data');
         }
       } catch (err) {
         console.error('Error fetching note:', err);
@@ -132,12 +148,41 @@ const NoteViewer = () => {
     );
   }
   
-  // Get proper note URL and title
-  const noteUrl = note.secure_url || note.fileUrl;
-  const noteTitle = note.title || note.context?.caption || 'Untitled Note';
+  // Validate note data and get proper note URL and title
+  const noteUrl = note.secure_url || note.fileUrl || null;
+  const noteTitle = note.title || (note.context && note.context.caption) || 'Untitled Note';
   
-  // Render PDFViewer
-  return <PDFViewer noteUrl={noteUrl} noteTitle={noteTitle} />;
+  // Extra validation - if no valid URL exists, show error
+  if (!noteUrl) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
+        <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 max-w-lg w-full shadow-md">
+          <div className="flex items-start">
+            <FaExclamationTriangle className="text-yellow-500 dark:text-yellow-400 mr-3 mt-1 flex-shrink-0 text-xl" />
+            <div>
+              <h3 className="font-bold text-yellow-700 dark:text-yellow-300 mb-2">Invalid Note</h3>
+              <p className="text-yellow-600 dark:text-yellow-200 mb-4">
+                This note doesn't have a valid document URL.
+              </p>
+              <button 
+                onClick={() => navigate('/my-notes')} 
+                className="px-4 py-2 bg-yellow-100 dark:bg-yellow-800 text-yellow-700 dark:text-yellow-200 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-700 transition-colors"
+              >
+                Back to Notes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Render PDFViewer within ErrorBoundary
+  return (
+    <ErrorBoundary>
+      <PDFViewer noteUrl={noteUrl} noteTitle={noteTitle} />
+    </ErrorBoundary>
+  );
 };
 
 export default NoteViewer; 
