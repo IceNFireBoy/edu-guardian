@@ -25,6 +25,25 @@ const advancedResults = require('../middleware/advancedResults');
 
 const router = express.Router();
 
+// Debug route - returns all notes without filters
+router.get('/test', async (req, res) => {
+  try {
+    const notes = await Note.find().lean();
+    console.log("[Backend] Test route returning", notes.length, "notes");
+    return res.status(200).json({
+      success: true,
+      count: notes.length,
+      data: notes
+    });
+  } catch (error) {
+    console.error("[Backend] Test route error:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to retrieve notes"
+    });
+  }
+});
+
 // Public routes - all routes are now public
 router.route('/filter').get(getNotesByFilters);
 router.route('/my-notes').get(getMyNotes);
@@ -40,10 +59,7 @@ router.route('/:id/flashcards').post(createFlashcard);
 // Main CRUD routes
 router
   .route('/')
-  .get(advancedResults(Note, {
-    path: 'user',
-    select: 'name username profileImage'
-  }), getNotes)
+  .get(getNotes)
   .post(createNote);
 
 router

@@ -12,32 +12,37 @@ exports.getNotes = async (req, res) => {
     const filter = {};
     
     // Add query parameters to filter if they exist
-    if (req.query.grade) filter.grade = req.query.grade;
-    if (req.query.subject) filter.subject = req.query.subject;
-    if (req.query.semester) filter.semester = req.query.semester;
-    if (req.query.quarter) filter.quarter = req.query.quarter;
-    
-    // For topic, use regex for partial matching
+    if (req.query.grade) {
+      filter.grade = { $regex: new RegExp(req.query.grade, "i") };
+    }
+    if (req.query.subject) {
+      filter.subject = { $regex: new RegExp(req.query.subject, "i") };
+    }
+    if (req.query.semester) {
+      filter.semester = req.query.semester;
+    }
+    if (req.query.quarter) {
+      filter.quarter = req.query.quarter;
+    }
     if (req.query.topic) {
-      filter.topic = new RegExp(req.query.topic, 'i');
+      filter.topic = { $regex: new RegExp(req.query.topic, "i") };
     }
     
-    console.log("[Backend] Filtering notes with query:", req.query);
-    console.log("[Backend] Using filter:", filter);
+    console.log("[Backend] getNotes: Query parameters:", req.query);
+    console.log("[Backend] getNotes: MongoDB filter:", filter);
     
     // Find notes matching filter criteria
     const notes = await Note.find(filter)
       .select('-__v')
-      .lean();
+      .lean()
+      .exec();
     
-    console.log("[Backend] Found", notes.length, "notes matching criteria");
-    console.log("[Backend] Returning notes:", 
-      notes.map(note => ({
-        _id: note._id,
-        title: note.title,
-        subject: note.subject
-      }))
-    );
+    console.log("[Backend] getNotes: Found", notes.length, "notes");
+    console.log("[Backend] getNotes: Sample note:", notes[0] ? {
+      _id: notes[0]._id,
+      title: notes[0].title,
+      subject: notes[0].subject
+    } : "No notes found");
     
     // Return notes in standard format
     return res.status(200).json({
@@ -46,7 +51,7 @@ exports.getNotes = async (req, res) => {
       data: notes
     });
   } catch (error) {
-    console.error("[Backend] MongoDB Filter Error:", error);
+    console.error("[Backend] getNotes Error:", error);
     return res.status(500).json({ 
       success: false, 
       error: "Failed to retrieve notes. Please try again." 
@@ -409,35 +414,41 @@ exports.getNotesByFilters = async (req, res) => {
     const filter = {};
     
     // Add query parameters to filter if they exist
-    if (req.query.grade) filter.grade = req.query.grade;
-    if (req.query.subject) filter.subject = req.query.subject;
-    if (req.query.semester) filter.semester = req.query.semester;
-    if (req.query.quarter) filter.quarter = req.query.quarter;
-    
-    // For topic, use regex for partial matching
+    if (req.query.grade) {
+      filter.grade = { $regex: new RegExp(req.query.grade, "i") };
+    }
+    if (req.query.subject) {
+      filter.subject = { $regex: new RegExp(req.query.subject, "i") };
+    }
+    if (req.query.semester) {
+      filter.semester = req.query.semester;
+    }
+    if (req.query.quarter) {
+      filter.quarter = req.query.quarter;
+    }
     if (req.query.topic) {
-      filter.topic = new RegExp(req.query.topic, 'i');
+      filter.topic = { $regex: new RegExp(req.query.topic, "i") };
     }
     
-    console.log("[Backend] Filtering notes with query:", req.query);
-    console.log("[Backend] Using filter:", filter);
+    console.log("[Backend] getNotesByFilters: Query parameters:", req.query);
+    console.log("[Backend] getNotesByFilters: MongoDB filter:", filter);
     
     // Find notes matching filter criteria
-    const notes = await Note.find(filter).populate({
-      path: 'user',
-      select: 'name username profileImage'
-    });
+    const notes = await Note.find(filter)
+      .select('-__v')
+      .lean()
+      .exec();
     
-    console.log("[Backend] Found", notes.length, "notes matching criteria");
+    console.log("[Backend] getNotesByFilters: Found", notes.length, "notes");
     
-    // Return notes as JSON array
+    // Return notes in standard format
     return res.status(200).json({
-      success: true, 
+      success: true,
       count: notes.length,
       data: notes
     });
   } catch (error) {
-    console.error("MongoDB Filter Error:", error);
+    console.error("[Backend] getNotesByFilters Error:", error);
     return res.status(500).json({ 
       success: false, 
       error: "Failed to retrieve notes. Please try again." 
