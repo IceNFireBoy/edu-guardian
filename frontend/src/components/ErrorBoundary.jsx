@@ -1,6 +1,35 @@
 import React, { Component } from 'react';
 import { FaExclamationTriangle } from 'react-icons/fa';
 
+// Utility function to safely stringify any value
+const safeStringify = (value) => {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  
+  try {
+    if (typeof value === 'object') {
+      // For Error objects, use toString()
+      if (value instanceof Error) {
+        return value.toString();
+      }
+      // For component stacks, we'll handle them specially
+      if (value && value.componentStack) {
+        return String(value.componentStack);
+      }
+      // For other objects, use JSON.stringify with fallback
+      try {
+        return JSON.stringify(value);
+      } catch (e) {
+        return '[Object]';
+      }
+    }
+    return String(value);
+  } catch (err) {
+    console.error('Error in safeStringify:', err);
+    return '[Value cannot be displayed]';
+  }
+};
+
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -21,13 +50,13 @@ class ErrorBoundary extends Component {
     console.error('Error caught by boundary:', error, errorInfo);
     
     // Check if this is the React error #31 specifically
-    const errorText = error.toString();
+    const errorText = safeStringify(error);
     if (errorText.includes('Error: Minified React error #31')) {
       console.error('[React Error #31] Likely caused by invalid props to a component or render function');
       console.error('Component stack:', errorInfo.componentStack);
       
       // Try to get the component name from the stack
-      const stackLines = errorInfo.componentStack.split('\n');
+      const stackLines = (errorInfo.componentStack || '').split('\n');
       if (stackLines.length > 1) {
         const firstComponentLine = stackLines[1].trim();
         console.error('Problematic component:', firstComponentLine);
@@ -39,7 +68,7 @@ class ErrorBoundary extends Component {
     // Try to log to window for visibility
     if (window.onerror) {
       window.onerror(
-        error.message,
+        error.message || safeStringify(error),
         null, // filename
         null, // lineno
         null, // colno
@@ -52,7 +81,9 @@ class ErrorBoundary extends Component {
       const errorDisplay = document.getElementById('error-display');
       if (errorDisplay) {
         errorDisplay.style.display = 'block';
-        errorDisplay.innerHTML += `<p><strong>ERROR BOUNDARY CAUGHT:</strong> ${error.toString()}<br/><pre>${errorInfo?.componentStack || ''}</pre></p>`;
+        const errorStr = safeStringify(error);
+        const stackStr = errorInfo && errorInfo.componentStack ? safeStringify(errorInfo.componentStack) : '';
+        errorDisplay.innerHTML += `<p><strong>ERROR BOUNDARY CAUGHT:</strong> ${errorStr}<br/><pre>${stackStr}</pre></p>`;
       }
     } catch (displayError) {
       console.error('Failed to log to error display:', displayError);
@@ -76,12 +107,14 @@ class ErrorBoundary extends Component {
                 Something went wrong
               </h2>
               <p className="text-red-600 dark:text-red-200 mb-4">
-                {this.state.error && this.state.error.toString()}
+                {this.state.error ? safeStringify(this.state.error) : 'An error occurred'}
               </p>
               
               <div className="bg-red-100 dark:bg-red-900/50 p-4 rounded-lg mb-4 overflow-auto max-h-[200px]">
                 <pre className="text-xs text-red-800 dark:text-red-200 font-mono">
-                  {this.state.errorInfo && this.state.errorInfo.componentStack}
+                  {this.state.errorInfo && this.state.errorInfo.componentStack 
+                    ? safeStringify(this.state.errorInfo.componentStack)
+                    : ''}
                 </pre>
               </div>
               
