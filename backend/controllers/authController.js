@@ -255,6 +255,56 @@ exports.verifyEmail = asyncHandler(async (req, res, next) => {
   }
 });
 
+// @desc    Update user profile
+// @route   PUT /api/v1/auth/me
+// @access  Public
+exports.updateProfile = asyncHandler(async (req, res) => {
+  try {
+    const fieldsToUpdate = {
+      name: req.body.name,
+      email: req.body.email,
+      username: req.body.username
+    };
+
+    // Remove undefined fields
+    Object.keys(fieldsToUpdate).forEach(key => 
+      fieldsToUpdate[key] === undefined && delete fieldsToUpdate[key]
+    );
+
+    // Since auth is disabled, use a dummy user ID or find by email
+    let user;
+    if (req.body.email) {
+      user = await User.findOne({ email: req.body.email });
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found"
+      });
+    }
+
+    // Update user
+    user = await User.findByIdAndUpdate(user._id, fieldsToUpdate, {
+      new: true,
+      runValidators: true
+    });
+
+    console.log("[Backend] User profile updated:", user._id);
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error("[Backend] Update profile error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to update profile"
+    });
+  }
+});
+
 // Get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {
   // Create token

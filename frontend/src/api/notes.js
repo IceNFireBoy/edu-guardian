@@ -18,31 +18,54 @@ export async function fetchNotes(filters = {}) {
   
   try {
     debug("[Frontend] Fetching notes from API: " + url);
-    const res = await fetch(url);
+    debug("[Frontend] Using filters:", filters);
     
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Server responded with ${res.status}: ${errorText}`);
+    const res = await fetch(url);
+    const contentType = res.headers.get("content-type");
+    
+    // Check if response is JSON
+    if (!contentType || !contentType.includes("application/json")) {
+      debug("[Frontend] Received non-JSON response:", await res.text());
+      throw new Error("Server returned non-JSON response");
     }
     
     const data = await res.json();
     debug("[Frontend] Raw API response:", data);
     
-    // Return the complete response object
+    // Check for API-level success flag
     if (!data.success) {
       debug("[Frontend] API returned success: false");
-      throw new Error(data.error || "Failed to fetch notes");
+      throw new Error(data.error || "API request failed");
     }
     
-    debug(`[Frontend] Successfully retrieved ${Array.isArray(data.data) ? data.data.length : 0} notes`);
-    return data; // Return complete response object
+    // Validate response structure
+    if (!Array.isArray(data.data)) {
+      debug("[Frontend] API returned invalid data structure:", data);
+      throw new Error("Invalid response format from server");
+    }
+    
+    debug(`[Frontend] Successfully retrieved ${data.data.length} notes`);
+    
+    // Log a sample note for debugging
+    if (data.data.length > 0) {
+      debug("[Frontend] Sample note:", {
+        _id: data.data[0]._id,
+        title: data.data[0].title,
+        subject: data.data[0].subject
+      });
+    }
+    
+    return data;
   } catch (err) {
-    debug("[Frontend] Error fetching notes: " + err.message);
-    // Log network errors in detail
+    debug("[Frontend] Error fetching notes:", err.message);
+    
+    // Enhanced error logging
     if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
       debug("[Frontend] Network error - check if the backend is running and accessible");
+      debug("[Frontend] API_BASE:", API_BASE);
     }
-    throw err; // Let caller handle showing error message
+    
+    throw new Error(`Failed to fetch notes: ${err.message}`);
   }
 }
 
