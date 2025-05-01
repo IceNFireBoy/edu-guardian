@@ -13,6 +13,7 @@ import Progress from './pages/Progress';
 import Settings from './pages/Settings';
 import Leaderboard from './pages/Leaderboard';
 import Badges from './pages/Badges';
+import NoteViewer from './pages/NoteViewer';
 
 // Layout components
 import Sidebar from './components/layout/Sidebar';
@@ -146,6 +147,8 @@ function App() {
               <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/badges" element={<Badges />} />
+              <Route path="/view-note" element={<NoteViewer />} />
+              <Route path="/view-note/:noteId" element={<NoteViewer />} />
             </Routes>
           </main>
         </div>

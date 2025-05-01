@@ -24,10 +24,14 @@ const StarRating = ({ noteId, initialRating = 0, size = 'medium', readOnly = fal
   // Load rating from localStorage on component mount
   useEffect(() => {
     if (noteId) {
-      const storedRating = localStorage.getItem(`note_rating_${noteId}`);
-      if (storedRating) {
-        setRating(parseFloat(storedRating));
-        setHasRated(true);
+      try {
+        const storedRating = localStorage.getItem(`note_rating_${noteId}`);
+        if (storedRating) {
+          setRating(parseFloat(storedRating));
+          setHasRated(true);
+        }
+      } catch (err) {
+        console.error('Error loading rating from localStorage:', err);
       }
     }
   }, [noteId]);
@@ -36,20 +40,32 @@ const StarRating = ({ noteId, initialRating = 0, size = 'medium', readOnly = fal
   const handleRatingClick = (selectedRating) => {
     if (readOnly) return;
     
-    // Save to localStorage
-    if (noteId) {
-      localStorage.setItem(`note_rating_${noteId}`, selectedRating.toString());
-    }
-    
-    setRating(selectedRating);
-    setHasRated(true);
-    
-    // Record activity for XP
-    recordActivity('RATE_NOTE');
-    
-    // Call the callback if provided
-    if (onRatingChange) {
-      onRatingChange(selectedRating);
+    try {
+      // Save to localStorage
+      if (noteId) {
+        localStorage.setItem(`note_rating_${noteId}`, selectedRating.toString());
+        
+        // Also update overall ratings
+        const ratingsData = localStorage.getItem('note_ratings') || '{}';
+        const ratings = JSON.parse(ratingsData);
+        ratings[noteId] = selectedRating;
+        localStorage.setItem('note_ratings', JSON.stringify(ratings));
+      }
+      
+      setRating(selectedRating);
+      setHasRated(true);
+      
+      // Record activity for XP
+      if (recordActivity) {
+        recordActivity('RATE_NOTE');
+      }
+      
+      // Call the callback if provided
+      if (onRatingChange) {
+        onRatingChange(selectedRating);
+      }
+    } catch (err) {
+      console.error('Error saving rating:', err);
     }
   };
   

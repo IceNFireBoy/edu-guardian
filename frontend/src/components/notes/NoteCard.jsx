@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FaBookOpen, FaFilePdf, FaImage, FaFileAlt, FaExclamationCircle } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 import StarRating from './StarRating';
 import { useStreak } from '../../hooks/useStreak';
 
@@ -44,6 +45,7 @@ const NoteCard = ({ note, onView, compact = false }) => {
   }
   
   const { recordActivity } = useStreak();
+  const navigate = useNavigate();
   const noteId = note.asset_id || note._id || `note-${Math.random()}`;
   const averageRating = getAverageRating(noteId);
   
@@ -54,7 +56,10 @@ const NoteCard = ({ note, onView, compact = false }) => {
         recordActivity('VIEW_NOTE');
       }
       
-      // Call the parent handler
+      // Navigate to the note viewer page
+      navigate(`/view-note?id=${noteId}`);
+      
+      // Also call the parent handler if provided (for backward compatibility)
       if (onView && typeof onView === 'function') {
         onView(note);
       }
@@ -248,8 +253,8 @@ const NoteCard = ({ note, onView, compact = false }) => {
       </motion.div>
     );
   } catch (renderError) {
-    console.error("Error rendering NoteCard:", renderError, note);
-    return <InvalidNoteCard error="Error rendering note" compact={compact} />;
+    console.error("Error rendering NoteCard:", renderError);
+    return <InvalidNoteCard error="Failed to render note" compact={compact} />;
   }
 };
 
