@@ -42,11 +42,16 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
     const minutes = Math.floor((timeInSeconds % 3600) / 60);
     const seconds = timeInSeconds % 60;
     
-    return [
-      hours.toString().padStart(2, '0'),
-      minutes.toString().padStart(2, '0'),
-      seconds.toString().padStart(2, '0')
-    ].join(':');
+    try {
+      return [
+        hours.toString().padStart(2, '0'),
+        minutes.toString().padStart(2, '0'),
+        seconds.toString().padStart(2, '0')
+      ].join(':');
+    } catch (err) {
+      console.error("Error formatting time:", err);
+      return '00:00:00';
+    }
   };
   
   // Start session timer on component mount
@@ -276,7 +281,7 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
               <div className="flex items-center bg-gray-100 dark:bg-slate-700 px-3 py-2 rounded-lg">
                 <FaClock className="text-primary dark:text-primary-light mr-2" />
                 <span className="text-gray-800 dark:text-gray-100 font-mono">
-                  {formatTime(sessionTime)}
+                  {ensureString(formatTime(sessionTime))}
                 </span>
                 <button 
                   onClick={togglePause}
@@ -297,7 +302,7 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
                   <div className="flex items-center bg-blue-100 dark:bg-blue-900/30 px-3 py-2 rounded-lg">
                     <FaCoffee className="text-blue-600 dark:text-blue-400 mr-2" />
                     <span className="text-blue-800 dark:text-blue-300 font-mono">
-                      Break: {formatTime(breakTime)}
+                      Break: {ensureString(formatTime(breakTime))}
                     </span>
                     <button
                       onClick={cancelBreak}
@@ -380,7 +385,7 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
               </h2>
               <div className="text-center mb-6">
                 <span className="text-5xl font-mono text-blue-600 dark:text-blue-400">
-                  {formatTime(breakTime)}
+                  {ensureString(formatTime(breakTime))}
                 </span>
               </div>
               <p className="text-gray-600 dark:text-gray-300 text-center mb-6">
