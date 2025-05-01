@@ -26,13 +26,27 @@ exports.getNotes = async (req, res) => {
     console.log("[Backend] Using filter:", filter);
     
     // Find notes matching filter criteria
-    const notes = await Note.find(filter);
-    console.log("[Backend] Found", notes.length, "notes matching criteria");
+    const notes = await Note.find(filter)
+      .select('-__v')
+      .lean();
     
-    // Return notes as JSON array
-    return res.status(200).json(notes);
+    console.log("[Backend] Found", notes.length, "notes matching criteria");
+    console.log("[Backend] Returning notes:", 
+      notes.map(note => ({
+        _id: note._id,
+        title: note.title,
+        subject: note.subject
+      }))
+    );
+    
+    // Return notes in standard format
+    return res.status(200).json({
+      success: true,
+      count: notes.length,
+      data: notes
+    });
   } catch (error) {
-    console.error("MongoDB Filter Error:", error);
+    console.error("[Backend] MongoDB Filter Error:", error);
     return res.status(500).json({ 
       success: false, 
       error: "Failed to retrieve notes. Please try again." 

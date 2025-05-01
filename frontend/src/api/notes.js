@@ -26,8 +26,16 @@ export async function fetchNotes(filters = {}) {
     }
     
     const data = await res.json();
+    debug("[Frontend] Raw API response:", data);
+    
+    // Return the complete response object
+    if (!data.success) {
+      debug("[Frontend] API returned success: false");
+      throw new Error(data.error || "Failed to fetch notes");
+    }
+    
     debug(`[Frontend] Successfully retrieved ${Array.isArray(data.data) ? data.data.length : 0} notes`);
-    return data.data || []; // Extract the data array from the response
+    return data; // Return complete response object
   } catch (err) {
     debug("[Frontend] Error fetching notes: " + err.message);
     // Log network errors in detail

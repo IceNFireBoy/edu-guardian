@@ -453,36 +453,36 @@ const NoteFilter = () => {
     setError(null);
     
     try {
-      // Filter only by non-empty values
-      const filterContext = Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== '')
-      );
+      // For initial testing, skip filters
+      const filterContext = {}; // Temporarily ignore filters
       
-      debug("[Frontend] Applying filters: " + JSON.stringify(filterContext));
+      debug("[Frontend] Fetching all notes without filters for testing");
       
       // Use the API client to fetch notes
-      const notesData = await fetchNotes(filterContext);
+      const response = await fetchNotes(filterContext);
       
-      // Handle the response - notesData should already be the array from the data field
-      if (Array.isArray(notesData)) {
-        setNotes(notesData);
+      debug("[Frontend] Raw API response:", response);
+      
+      // Check if response has the expected structure
+      if (response && response.success && Array.isArray(response.data)) {
+        debug("[Frontend] Setting notes array:", response.data.length, "notes");
+        setNotes(response.data);
         
-        // Show message if no notes found with filters applied
-        if (notesData.length === 0 && hasFiltersApplied) {
-          debug("[Frontend] No notes found matching filters: " + JSON.stringify(filterContext));
-          toast.info("No notes found matching your filters.");
+        // Show message if no notes found
+        if (response.data.length === 0) {
+          debug("[Frontend] No notes found in response");
+          toast.info("No notes available.");
         }
       } else {
-        // If not an array, log the issue and set empty array
-        debug("[Frontend] Unexpected response format: " + JSON.stringify(notesData));
+        // Log unexpected response format
+        debug("[Frontend] Unexpected API response format:", response);
         setNotes([]);
         toast.warning("Received unexpected data format from server");
       }
     } catch (err) {
-      debug("[Frontend] Error fetching notes: " + err.message);
+      debug("[Frontend] Error fetching notes:", err.message);
       setError("Failed to fetch notes. Please try again later.");
       toast.error('Error fetching notes: ' + err.message);
-      // Set empty array to prevent rendering issues
       setNotes([]);
     } finally {
       setLoading(false);
