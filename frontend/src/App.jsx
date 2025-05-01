@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import { ToastProvider } from './components/ui/Toast';
 import toast from 'react-hot-toast';
+import ErrorBoundary from './components/ErrorBoundary';
+import Fallback from './components/Fallback';
 
 // Pages
 import HomePage from './pages/Home';
@@ -29,30 +31,38 @@ if (typeof window !== 'undefined') {
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   // Check if localStorage is available
   useEffect(() => {
-    const checkStorage = () => {
-      try {
-        localStorage.setItem('storage_test', 'test');
-        localStorage.removeItem('storage_test');
-        return true;
-      } catch (e) {
-        return false;
-      }
-    };
+    try {
+      const checkStorage = () => {
+        try {
+          localStorage.setItem('storage_test', 'test');
+          localStorage.removeItem('storage_test');
+          return true;
+        } catch (e) {
+          return false;
+        }
+      };
 
-    if (!checkStorage()) {
-      // Show error if localStorage is not available
-      setTimeout(() => {
-        toast.error(
-          'Local storage is not available. Some features may not work properly. Please enable cookies and local storage in your browser settings.',
-          { duration: 8000 }
-        );
-        debug('LocalStorage is not available - features may be limited');
-      }, 1000);
-    } else {
-      debug('App initialized - LocalStorage is available');
+      if (!checkStorage()) {
+        // Show error if localStorage is not available
+        setTimeout(() => {
+          toast.error(
+            'Local storage is not available. Some features may not work properly. Please enable cookies and local storage in your browser settings.',
+            { duration: 8000 }
+          );
+          debug('LocalStorage is not available - features may be limited');
+        }, 1000);
+      } else {
+        debug('App initialized - LocalStorage is available');
+      }
+    } catch (error) {
+      console.error('Error in localStorage check:', error);
+      debug('Error checking localStorage:', error.message);
+      // Don't set hasError here - we can continue without localStorage
     }
   }, []);
 
@@ -107,56 +117,71 @@ function App() {
     }
   };
 
-  return (
-    <ToastProvider>
-      <div className={`min-h-screen ${darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-900'}`}>
-        <Toaster position="top-right" toastOptions={{
-          // Define default options
-          className: '',
-          duration: 5000,
-          style: {
-            background: darkMode ? '#1e293b' : '#fff',
-            color: darkMode ? '#fff' : '#334155',
-          },
-          // Default options for specific types
-          success: {
-            duration: 3000,
-            iconTheme: {
-              primary: '#10b981',
-              secondary: 'white',
+  // If we've encountered a critical error, render the fallback
+  if (hasError) {
+    console.error('App rendering fallback due to error:', errorMessage);
+    return <Fallback />;
+  }
+
+  try {
+    return (
+      <ToastProvider>
+        <div className={`min-h-screen ${darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-900'}`}>
+          <Toaster position="top-right" toastOptions={{
+            // Define default options
+            className: '',
+            duration: 5000,
+            style: {
+              background: darkMode ? '#1e293b' : '#fff',
+              color: darkMode ? '#fff' : '#334155',
             },
-          },
-          error: {
-            duration: 4000,
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: 'white',
+            // Default options for specific types
+            success: {
+              duration: 3000,
+              iconTheme: {
+                primary: '#10b981',
+                secondary: 'white',
+              },
             },
-          },
-        }} />
-        <OfflineDetector />
-        <Sidebar />
-        <div className="flex flex-col min-h-screen md:ml-64">
-          <Header toggleDarkMode={toggleDarkMode} />
-          <main className="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/my-notes" element={<MyNotes />} />
-              <Route path="/donate" element={<Donate />} />
-              <Route path="/progress" element={<Progress />} />
-              <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
-              <Route path="/leaderboard" element={<Leaderboard />} />
-              <Route path="/badges" element={<Badges />} />
-              <Route path="/view-note" element={<NoteViewer />} />
-              <Route path="/view-note/:noteId" element={<NoteViewer />} />
-            </Routes>
-          </main>
+            error: {
+              duration: 4000,
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: 'white',
+              },
+            },
+          }} />
+          <OfflineDetector />
+          <Sidebar />
+          <div className="flex flex-col min-h-screen md:ml-64">
+            <Header toggleDarkMode={toggleDarkMode} />
+            <main className="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full">
+              <ErrorBoundary>
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/my-notes" element={<MyNotes />} />
+                  <Route path="/donate" element={<Donate />} />
+                  <Route path="/progress" element={<Progress />} />
+                  <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
+                  <Route path="/leaderboard" element={<Leaderboard />} />
+                  <Route path="/badges" element={<Badges />} />
+                  <Route path="/view-note" element={<NoteViewer />} />
+                  <Route path="/view-note/:noteId" element={<NoteViewer />} />
+                </Routes>
+              </ErrorBoundary>
+            </main>
+          </div>
+          <CookieConsent />
+          <DebugPanel />
         </div>
-        <CookieConsent />
-        <DebugPanel />
-      </div>
-    </ToastProvider>
-  );
+      </ToastProvider>
+    );
+  } catch (error) {
+    console.error('Critical error in App render:', error);
+    setHasError(true);
+    setErrorMessage(error.message);
+    return <Fallback />;
+  }
 }
 
 export default App;

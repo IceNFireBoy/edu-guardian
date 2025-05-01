@@ -1,8 +1,25 @@
 // API client for notes
 import { debug } from '../components/DebugPanel';
 
+// Get API base from environment or use a relative URL
 const API_BASE = import.meta.env.VITE_API_URL || '';
 debug(`Using API base URL: ${API_BASE || '(none - using relative URL)'}`);
+
+// Add a backup API endpoint for Netlify deployment if env variable is missing
+const getApiUrl = () => {
+  // If API_BASE is defined, use it
+  if (API_BASE) return API_BASE;
+  
+  // In production on Netlify, use a relative URL
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    debug('[Frontend] Using relative API URL for production');
+    return '';
+  }
+  
+  // In development, fallback to localhost
+  debug('[Frontend] Using localhost API URL for development');
+  return 'http://localhost:5000';
+};
 
 // Fetch notes with optional filters
 export async function fetchNotes(filters = {}) {
@@ -14,7 +31,8 @@ export async function fetchNotes(filters = {}) {
   });
   
   const queryString = query.toString();
-  const url = `${API_BASE}/api/v1/notes${queryString ? `?${queryString}` : ''}`;
+  const apiUrl = getApiUrl();
+  const url = `${apiUrl}/api/v1/notes${queryString ? `?${queryString}` : ''}`;
   
   try {
     debug("[Frontend] Fetching notes from API: " + url);
@@ -55,6 +73,14 @@ export async function fetchNotes(filters = {}) {
       });
     }
     
+    // Store notes in localStorage for offline use
+    try {
+      localStorage.setItem('notes', JSON.stringify(data.data));
+      debug('[Frontend] Notes cached in localStorage');
+    } catch (err) {
+      debug('[Frontend] Failed to cache notes in localStorage', err);
+    }
+    
     return data;
   } catch (err) {
     debug("[Frontend] Error fetching notes:", err.message);
@@ -62,7 +88,24 @@ export async function fetchNotes(filters = {}) {
     // Enhanced error logging
     if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
       debug("[Frontend] Network error - check if the backend is running and accessible");
-      debug("[Frontend] API_BASE:", API_BASE);
+      debug("[Frontend] API URL:", apiUrl);
+      
+      // Try to load from localStorage as fallback
+      try {
+        const cachedNotes = localStorage.getItem('notes');
+        if (cachedNotes) {
+          const parsedNotes = JSON.parse(cachedNotes);
+          debug('[Frontend] Loaded notes from localStorage cache:', parsedNotes.length);
+          return {
+            success: true,
+            data: parsedNotes,
+            count: parsedNotes.length,
+            fromCache: true
+          };
+        }
+      } catch (cacheErr) {
+        debug('[Frontend] Failed to load notes from cache', cacheErr);
+      }
     }
     
     throw new Error(`Failed to fetch notes: ${err.message}`);
@@ -78,18 +121,17 @@ export async function uploadNote(file, metadata) {
     formData.append("file", file);
     
     // Check if upload preset is configured
-    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-    if (!uploadPreset) {
-      debug("[Frontend] WARNING: Cloudinary upload preset not configured!");
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'edu_guardian';
+    if (!import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET) {
+      debug("[Frontend] WARNING: Using default upload preset. Set VITE_CLOUDINARY_UPLOAD_PRESET in your environment.");
     }
     
     formData.append("upload_preset", uploadPreset);
     
     // Check if cloud name is configured
-    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-    if (!cloudName) {
-      debug("[Frontend] WARNING: Cloudinary cloud name not configured!");
-      throw new Error("Cloudinary configuration missing. Please set VITE_CLOUDINARY_CLOUD_NAME in .env");
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dbnk6q2k6';
+    if (!import.meta.env.VITE_CLOUDINARY_CLOUD_NAME) {
+      debug("[Frontend] WARNING: Using default cloud name. Set VITE_CLOUDINARY_CLOUD_NAME in your environment.");
     }
     
     const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/upload`;
@@ -128,12 +170,10 @@ export async function uploadNote(file, metadata) {
     
     debug("[Frontend] Sending note data to backend: " + JSON.stringify(noteData));
     
-    // Make sure API_BASE is defined
-    if (!API_BASE) {
-      debug("[Frontend] WARNING: API_BASE URL is not defined. Check your .env file!");
-    }
+    // Use the getApiUrl function for consistency
+    const apiUrl = getApiUrl();
     
-    const backendRes = await fetch(`${API_BASE}/api/v1/notes`, {
+    const backendRes = await fetch(`${apiUrl}/api/v1/notes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(noteData)
