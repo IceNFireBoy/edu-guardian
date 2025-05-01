@@ -51,3 +51,4 @@ Thumbs.db
 
 # Coverage reports
 /coverage 
+.DS_Store
