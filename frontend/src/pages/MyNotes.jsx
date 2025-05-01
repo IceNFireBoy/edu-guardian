@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import NoteFilter from '../features/notes/NoteFilter';
-import { useAntiCheating } from '../hooks/useAntiCheating';
+import { useAntiCheating } from '../hooks/useAntiCheating.jsx';
 import { FaExclamationTriangle, FaSpinner, FaBook } from 'react-icons/fa';
 
 const MyNotes = () => {
