@@ -6,7 +6,10 @@ import { useStreak } from '../../hooks/useStreak';
 const Header = ({ toggleDarkMode }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
-  const { streak, xp } = useStreak();
+  const { streak: streakData, recordActivity } = useStreak();
+  const currentStreak = streakData?.currentStreak || 0;
+  const xp = streakData?.xp || 0;
+  const lastVisit = streakData?.lastVisit;
 
   // Motivational quotes
   const quotes = [
@@ -18,10 +21,10 @@ const Header = ({ toggleDarkMode }) => {
   
   const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-  // Sample notifications
+  // Sample notifications (using current streak)
   const sampleNotifications = [
     { id: 1, title: "🎉 You gained 15 XP for uploading notes!", time: "Just now", read: false },
-    { id: 2, title: `🔥 You're on a ${streak}-day streak!`, time: "Today", read: false },
+    { id: 2, title: `🔥 You're on a ${currentStreak}-day streak!`, time: "Today", read: false },
     { id: 3, title: "📚 New notes added to Grade 12 > Science!", time: "Yesterday", read: true },
     { id: 4, title: "⭐ You've earned the 'Note Scholar' badge!", time: "2 days ago", read: true },
   ];
@@ -57,9 +60,9 @@ const Header = ({ toggleDarkMode }) => {
             <motion.div 
               className="bg-primary/10 px-3 py-1 rounded-full flex items-center mr-4"
               whileHover={{ scale: 1.05 }}
-              aria-label={`Current streak: ${streak} days`}
+              aria-label={`Current streak: ${currentStreak} days`}
             >
-              <span className="font-medium text-primary dark:text-primary-light">Streak: {streak} 🔥</span>
+              <span className="font-medium text-primary dark:text-primary-light">Streak: {currentStreak} 🔥</span>
             </motion.div>
             
             <motion.div 
