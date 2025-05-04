@@ -134,7 +134,8 @@ export async function uploadNote(file, metadata) {
       debug("[Frontend] WARNING: Using default cloud name. Set VITE_CLOUDINARY_CLOUD_NAME in your environment.");
     }
     
-    const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/upload`;
+    // FIX: Use /raw/upload for PDFs and other non-images
+    const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`;
     debug("[Frontend] Uploading to Cloudinary URL: " + cloudinaryUrl);
     
     const cloudRes = await fetch(cloudinaryUrl, { 
