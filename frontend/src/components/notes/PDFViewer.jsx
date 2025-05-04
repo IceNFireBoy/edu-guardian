@@ -103,14 +103,19 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
   
   // Handle iframe load and error events
   useEffect(() => {
+    // Only set up listeners if we have a valid URL
+    if (!validNoteUrl) {
+      return;
+    }
+    
     const handleIframeLoad = () => {
       console.log("PDF iframe loaded successfully");
       setPdfLoaded(true);
       setPdfError(null);
     };
     
-    const handleIframeError = () => {
-      console.error("PDF iframe failed to load");
+    const handleIframeError = (e) => {
+      console.error("PDF iframe failed to load:", e);
       setPdfError("Failed to load PDF. The file might be invalid or inaccessible.");
       setPdfLoaded(false);
     };
@@ -119,20 +124,20 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
     
     if (iframe) {
       iframe.addEventListener('load', handleIframeLoad);
-      iframe.addEventListener('error', handleIframeError);
+      
+      // Error handler for the iframe
+      window.addEventListener('error', (e) => {
+        if (e.target === iframe) {
+          handleIframeError(e);
+        }
+      }, true);
       
       return () => {
         iframe.removeEventListener('load', handleIframeLoad);
-        iframe.removeEventListener('error', handleIframeError);
+        // We don't remove the error listener as it's on window
       };
     }
   }, [validNoteUrl]);
-  
-  // Handle PDF errors separate from iframe events
-  const handlePdfError = () => {
-    setPdfError("Failed to load PDF. The file might be invalid or inaccessible.");
-    setPdfLoaded(false);
-  };
   
   // Toggle pause/resume for session timer
   const togglePause = () => {
@@ -181,7 +186,7 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
       let url = noteUrl;
       
       // Add toolbar parameter if URL doesn't already have parameters
-      if (url.indexOf('#') === -1) {
+      if (url && url.indexOf('#') === -1) {
         url = `${url}#toolbar=0`;
       }
       
@@ -233,6 +238,8 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
       );
     }
     
+    const safeUrl = getSafeUrl();
+    
     return (
       <div className="relative w-full h-full">
         {!pdfLoaded && (
@@ -243,16 +250,16 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
             </div>
           </div>
         )}
-        <iframe
-          ref={iframeRef}
-          src={getSafeUrl()}
-          className="w-full h-full"
-          title={safeNoteTitle}
-          aria-label="PDF document viewer"
-          onError={handlePdfError}
-          sandbox="allow-scripts allow-same-origin"
-          loading="lazy"
-        />
+        {safeUrl && (
+          <iframe
+            ref={iframeRef}
+            src={safeUrl}
+            className="w-full h-full"
+            title={safeNoteTitle}
+            sandbox="allow-scripts allow-same-origin"
+            loading="lazy"
+          />
+        )}
       </div>
     );
   };

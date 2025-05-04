@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
 import PDFViewer from '../components/notes/PDFViewer';
-import { fetchNotes } from '../api/notes';
 import ErrorBoundary from '../components/ErrorBoundary';
 
 // Utility function to ensure string values
@@ -42,72 +41,100 @@ const NoteViewer = () => {
   
   // Fetch note data
   useEffect(() => {
+    let isMounted = true;
+    
     const id = getNoteIdFromUrl();
     
     if (!id) {
       console.warn('No note ID provided in URL');
-      setError('No note ID provided');
-      setLoading(false);
+      if (isMounted) {
+        setError('No note ID provided');
+        setLoading(false);
+      }
       return;
     }
     
     const fetchNoteData = async () => {
       try {
-        setLoading(true);
+        if (isMounted) {
+          setLoading(true);
+        }
         
-        // Try to get from localStorage first
-        const notesData = localStorage.getItem('notes');
-        if (notesData) {
-          try {
+        // Try to get from localStorage first to avoid API calls if possible
+        let foundNote = null;
+        try {
+          const notesData = localStorage.getItem('notes');
+          if (notesData) {
             const parsedNotes = JSON.parse(notesData);
             if (Array.isArray(parsedNotes)) {
-              const foundNote = parsedNotes.find(n => (n && (n._id === id || n.asset_id === id)));
+              foundNote = parsedNotes.find(n => n && (n._id === id || n.asset_id === id));
               
               if (foundNote) {
                 console.log('Note found in localStorage:', foundNote._id || foundNote.asset_id);
-                setNote(foundNote);
-                setLoading(false);
+                if (isMounted) {
+                  setNote(foundNote);
+                  setLoading(false);
+                }
                 return;
               }
             }
-          } catch (parseError) {
-            console.error('Failed to parse localStorage notes data:', parseError);
-            // Continue to API fetch if localStorage parsing fails
           }
+        } catch (parseError) {
+          console.error('Failed to parse localStorage notes data:', parseError);
+          // Continue to API fetch if localStorage parsing fails
         }
         
-        // If not found in localStorage, fetch from API
-        console.log('Fetching notes from API...');
-        const response = await fetchNotes();
-        
-        if (response && response.success) {
-          if (Array.isArray(response.data)) {
-            const foundNote = response.data.find(n => (n && (n._id === id || n.asset_id === id)));
-            
-            if (foundNote) {
-              console.log('Note found in API response:', foundNote._id || foundNote.asset_id);
-              setNote(foundNote);
+        // If not found in localStorage, try to import the fetch function
+        try {
+          const { fetchNotes } = await import('../api/notes');
+          
+          // Fetch from API
+          console.log('Fetching notes from API...');
+          const response = await fetchNotes();
+          
+          if (!isMounted) return;
+          
+          if (response && response.success) {
+            if (Array.isArray(response.data)) {
+              foundNote = response.data.find(n => n && (n._id === id || n.asset_id === id));
+              
+              if (foundNote) {
+                console.log('Note found in API response:', foundNote._id || foundNote.asset_id);
+                setNote(foundNote);
+              } else {
+                console.warn('Note not found in fetched data');
+                setError('Note not found in collection');
+              }
             } else {
-              console.warn('Note not found in fetched data');
-              setError('Note not found in collection');
+              console.error('API response data is not an array:', response.data);
+              setError('Invalid response format from server');
             }
           } else {
-            console.error('API response data is not an array:', response.data);
-            setError('Invalid response format from server');
+            console.error('API request failed:', response?.error || 'Unknown error');
+            setError(response?.error || 'Failed to fetch note data');
           }
-        } else {
-          console.error('API request failed:', response?.error || 'Unknown error');
-          setError(response?.error || 'Failed to fetch note data');
+        } catch (apiError) {
+          console.error('Error importing or calling fetchNotes:', apiError);
+          setError('Failed to load note data. Please try again later.');
         }
       } catch (err) {
         console.error('Error fetching note:', err);
-        setError('Failed to load note. Please try again later.');
+        if (isMounted) {
+          setError('Failed to load note. Please try again later.');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     
     fetchNoteData();
+    
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+    };
   }, [noteId, location.search]); // Add dependencies to rerun if the URL changes
   
   // Loading state
@@ -168,33 +195,28 @@ const NoteViewer = () => {
     );
   }
   
-  // Validate note data and get proper note URL and title with safeguards
+  // Get proper note URL and title with safeguards
   let noteUrl;
   let noteTitle;
   
   try {
-    // Check for common URL properties
-    noteUrl = note.secure_url || note.fileUrl || note.url || null;
+    // Check for common URL properties with fallbacks
+    noteUrl = note.secure_url || note.fileUrl || note.url || '';
     
     // Further validate the URL before passing to PDFViewer
     if (noteUrl) {
       // Ensure it's a string
       noteUrl = ensureString(noteUrl, '');
       
-      // Check if URL is valid
-      try {
-        // Basic URL validation
-        if (!noteUrl.startsWith('http://') && !noteUrl.startsWith('https://')) {
-          console.warn('URL does not start with http:// or https://', noteUrl);
-          
-          // Try to prepend https:// if it's missing
-          if (noteUrl.includes('cloudinary.com') || noteUrl.startsWith('//')) {
-            noteUrl = 'https:' + (noteUrl.startsWith('//') ? noteUrl : '//' + noteUrl);
-            console.log('Fixed URL to:', noteUrl);
-          }
+      // Basic URL validation and fixes
+      if (noteUrl && !noteUrl.startsWith('http://') && !noteUrl.startsWith('https://')) {
+        console.warn('URL does not start with http:// or https://', noteUrl);
+        
+        // Try to prepend https:// if it's missing
+        if (noteUrl.includes('cloudinary.com') || noteUrl.startsWith('//')) {
+          noteUrl = 'https:' + (noteUrl.startsWith('//') ? noteUrl : '//' + noteUrl);
+          console.log('Fixed URL to:', noteUrl);
         }
-      } catch (urlError) {
-        console.error('Error validating URL:', urlError);
       }
     }
     
@@ -207,7 +229,7 @@ const NoteViewer = () => {
     );
   } catch (err) {
     console.error('Error processing note data:', err);
-    noteUrl = null;
+    noteUrl = '';
     noteTitle = 'Error Processing Note';
   }
   

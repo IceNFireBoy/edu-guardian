@@ -1,10 +1,12 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import { Route, Routes, Link, useNavigate } from 'react-router-dom';
 import PDFViewer from '../components/notes/PDFViewer';
 import ErrorBoundary from '../components/ErrorBoundary';
 
 // Test component with various edge cases
 const TestPDFDebug = () => {
+  const navigate = useNavigate();
+  
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-6">PDF Viewer Debug Tests</h1>
@@ -57,12 +59,12 @@ const TestPDFDebug = () => {
           </ul>
           
           <div className="mt-6">
-            <Link 
-              to="/my-notes" 
+            <button 
+              onClick={() => navigate('/my-notes')}
               className="inline-block px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded"
             >
               Back to App
-            </Link>
+            </button>
           </div>
         </div>
         
@@ -71,7 +73,7 @@ const TestPDFDebug = () => {
           <h2 className="text-xl font-semibold mb-4">Test Results</h2>
           <Routes>
             <Route 
-              path="/valid" 
+              path="valid" 
               element={
                 <ErrorBoundary>
                   <div className="h-96 border border-gray-200 dark:border-gray-700 rounded">
@@ -84,7 +86,7 @@ const TestPDFDebug = () => {
               } 
             />
             <Route 
-              path="/null-url" 
+              path="null-url" 
               element={
                 <ErrorBoundary>
                   <div className="h-96 border border-gray-200 dark:border-gray-700 rounded">
@@ -97,7 +99,7 @@ const TestPDFDebug = () => {
               } 
             />
             <Route 
-              path="/empty-url" 
+              path="empty-url" 
               element={
                 <ErrorBoundary>
                   <div className="h-96 border border-gray-200 dark:border-gray-700 rounded">
@@ -110,7 +112,7 @@ const TestPDFDebug = () => {
               } 
             />
             <Route 
-              path="/invalid-url" 
+              path="invalid-url" 
               element={
                 <ErrorBoundary>
                   <div className="h-96 border border-gray-200 dark:border-gray-700 rounded">
@@ -123,7 +125,7 @@ const TestPDFDebug = () => {
               } 
             />
             <Route 
-              path="/null-title" 
+              path="null-title" 
               element={
                 <ErrorBoundary>
                   <div className="h-96 border border-gray-200 dark:border-gray-700 rounded">
@@ -136,7 +138,7 @@ const TestPDFDebug = () => {
               } 
             />
             <Route 
-              path="/" 
+              path="*" 
               element={
                 <div className="text-center p-8 bg-gray-100 dark:bg-gray-700 rounded">
                   <p>Select a test case from the left to begin testing</p>

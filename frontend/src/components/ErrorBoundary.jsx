@@ -70,6 +70,15 @@ class ErrorBoundary extends Component {
     // Update state with the already-stringified stack trace
     this.setState({ stackTrace });
     
+    // Call the onError prop if provided
+    if (typeof this.props.onError === 'function') {
+      try {
+        this.props.onError(error, errorInfo);
+      } catch (handlerError) {
+        console.error('Error in onError handler:', handlerError);
+      }
+    }
+    
     // Log the error to console (safely)
     console.error('Error caught by boundary:', 
       safeStringify(error), 
