@@ -395,6 +395,31 @@ const getAverageRating = (noteId) => {
   }
 };
 
+// Helper to check if a file URL is accessible
+async function isFileAccessible(url) {
+  if (!url) return false;
+  try {
+    const res = await fetch(url, { method: 'HEAD' });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// Helper to get average rating and count from localStorage
+function getRatingStats(noteId) {
+  try {
+    const ratingsData = localStorage.getItem('note_ratings') || '{}';
+    const ratings = JSON.parse(ratingsData);
+    const allRatings = ratings[noteId] ? (Array.isArray(ratings[noteId]) ? ratings[noteId] : [ratings[noteId]]) : [];
+    if (!allRatings.length) return { avg: 0, count: 0 };
+    const sum = allRatings.reduce((a, b) => a + b, 0);
+    return { avg: sum / allRatings.length, count: allRatings.length };
+  } catch {
+    return { avg: 0, count: 0 };
+  }
+}
+
 // Main NoteFilter Component
 const NoteFilter = () => {
   const [filters, setFilters] = useState({
@@ -451,30 +476,40 @@ const NoteFilter = () => {
   const fetchNotesWithFilters = async () => {
     setLoading(true);
     setError(null);
-    
     try {
-      // For initial testing, skip filters
-      const filterContext = {}; // Temporarily ignore filters
-      
+      const filterContext = {};
       debug("[Frontend] Fetching all notes without filters for testing");
-      
-      // Use the API client to fetch notes
       const response = await fetchNotes(filterContext);
-      
       debug("[Frontend] Raw API response:", response);
-      
-      // Check if response has the expected structure
       if (response && response.success && Array.isArray(response.data)) {
-        debug("[Frontend] Setting notes array:", response.data.length, "notes");
-        setNotes(response.data);
-        
-        // Show message if no notes found
-        if (response.data.length === 0) {
+        // Filter out notes whose file is not accessible
+        const notesWithUrls = response.data.filter(n => n && (n.fileUrl || n.secure_url));
+        // Check accessibility in parallel (limit concurrency for performance)
+        const concurrency = 5;
+        let filteredNotes = [];
+        for (let i = 0; i < notesWithUrls.length; i += concurrency) {
+          const chunk = notesWithUrls.slice(i, i + concurrency);
+          const results = await Promise.all(chunk.map(async note => {
+            const url = note.fileUrl || note.secure_url;
+            const accessible = await isFileAccessible(url);
+            return accessible ? note : null;
+          }));
+          filteredNotes = filteredNotes.concat(results.filter(Boolean));
+        }
+        // Sort by average rating (highest first)
+        filteredNotes.sort((a, b) => {
+          const aStats = getRatingStats(a.asset_id || a._id);
+          const bStats = getRatingStats(b.asset_id || b._id);
+          if (bStats.avg !== aStats.avg) return bStats.avg - aStats.avg;
+          // If avg is equal, sort by count
+          return bStats.count - aStats.count;
+        });
+        setNotes(filteredNotes);
+        if (filteredNotes.length === 0) {
           debug("[Frontend] No notes found in response");
           toast.info("No notes available.");
         }
       } else {
-        // Log unexpected response format
         debug("[Frontend] Unexpected API response format:", response);
         setNotes([]);
         toast.warning("Received unexpected data format from server");

@@ -37,6 +37,19 @@ const InvalidNoteCard = ({ error, compact = false }) => {
   );
 };
 
+const getRatingStats = (noteId) => {
+  try {
+    const ratingsData = localStorage.getItem('note_ratings') || '{}';
+    const ratings = JSON.parse(ratingsData);
+    const allRatings = ratings[noteId] ? (Array.isArray(ratings[noteId]) ? ratings[noteId] : [ratings[noteId]]) : [];
+    if (!allRatings.length) return { avg: 0, count: 0 };
+    const sum = allRatings.reduce((a, b) => a + b, 0);
+    return { avg: sum / allRatings.length, count: allRatings.length };
+  } catch {
+    return { avg: 0, count: 0 };
+  }
+};
+
 const NoteCard = ({ note, onView, compact = false }) => {
   // Handle invalid note prop
   if (!note || typeof note !== 'object') {
@@ -47,7 +60,7 @@ const NoteCard = ({ note, onView, compact = false }) => {
   const { recordActivity } = useStreak();
   const navigate = useNavigate();
   const noteId = note.asset_id || note._id || `note-${Math.random()}`;
-  const averageRating = getAverageRating(noteId);
+  const { avg: averageRating, count: ratingCount } = getRatingStats(noteId);
   
   const handleView = () => {
     try {
@@ -215,38 +228,24 @@ const NoteCard = ({ note, onView, compact = false }) => {
         </div>
         
         <div className="p-4">
-          <h3 className="font-semibold text-lg mb-1 text-gray-800 dark:text-gray-100">
+          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-1 line-clamp-1">
             {getTitle()}
           </h3>
-          
-          {getTags().length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-3">
-              {getTags().map((tag, index) => (
-                <span 
-                  key={index}
-                  className="px-2 py-1 bg-primary/10 text-primary dark:text-primary-light text-xs rounded-full"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-          
-          <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-2">
+          <p className="text-gray-600 dark:text-gray-300 text-sm mb-2 line-clamp-2">
             {getDescription()}
           </p>
-          
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mt-2">
             <button
               onClick={handleView}
               className="text-primary dark:text-primary-light hover:text-primary-dark text-sm font-medium flex items-center"
-              aria-label={`View note: ${getTitle()}`}
             >
-              <FaBookOpen className="mr-1" /> View Note
+              View
             </button>
-            
             <div className="flex items-center">
-              <StarRating noteId={noteId} size="small" readOnly={true} initialRating={averageRating} />
+              <StarRating noteId={noteId} initialRating={averageRating} readOnly={false} />
+              {ratingCount > 0 && (
+                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">({ratingCount})</span>
+              )}
             </div>
           </div>
         </div>

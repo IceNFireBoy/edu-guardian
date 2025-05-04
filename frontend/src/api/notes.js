@@ -160,6 +160,7 @@ export async function uploadNote(file, metadata) {
       semester: metadata.semester,
       quarter: metadata.quarter,
       topic: metadata.topic,
+      description: metadata.description,
       fileUrl: fileUrl,
       // Additional fields from Cloudinary response
       fileType: file.type.split('/')[1] || 'unknown',
