@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaMoon, FaSun, FaTrash, FaInfoCircle, FaKey, FaServer, FaCog } from 'react-icons/fa';
+import { FaMoon, FaTrash, FaInfoCircle } from 'react-icons/fa';
 
 const SettingsCard = ({ title, icon, children }) => (
   <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 mb-6">
@@ -15,14 +15,6 @@ const SettingsCard = ({ title, icon, children }) => (
 const Settings = ({ toggleDarkMode, darkMode }) => {
   const [showConfirmClear, setShowConfirmClear] = useState(false);
   const [clearSuccess, setClearSuccess] = useState(false);
-  const [showCloudinaryInfo, setShowCloudinaryInfo] = useState(false);
-  
-  // Get Cloudinary environment variables
-  const cloudinaryCloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'Not configured';
-  const cloudinaryApiKey = import.meta.env.VITE_CLOUDINARY_API_KEY 
-    ? `${import.meta.env.VITE_CLOUDINARY_API_KEY.substring(0, 4)}...${import.meta.env.VITE_CLOUDINARY_API_KEY.substring(import.meta.env.VITE_CLOUDINARY_API_KEY.length - 4)}` 
-    : 'Not configured';
-  const cloudinaryUploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'Not configured';
   
   // Clear local storage cache
   const clearCache = () => {
@@ -125,69 +117,15 @@ const Settings = ({ toggleDarkMode, darkMode }) => {
         </div>
       </SettingsCard>
       
-      {/* Developer Settings */}
-      <SettingsCard title="Developer Settings" icon={<FaCog size={20} />}>
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="font-medium text-gray-800 dark:text-gray-100">Cloudinary Configuration</h3>
-              <p className="text-gray-600 dark:text-gray-300 text-sm">
-                View current Cloudinary settings for debugging
-              </p>
-            </div>
-            <button
-              onClick={() => setShowCloudinaryInfo(!showCloudinaryInfo)}
-              className="text-primary dark:text-primary-light"
-            >
-              <FaInfoCircle size={20} />
-            </button>
-          </div>
-          
-          {showCloudinaryInfo && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="bg-gray-50 dark:bg-gray-900/30 p-4 rounded-lg"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center">
-                  <FaServer className="text-gray-500 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300 mr-2 font-medium">Cloud Name:</span>
-                  <code className="bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded text-gray-800 dark:text-gray-200 text-sm">
-                    {cloudinaryCloudName}
-                  </code>
-                </div>
-                
-                <div className="flex items-center">
-                  <FaKey className="text-gray-500 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300 mr-2 font-medium">API Key:</span>
-                  <code className="bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded text-gray-800 dark:text-gray-200 text-sm">
-                    {cloudinaryApiKey}
-                  </code>
-                </div>
-                
-                <div className="flex items-center">
-                  <FaCog className="text-gray-500 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300 mr-2 font-medium">Upload Preset:</span>
-                  <code className="bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded text-gray-800 dark:text-gray-200 text-sm">
-                    {cloudinaryUploadPreset}
-                  </code>
-                </div>
-                
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                  To change these values, update the <code className="bg-gray-200 dark:bg-gray-800 px-1 rounded">.env</code> file in the root directory.
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </div>
-      </SettingsCard>
-      
       {/* About Section */}
       <SettingsCard title="About EduGuardian" icon={<FaInfoCircle size={20} />}>
         <div className="text-gray-600 dark:text-gray-300">
-          <p className="mb-2">Version 1.0.0</p>
-          <p>EduGuardian is a gamified, secure, and filterable educational web app for uploading, managing, and discovering academic notes.</p>
+          <p className="mb-2">
+            EduGuardian is a student-powered, secure, and gamified learning platform built to make quality education more accessible, collaborative, and enjoyable. Designed for uploading, organizing, and discovering academic notes, EduGuardian combines smart filtering, progress tracking, and community-driven features to help learners stay motivated and succeed—no matter where they start.
+          </p>
+          <p className="mt-4">
+            Whether you're reviewing for an exam or contributing your own study materials, EduGuardian ensures that learning is always engaging, inclusive, and within reach.
+          </p>
         </div>
       </SettingsCard>
     </div>
