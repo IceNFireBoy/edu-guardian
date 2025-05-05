@@ -38,10 +38,12 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [useFallbackViewer, setUseFallbackViewer] = useState(isMobileDevice());
   const [attemptedDirectLoad, setAttemptedDirectLoad] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
   
   const sessionTimerRef = useRef(null);
   const breakTimerRef = useRef(null);
   const iframeRef = useRef(null);
+  const loadingTimerRef = useRef(null);
   const navigate = useNavigate();
   
   // Validate props - with more thorough validation
@@ -142,6 +144,30 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
     return () => clearTimeout(timer);
   }, [pdfLoaded]);
   
+  // Add loading timeout to prevent indefinite loading state
+  useEffect(() => {
+    // Clear any existing timer
+    if (loadingTimerRef.current) {
+      clearTimeout(loadingTimerRef.current);
+    }
+    
+    // Set a timeout to handle loading issues
+    loadingTimerRef.current = setTimeout(() => {
+      if (!pdfLoaded) {
+        console.log("PDF loading timeout - switching to direct URL");
+        setLoadingTimeout(true);
+        // Force different viewer if we're stuck loading
+        setUseFallbackViewer(prev => !prev);
+      }
+    }, 8000); // 8 seconds timeout
+    
+    return () => {
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+      }
+    };
+  }, [pdfLoaded, noteUrl]);
+  
   // Handle iframe load and error events
   useEffect(() => {
     // Only set up listeners if we have a valid URL
@@ -153,12 +179,19 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
       console.log("PDF iframe loaded successfully");
       setPdfLoaded(true);
       setPdfError(null);
+      setLoadingTimeout(false);
+      
+      // Clear the loading timeout since we've loaded successfully
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+      }
     };
     
     const handleIframeError = (e) => {
       console.error("PDF iframe failed to load:", e);
       setAttemptedDirectLoad(true); // Trigger fallback
       setPdfLoaded(false);
+      setLoadingTimeout(true);
     };
     
     const iframe = iframeRef.current;
@@ -278,12 +311,19 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
   const getPDFjsViewerUrl = () => {
     const url = getSafeUrl();
     if (!url) return '';
-    return `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(url)}`;
+    
+    // Use a CDN version of PDF.js instead of Mozilla's site which might be slow
+    return `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/web/viewer.html?file=${encodeURIComponent(url)}`;
   };
   
-  // Get a mobile-optimized PDF URL
+  // Get a mobile-optimized PDF URL - try multiple options
   const getMobileOptimizedUrl = () => {
-    // First try PDF.js which has good mobile support
+    // If we've timed out, try direct PDF URL which might work better
+    if (loadingTimeout) {
+      return getSafeUrl();
+    }
+    
+    // Otherwise use PDF.js which has good mobile support
     return getPDFjsViewerUrl();
   };
   
@@ -401,6 +441,26 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
             <div className="text-center">
               <FaFilePdf className="text-blue-500 dark:text-blue-400 text-5xl mx-auto animate-pulse mb-4" />
               <p className="text-gray-600 dark:text-gray-300">Loading document...</p>
+              
+              {loadingTimeout && (
+                <div className="mt-4">
+                  <p className="text-amber-600 dark:text-amber-400 text-sm mb-2">
+                    Taking longer than expected...
+                  </p>
+                  <button 
+                    onClick={() => {
+                      // Toggle between viewers
+                      setUseFallbackViewer(prev => !prev);
+                      // Reset loading state
+                      setLoadingTimeout(false);
+                      setPdfLoaded(false);
+                    }} 
+                    className="px-3 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600"
+                  >
+                    Try Different Viewer
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -421,6 +481,11 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
               scrolling="yes"
               allowFullScreen={true}
               title={`${safeNoteTitle} (Mobile Viewer)`}
+              onLoad={() => setPdfLoaded(true)}
+              onError={() => {
+                setLoadingTimeout(true);
+                setUseFallbackViewer(false);
+              }}
             />
           </div>
         ) : (
@@ -435,6 +500,7 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
               border: 'none',
               overflow: 'auto'
             }}
+            onLoad={() => setPdfLoaded(true)}
           >
             {/* Fallback for older browsers */}
             <iframe 
@@ -451,6 +517,7 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
               scrolling="yes"
               allowFullScreen={true}
               title={safeNoteTitle}
+              onLoad={() => setPdfLoaded(true)}
             />
           </object>
         )}
