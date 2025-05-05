@@ -10,7 +10,7 @@ const formatTime = (timeInSeconds) => {
   return [hours, minutes, seconds].map((v) => v.toString().padStart(2, '0')).join(':');
 };
 
-const NoteStudySession = ({ noteUrl, noteTitle, noteId, subject, sidebarMode }) => {
+const NoteStudySession = ({ noteUrl, noteTitle, noteId, subject, sidebarMode, onBreakStateChange }) => {
   // Timers
   const [sessionTime, setSessionTime] = useState(0); // in seconds
   const [breakTime, setBreakTime] = useState(0); // in seconds
@@ -47,6 +47,19 @@ const NoteStudySession = ({ noteUrl, noteTitle, noteId, subject, sidebarMode }) 
       }, 1000);
     }
     return () => clearInterval(breakTimerRef.current);
+  }, [isBreakActive, breakTime]);
+
+  // Notify parent of break state changes
+  useEffect(() => {
+    if (typeof onBreakStateChange === 'function') {
+      onBreakStateChange({
+        isBreakActive,
+        breakTime,
+        cancelBreak,
+      });
+    }
+    // Only update when break state changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBreakActive, breakTime]);
 
   // Break controls

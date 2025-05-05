@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
+import { FaSpinner, FaExclamationTriangle, FaCoffee } from 'react-icons/fa';
 import PDFViewer from '../components/PDFViewer';
 import ErrorBoundary from '../components/ErrorBoundary';
 import usePDFNote from '../hooks/usePDFNote';
@@ -26,6 +26,7 @@ const NoteViewer = () => {
   const [loading, setLoading] = useState(true); // Loading state for initial fetch
   const [error, setError] = useState(null); // Error state for initial fetch
   const [note, setNote] = useState(null);
+  const [breakState, setBreakState] = useState({ isBreakActive: false, breakTime: 0, cancelBreak: () => {} });
 
   // Get note ID from URL params or search params
   const getNoteIdFromUrl = () => {
@@ -263,14 +264,40 @@ const NoteViewer = () => {
       noteId={finalNoteId}
       subject={note && (note.subject || finalNoteTitle)}
       sidebarMode
+      onBreakStateChange={setBreakState}
     />
   );
+
   return (
     <ErrorBoundary>
       <Sidebar studySessionPanel={studySessionPanel} />
+      {/* Break Overlay */}
+      {breakState.isBreakActive && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-blue-900/80">
+          <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-2xl max-w-md w-full flex flex-col items-center animate-pulse">
+            <FaCoffee className="text-blue-600 dark:text-blue-400 text-6xl mb-4 animate-bounce" />
+            <h2 className="text-3xl font-bold text-center mb-4 text-blue-800 dark:text-blue-300">
+              Break Time!
+            </h2>
+            <div className="text-center mb-6">
+              <span className="text-5xl font-mono text-blue-600 dark:text-blue-400">
+                {formatTime(breakState.breakTime)}
+              </span>
+            </div>
+            <p className="text-gray-600 dark:text-gray-300 text-center mb-6">
+              Take some time to rest your eyes and stretch. Your notes will be waiting for you when you return.
+            </p>
+            <button
+              onClick={breakState.cancelBreak}
+              className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              End Break Early
+            </button>
+          </div>
+        </div>
+      )}
       {/* Main content area: PDFViewer will be rendered full width */}
       <div className="flex flex-col min-h-screen md:ml-64">
-        {/* ... header and main content ... */}
         <div className="flex-1 flex flex-col w-full h-[100vh] p-0 m-0">
           <PDFViewer noteUrl={finalPdfUrl} noteTitle={finalNoteTitle} noteId={finalNoteId} />
         </div>
@@ -278,5 +305,13 @@ const NoteViewer = () => {
     </ErrorBoundary>
   );
 };
+
+// Helper for formatting time
+function formatTime(timeInSeconds) {
+  const hours = Math.floor(timeInSeconds / 3600);
+  const minutes = Math.floor((timeInSeconds % 3600) / 60);
+  const seconds = timeInSeconds % 60;
+  return [hours, minutes, seconds].map((v) => v.toString().padStart(2, '0')).join(':');
+}
 
 export default NoteViewer; 
