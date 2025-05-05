@@ -91,7 +91,8 @@ exports.createNote = asyncHandler(async (req, res) => {
       semester, 
       quarter, 
       topic, 
-      fileUrl 
+      fileUrl,
+      description
     } = req.body;
     
     console.log("[Backend] Received note creation request:", req.body);
@@ -114,6 +115,7 @@ exports.createNote = asyncHandler(async (req, res) => {
       quarter,
       topic,
       fileUrl,
+      description: description || '',
       // Additional fields if needed
       fileType: req.body.fileType || 'unknown',
       fileSize: req.body.fileSize || 0,
