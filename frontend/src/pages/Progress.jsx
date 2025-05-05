@@ -26,7 +26,8 @@ const StatsCard = ({ title, value, icon, color }) => (
 );
 
 const Progress = () => {
-  const { streak, xp } = useStreak();
+  // Get streak and XP from useStreak hook
+  const { streak: streakData, getXpForNextLevel } = useStreak();
   const [progressData, setProgressData] = useState(null);
   
   // Load progress data from localStorage on component mount
@@ -191,7 +192,7 @@ const Progress = () => {
           inactiveSubjects,
           completedThisWeek,
           totalCompletedNotes: completedNotes.length,
-          currentStreak: streak,
+          currentStreak: streakData.currentStreak,
           subjectProgress: Object.fromEntries(
             Object.entries(subjectData).map(([subject, data]) => [
               subject,
@@ -211,7 +212,7 @@ const Progress = () => {
     };
     
     loadProgressData();
-  }, [streak]);
+  }, [streakData]);
   
   // Demo data for testing/development
   const getDemoProgressData = () => {
@@ -261,7 +262,7 @@ const Progress = () => {
       ],
       completedThisWeek: 4,
       totalCompletedNotes: 23,
-      currentStreak: streak || 5,
+      currentStreak: streakData.currentStreak || 5,
       subjectProgress: {
         'Mathematics': { percentage: 67, completed: 8, total: 12 },
         'Physics': { percentage: 50, completed: 5, total: 10 },
@@ -273,10 +274,30 @@ const Progress = () => {
   
   // Stats data
   const statsData = [
-    { title: 'Current Streak', value: `${streak} days`, icon: <FaFire className="text-orange-500" size={20} />, color: 'text-orange-500' },
-    { title: 'XP Points', value: xp, icon: <FaStar className="text-yellow-500" size={20} />, color: 'text-yellow-500' },
-    { title: 'Total Notes Completed', value: progressData?.totalCompletedNotes || '0', icon: <FaBook className="text-green-500" size={20} />, color: 'text-green-500' },
-    { title: 'Days Active', value: streak > 0 ? streak : '0', icon: <FaCalendarAlt className="text-blue-500" size={20} />, color: 'text-blue-500' }
+    { 
+      title: 'Current Streak', 
+      value: `${streakData.currentStreak} days`, 
+      icon: <FaFire className="text-orange-500" size={20} />, 
+      color: 'text-orange-500' 
+    },
+    { 
+      title: 'XP Points', 
+      value: streakData.xp, 
+      icon: <FaStar className="text-yellow-500" size={20} />, 
+      color: 'text-yellow-500' 
+    },
+    { 
+      title: 'Total Notes Completed', 
+      value: progressData?.totalCompletedNotes || '0', 
+      icon: <FaBook className="text-green-500" size={20} />, 
+      color: 'text-green-500' 
+    },
+    { 
+      title: 'Days Active', 
+      value: streakData.currentStreak > 0 ? streakData.currentStreak : '0', 
+      icon: <FaCalendarAlt className="text-blue-500" size={20} />, 
+      color: 'text-blue-500' 
+    }
   ];
   
   return (

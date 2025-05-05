@@ -149,7 +149,14 @@ export const useStreak = () => {
   };
 
   return {
-    streak,
+    streak: {
+      currentStreak: streak.currentStreak,
+      longestStreak: streak.longestStreak,
+      lastVisit: streak.lastVisit,
+      xp: streak.xp,
+      level: streak.level,
+      activities: streak.activities
+    },
     recordActivity,
     resetStreak,
     getXpForNextLevel
