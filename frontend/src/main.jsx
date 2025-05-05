@@ -5,6 +5,7 @@ import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import Fallback from './components/Fallback.jsx';
 import './index.css';
+import './styles/pdf-thumbnails.css';
 
 // Log any startup errors
 console.log('Starting application...');

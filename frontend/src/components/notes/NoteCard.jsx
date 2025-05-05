@@ -4,6 +4,7 @@ import { FaBookOpen, FaFilePdf, FaImage, FaFileAlt, FaExclamationCircle } from '
 import { useNavigate } from 'react-router-dom';
 import StarRating from './StarRating';
 import { useStreak } from '../../hooks/useStreak';
+import PDFThumbnail from './PDFThumbnail';
 
 // Helper function to get average rating from localStorage
 const getAverageRating = (noteId) => {
@@ -166,6 +167,12 @@ const NoteCard = ({ note, onView, compact = false }) => {
     }
   };
 
+  // Check if the note is a PDF
+  const isPDF = () => {
+    return note.fileType === 'pdf' || note.format === 'pdf' || 
+           (note.resource_type === 'raw' && note.secure_url?.toLowerCase().endsWith('.pdf'));
+  };
+
   // Render the component in a try/catch block to prevent rendering errors
   try {
     // Compact view for grid layouts
@@ -185,6 +192,12 @@ const NoteCard = ({ note, onView, compact = false }) => {
                   e.target.onerror = null;
                   e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
                 }}
+              />
+            ) : isPDF() ? (
+              <PDFThumbnail 
+                url={getImageUrl()} 
+                alt={getTitle()} 
+                className="w-full h-full"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
@@ -238,6 +251,12 @@ const NoteCard = ({ note, onView, compact = false }) => {
                 e.target.onerror = null;
                 e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
               }}
+            />
+          ) : isPDF() ? (
+            <PDFThumbnail 
+              url={getImageUrl()} 
+              alt={getTitle()} 
+              className="w-full h-full"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
