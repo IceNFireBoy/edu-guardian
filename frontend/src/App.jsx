@@ -13,7 +13,6 @@ import MyNotes from './pages/MyNotes';
 import Donate from './pages/Donate';
 import Progress from './pages/Progress';
 import Settings from './pages/Settings';
-import Leaderboard from './pages/Leaderboard';
 import Badges from './pages/Badges';
 import NoteViewer from './pages/NoteViewer';
 import TestPDFDebug from './debug/TestPDFDebug';
@@ -164,7 +163,6 @@ function App() {
                   <Route path="/donate" element={<Donate />} />
                   <Route path="/progress" element={<Progress />} />
                   <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
-                  <Route path="/leaderboard" element={<Leaderboard />} />
                   <Route path="/badges" element={<Badges />} />
                   <Route path="/view-note" element={<NoteViewer />} />
                   <Route path="/view-note/:noteId" element={<NoteViewer />} />
