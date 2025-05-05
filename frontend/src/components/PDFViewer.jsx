@@ -3,13 +3,11 @@ import { Worker, Viewer } from '@react-pdf-viewer/core';
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
 import { FaArrowLeft } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import workerSrc from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
 // Import styles
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/default-layout/lib/styles/index.css';
-
-// Define worker URL (using the installed pdfjs-dist version)
-const WORKER_URL = 'https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js';
 
 /**
  * PDF Viewer component using @react-pdf-viewer
@@ -65,7 +63,7 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => { // Keep noteId prop if n
       
       {/* PDF Viewer container */}
       <div className="flex-grow w-full h-full overflow-hidden">
-        <Worker workerUrl={WORKER_URL}>
+        <Worker workerUrl={workerSrc}>
           <Viewer 
             fileUrl={noteUrl} 
             plugins={[defaultLayoutPluginInstance]} 
