@@ -87,6 +87,15 @@ const Progress = () => {
         
         // Count total notes per subject
         allNotes.forEach(note => {
+          // Skip notes with missing/broken URLs
+          const noteUrl = note.secure_url || note.fileUrl || note.url || '';
+          const hasValidUrl = typeof noteUrl === 'string' && noteUrl.trim() !== '' && 
+                              (noteUrl.startsWith('http://') || noteUrl.startsWith('https://'));
+          
+          if (!hasValidUrl) {
+            return; // Skip this note
+          }
+          
           // Attempt to detect subject from note title if not explicitly set
           let subject = note.subject || 'Uncategorized';
           
@@ -274,6 +283,9 @@ const Progress = () => {
       {/* Subject Progress */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Subject Progress</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Only accessible notes with valid links are counted in your progress statistics.
+        </p>
         <div className="space-y-6">
           {progressData && Object.entries(progressData.subjectProgress).map(([subject, data]) => (
             <SubjectCard 

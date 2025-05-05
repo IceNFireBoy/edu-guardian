@@ -64,7 +64,7 @@ const StudyRecommendation = ({ subjectsData }) => {
           <div>
             <h3 className="font-semibold text-green-700 dark:text-green-300 mb-1">You're on track!</h3>
             <p className="text-green-600 dark:text-green-300">
-              Keep up with your studies. You're doing well with completing notes and understanding the material.
+              Keep up with your studies. You're doing well with completing accessible notes and understanding the material.
             </p>
           </div>
         </div>
