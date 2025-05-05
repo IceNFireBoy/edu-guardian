@@ -29,11 +29,18 @@ const NoteViewer = () => {
   const getNoteIdFromUrl = () => {
     try {
       // First try to get from route params
-      if (noteId) return noteId;
+      if (noteId) {
+        console.log("Found ID in route params:", noteId);
+        return noteId;
+      }
       
       // Then try to get from query params
       const searchParams = new URLSearchParams(location.search);
-      return searchParams.get('id');
+      const queryId = searchParams.get('id');
+      if (queryId) {
+        console.log("Found ID in query params:", queryId);
+      }
+      return queryId;
     } catch (err) {
       console.error('Error getting note ID from URL:', err);
       return null;
@@ -148,11 +155,37 @@ const NoteViewer = () => {
   // Use our custom hook to process the note data
   const { pdfUrl, noteTitle, noteId: processedNoteId, loading: hookLoading, error: hookError } = usePDFNote(note);
   
+  // Debug output of actual data being passed to component
+  useEffect(() => {
+    console.log("Note data being processed:", {
+      note,
+      extracted: {
+        pdfUrl,
+        noteTitle,
+        processedNoteId
+      }
+    });
+  }, [note, pdfUrl, noteTitle, processedNoteId]);
+  
   // Combine loading states
   const isLoading = loading || hookLoading;
   
   // Combine error states
   const errorMessage = error || hookError;
+  
+  // For direct rendering - might need to bypass the hook in some cases
+  let directNoteUrl = '';
+  let directNoteTitle = '';
+  
+  if (note && !pdfUrl) {
+    console.log("Attempting direct extraction from note:", note);
+    directNoteUrl = note.secure_url || note.fileUrl || note.url || '';
+    directNoteTitle = note.title || (note.context && note.context.caption) || 'Untitled Note';
+    
+    if (directNoteUrl) {
+      console.log("Using direct URL extraction:", directNoteUrl);
+    }
+  }
   
   // Loading state
   if (isLoading) {
