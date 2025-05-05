@@ -32,17 +32,27 @@ console.log('Using API base URL:', API_BASE || '(none - using relative URL)');
 const FilterForm = ({ filters, setFilters, onSubmit, hasFiltersApplied, clearAllFilters }) => {
   // List of subjects
   const subjects = [
-    "Mathematics", 
-    "Physics", 
-    "Chemistry", 
-    "Biology", 
-    "History", 
-    "Geography", 
-    "English", 
-    "Literature", 
-    "Computer Science",
-    "Economics",
-    "Business Studies"
+    "Biology",
+    "Business Mathematics",
+    "Calculus",
+    "Chemistry",
+    "Computer",
+    "Creative Writing",
+    "Disciplines in the Social Sciences",
+    "Drafting",
+    "English",
+    "Filipino",
+    "Fundamentals of Accounting",
+    "General Mathematics",
+    "Introduction to World Religion",
+    "Organization and Management",
+    "Photography",
+    "Physics",
+    "Religion",
+    "Research",
+    "Science",
+    "Social Science",
+    "Trends, Networks, and Critical Thinking"
   ];
   
   const handleChange = (e) => {

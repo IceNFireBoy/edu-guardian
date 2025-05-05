@@ -301,17 +301,27 @@ const NoteUploader = () => {
   
   // List of subjects
   const subjects = [
-    "Mathematics", 
-    "Physics", 
-    "Chemistry", 
-    "Biology", 
-    "History", 
-    "Geography", 
-    "English", 
-    "Literature", 
-    "Computer Science",
-    "Economics",
-    "Business Studies"
+    "Biology",
+    "Business Mathematics",
+    "Calculus",
+    "Chemistry",
+    "Computer",
+    "Creative Writing",
+    "Disciplines in the Social Sciences",
+    "Drafting", 
+    "English",
+    "Filipino",
+    "Fundamentals of Accounting",
+    "General Mathematics",
+    "Introduction to World Religion",
+    "Organization and Management",
+    "Photography",
+    "Physics",
+    "Religion",
+    "Research",
+    "Science",
+    "Social Science",
+    "Trends, Networks, and Critical Thinking"
   ];
   
   // Motivational quotes for success modal
