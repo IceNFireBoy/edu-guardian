@@ -29,7 +29,7 @@ const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
 console.log('Using API base URL:', API_BASE || '(none - using relative URL)');
 
 // Filter Form Component
-const FilterForm = ({ filters, setFilters, onSubmit, hasFiltersApplied }) => {
+const FilterForm = ({ filters, setFilters, onSubmit, hasFiltersApplied, clearAllFilters }) => {
   // List of subjects
   const subjects = [
     "Mathematics", 
@@ -812,6 +812,7 @@ const NoteFilter = () => {
         setFilters={setFilters} 
         onSubmit={fetchNotesWithFilters} 
         hasFiltersApplied={hasFiltersApplied} 
+        clearAllFilters={clearAllFilters} 
       />
       
       {/* Filter Tags */}
