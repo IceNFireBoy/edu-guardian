@@ -10,7 +10,12 @@ const Note = require('../models/Note');
 router.get('/', async (req, res) => {
   try {
     const notes = await Note.find().sort({ createdAt: -1 });
-    res.json(notes);
+    // Return notes in standard format with success flag
+    res.json({
+      success: true,
+      count: notes.length,
+      data: notes
+    });
   } catch (err) {
     console.error('Error fetching notes:', err);
     res.status(500).json({ success: false, message: 'Server error', error: err.message });
