@@ -44,7 +44,52 @@ const Progress = () => {
         const subjectData = {};
         const now = new Date();
         
-        // Process completed notes
+        // Create a mapping of valid notes for each subject
+        const validNotesBySubject = {};
+        
+        // First identify valid notes by URL and categorize them by subject
+        allNotes.forEach(note => {
+          // Validate URL - must be non-empty and start with http:// or https://
+          const noteUrl = note.secure_url || note.fileUrl || note.url || '';
+          const hasValidUrl = typeof noteUrl === 'string' && 
+                              noteUrl.trim() !== '' && 
+                              (noteUrl.startsWith('http://') || noteUrl.startsWith('https://'));
+          
+          if (!hasValidUrl) {
+            return; // Skip notes with invalid URLs
+          }
+          
+          // Attempt to detect subject from note title if not explicitly set
+          let subject = note.subject || 'Uncategorized';
+          
+          // Check if title contains a subject
+          if (note.title) {
+            if (note.title.includes('Biology') || note.title.toLowerCase().includes('biology')) {
+              subject = 'Biology';
+            }
+          }
+          
+          // Initialize subject array if needed
+          if (!validNotesBySubject[subject]) {
+            validNotesBySubject[subject] = [];
+          }
+          
+          // Add this valid note to its subject category
+          validNotesBySubject[subject].push(note);
+        });
+        
+        // Initialize subjectData with valid total counts
+        Object.entries(validNotesBySubject).forEach(([subject, notes]) => {
+          subjectData[subject] = {
+            completed: 0,
+            total: notes.length, // Set total to the count of valid notes for this subject
+            timeSpent: 0,
+            emojiStats: { "🤓": 0, "🤔": 0, "❗": 0 },
+            lastStudied: null
+          };
+        });
+        
+        // Now process completed notes
         completedNotes.forEach(note => {
           // Standardize subject names
           let subject = note.subject || 'Uncategorized';
@@ -54,14 +99,25 @@ const Progress = () => {
             subject = 'Biology';
           }
           
+          // Skip if we don't have this subject in our valid notes
           if (!subjectData[subject]) {
-            subjectData[subject] = {
-              completed: 0,
-              total: 0,
-              timeSpent: 0,
-              emojiStats: { "🤓": 0, "🤔": 0, "❗": 0 },
-              lastStudied: null
-            };
+            return;
+          }
+          
+          // Check if this note id exists in our valid notes for this subject
+          let isValidNote = false;
+          
+          // If we have valid notes for this subject
+          if (validNotesBySubject[subject]) {
+            // Check if this completed note corresponds to a valid note
+            isValidNote = validNotesBySubject[subject].some(validNote => 
+              validNote._id === note.id || validNote.asset_id === note.id
+            );
+          }
+          
+          // Only count completions for valid notes
+          if (!isValidNote) {
+            return; // Skip this completion
           }
           
           // Increment completed count
@@ -85,46 +141,11 @@ const Progress = () => {
           }
         });
         
-        // Count total notes per subject
-        allNotes.forEach(note => {
-          // Skip notes with missing/broken URLs
-          const noteUrl = note.secure_url || note.fileUrl || note.url || '';
-          const hasValidUrl = typeof noteUrl === 'string' && noteUrl.trim() !== '' && 
-                              (noteUrl.startsWith('http://') || noteUrl.startsWith('https://'));
-          
-          if (!hasValidUrl) {
-            return; // Skip this note
-          }
-          
-          // Attempt to detect subject from note title if not explicitly set
-          let subject = note.subject || 'Uncategorized';
-          
-          // Check if title contains a subject
-          if (note.title) {
-            if (note.title.includes('Biology') || note.title.toLowerCase().includes('biology')) {
-              subject = 'Biology';
-            }
-          }
-          
-          if (!subjectData[subject]) {
-            subjectData[subject] = {
-              completed: 0,
-              total: 0,
-              timeSpent: 0,
-              emojiStats: { "🤓": 0, "🤔": 0, "❗": 0 },
-              lastStudied: null
-            };
-          }
-          
-          // Increment total count
-          subjectData[subject].total++;
-        });
-        
         // Calculate average time and days since last study
         Object.keys(subjectData).forEach(subject => {
           const data = subjectData[subject];
           
-          // Calculate average time per note
+          // Calculate average time per note based on all completed notes
           data.avgTime = data.completed > 0 
             ? `${Math.round(data.timeSpent / data.completed)} min`
             : '0 min';

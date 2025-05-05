@@ -57,7 +57,9 @@ const EmojiStatsBar = ({ emojiStats }) => {
     <div className="mt-3">
       <div className="flex w-full h-3 rounded-full overflow-hidden">
         {Object.entries(stats).map(([emoji, value]) => {
-          const width = `${(value / total) * 100}%`;
+          // Calculate percentage, ensure it's never NaN
+          const percentage = (value / total) * 100 || 0;
+          const width = `${percentage}%`;
           let bgColor = 'bg-green-400';
           
           // Map emojis to colors
@@ -70,19 +72,23 @@ const EmojiStatsBar = ({ emojiStats }) => {
               key={emoji} 
               className={`${bgColor}`} 
               style={{ width }}
-              title={`${emoji}: ${Math.round((value / total) * 100)}%`}
+              title={`${emoji}: ${Math.round(percentage)}%`}
             />
           );
         })}
       </div>
       
       <div className="flex justify-between mt-1 text-xs text-gray-500 dark:text-gray-400">
-        {Object.entries(stats).map(([emoji, value]) => (
-          <div key={emoji} className="flex items-center">
-            <span className="mr-1">{emoji}</span>
-            <span>{Math.round((value / total) * 100)}%</span>
-          </div>
-        ))}
+        {Object.entries(stats).map(([emoji, value]) => {
+          // Calculate percentage, ensure it's never NaN
+          const percentage = (value / total) * 100 || 0;
+          return (
+            <div key={emoji} className="flex items-center">
+              <span className="mr-1">{emoji}</span>
+              <span>{Math.round(percentage)}%</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
