@@ -39,6 +39,7 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
   const [useFallbackViewer, setUseFallbackViewer] = useState(isMobileDevice());
   const [attemptedDirectLoad, setAttemptedDirectLoad] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [showLoadingUI, setShowLoadingUI] = useState(true);
   
   const sessionTimerRef = useRef(null);
   const breakTimerRef = useRef(null);
@@ -146,27 +147,32 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
   
   // Add loading timeout to prevent indefinite loading state
   useEffect(() => {
-    // Clear any existing timer
-    if (loadingTimerRef.current) {
-      clearTimeout(loadingTimerRef.current);
-    }
-    
-    // Set a timeout to handle loading issues
-    loadingTimerRef.current = setTimeout(() => {
-      if (!pdfLoaded) {
-        console.log("PDF loading timeout - switching to direct URL");
-        setLoadingTimeout(true);
-        // Force different viewer if we're stuck loading
-        setUseFallbackViewer(prev => !prev);
+    // Only start the timer if we're showing the loading UI and don't have an error
+    if (showLoadingUI && !pdfError) {
+      console.log("Starting loading timeout timer");
+      
+      // Clear any existing timer
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
       }
-    }, 8000); // 8 seconds timeout
+      
+      // Set a timeout to handle loading issues
+      loadingTimerRef.current = setTimeout(() => {
+        if (!pdfLoaded) {
+          console.log("PDF loading timeout - showing timeout message");
+          setLoadingTimeout(true);
+          // Make sure loading UI stays visible to show the timeout message
+          setShowLoadingUI(true);
+        }
+      }, 8000); // 8 seconds timeout
+    }
     
     return () => {
       if (loadingTimerRef.current) {
         clearTimeout(loadingTimerRef.current);
       }
     };
-  }, [pdfLoaded, noteUrl]);
+  }, [pdfLoaded, showLoadingUI, pdfError]);
   
   // Handle iframe load and error events
   useEffect(() => {
@@ -180,6 +186,7 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
       setPdfLoaded(true);
       setPdfError(null);
       setLoadingTimeout(false);
+      setShowLoadingUI(false);
       
       // Clear the loading timeout since we've loaded successfully
       if (loadingTimerRef.current) {
@@ -189,9 +196,11 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
     
     const handleIframeError = (e) => {
       console.error("PDF iframe failed to load:", e);
-      setAttemptedDirectLoad(true); // Trigger fallback
+      setAttemptedDirectLoad(true);
       setPdfLoaded(false);
       setLoadingTimeout(true);
+      // Keep showing loading UI to display the error/timeout message
+      setShowLoadingUI(true);
     };
     
     const iframe = iframeRef.current;
@@ -400,12 +409,25 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
             <FaExclamationTriangle className="text-red-500 dark:text-red-400 text-4xl mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">PDF Loading Error</h3>
             <p className="text-red-600 dark:text-red-200 mb-4">{ensureString(pdfError)}</p>
-            <button
-              onClick={() => navigate('/my-notes')}
-              className="px-4 py-2 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
-            >
-              Back to Notes
-            </button>
+            <div className="flex flex-col space-y-3">
+              <button
+                onClick={() => {
+                  setUseFallbackViewer(prev => !prev);
+                  setLoadingTimeout(false);
+                  setPdfLoaded(false);
+                  setShowLoadingUI(true);
+                }}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Try Different Viewer
+              </button>
+              <button
+                onClick={() => navigate('/my-notes')}
+                className="px-4 py-2 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+              >
+                Back to Notes
+              </button>
+            </div>
           </div>
         </div>
       );
@@ -436,26 +458,30 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
     
     return (
       <div className="w-full h-full relative overflow-hidden">
-        {!pdfLoaded && (
+        {/* Always show loading UI until PDF is confirmed loaded */}
+        {showLoadingUI && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-slate-800 z-10">
-            <div className="text-center">
+            <div className="text-center p-6">
               <FaFilePdf className="text-blue-500 dark:text-blue-400 text-5xl mx-auto animate-pulse mb-4" />
-              <p className="text-gray-600 dark:text-gray-300">Loading document...</p>
+              <p className="text-gray-600 dark:text-gray-300 mb-3">Loading document...</p>
               
               {loadingTimeout && (
                 <div className="mt-4">
-                  <p className="text-amber-600 dark:text-amber-400 text-sm mb-2">
+                  <p className="text-amber-600 dark:text-amber-400 mb-3">
                     Taking longer than expected...
                   </p>
                   <button 
                     onClick={() => {
                       // Toggle between viewers
                       setUseFallbackViewer(prev => !prev);
-                      // Reset loading state
+                      // Reset loading state but keep UI visible
                       setLoadingTimeout(false);
                       setPdfLoaded(false);
+                      // Keep showing loading UI
+                      setShowLoadingUI(true);
+                      console.log("Switching viewer due to user action");
                     }} 
-                    className="px-3 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600"
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                   >
                     Try Different Viewer
                   </button>
@@ -481,10 +507,16 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
               scrolling="yes"
               allowFullScreen={true}
               title={`${safeNoteTitle} (Mobile Viewer)`}
-              onLoad={() => setPdfLoaded(true)}
-              onError={() => {
+              onLoad={() => {
+                console.log("Mobile viewer iframe loaded");
+                setPdfLoaded(true);
+                setShowLoadingUI(false);
+              }}
+              onError={(e) => {
+                console.error("Mobile viewer failed to load", e);
                 setLoadingTimeout(true);
-                setUseFallbackViewer(false);
+                setPdfLoaded(false);
+                setShowLoadingUI(true);
               }}
             />
           </div>
@@ -500,7 +532,11 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
               border: 'none',
               overflow: 'auto'
             }}
-            onLoad={() => setPdfLoaded(true)}
+            onLoad={() => {
+              console.log("PDF object loaded");
+              setPdfLoaded(true);
+              setShowLoadingUI(false);
+            }}
           >
             {/* Fallback for older browsers */}
             <iframe 
@@ -517,7 +553,16 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
               scrolling="yes"
               allowFullScreen={true}
               title={safeNoteTitle}
-              onLoad={() => setPdfLoaded(true)}
+              onLoad={() => {
+                console.log("Fallback iframe loaded");
+                setPdfLoaded(true);
+                setShowLoadingUI(false);
+              }}
+              onError={(e) => {
+                console.error("Fallback iframe failed to load", e);
+                setPdfError("Failed to load PDF. Please try a different viewer.");
+                setShowLoadingUI(true);
+              }}
             />
           </object>
         )}
