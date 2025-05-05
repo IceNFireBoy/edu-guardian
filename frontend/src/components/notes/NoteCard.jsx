@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import StarRating from './StarRating';
 import { useStreak } from '../../hooks/useStreak';
 import PDFThumbnail from './PDFThumbnail';
+import EnhancedPDFIcon from './EnhancedPDFIcon';
 
 // Determine if we're in production mode
 const isProduction = import.meta.env.PROD || window.location.hostname === 'eduguardian.netlify.app';
@@ -187,12 +188,10 @@ const NoteCard = ({ note, onView, compact = false }) => {
   }, []);
   
   const renderPDFThumbnail = () => {
-    // If we're in production or PDF rendering failed, use icon instead
+    // If we're in production or PDF rendering failed, use enhanced PDF icon instead
     if (isProduction || pdfThumbnailFailed) {
       return (
-        <div className="w-full h-full flex items-center justify-center">
-          {getIcon()}
-        </div>
+        <EnhancedPDFIcon note={note} className="w-full h-full" />
       );
     }
     
