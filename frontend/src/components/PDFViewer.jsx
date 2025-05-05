@@ -20,7 +20,9 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
       url = 'https:' + (url.startsWith('//') ? url : '//' + url);
     }
     
-    return url;
+    // Add a cache-busting parameter to avoid caching issues
+    const cacheBuster = `?t=${Date.now()}`;
+    return url + (url.includes('?') ? '&cb=' + cacheBuster : cacheBuster);
   };
 
   // Get PDF.js viewer URL with proper scroll mode to ensure multi-page scrolling
@@ -29,7 +31,8 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
     if (!safeUrl) return '';
     
     // Use PDF.js with explicit scroll mode parameter (1) to force continuous scrolling
-    return `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(safeUrl)}&scrollMode=1`;
+    // Also pass a fallback URL directly to PDF.js rather than trying to proxy through Mozilla
+    return `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/web/viewer.html?file=${encodeURIComponent(safeUrl)}&scrollMode=1`;
   };
 
   // Try to load PDF when component mounts

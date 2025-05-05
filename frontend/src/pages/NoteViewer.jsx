@@ -75,6 +75,19 @@ const NoteViewer = () => {
               }
             }
           }
+          
+          // Also try completed notes storage
+          const completedNotes = localStorage.getItem('completedNotes');
+          if (completedNotes) {
+            const completedData = JSON.parse(completedNotes);
+            if (Array.isArray(completedData)) {
+              const completedNote = completedData.find(n => n && n.id === id);
+              if (completedNote) {
+                console.log('Found in completed notes:', completedNote.id);
+                // Use the completion data but need to fetch the actual note still
+              }
+            }
+          }
         } catch (localStorageError) {
           console.error('Error reading from localStorage:', localStorageError);
         }
