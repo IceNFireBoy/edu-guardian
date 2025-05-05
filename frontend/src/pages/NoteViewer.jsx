@@ -4,6 +4,7 @@ import { FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
 import PDFViewer from '../components/PDFViewer';
 import ErrorBoundary from '../components/ErrorBoundary';
 import usePDFNote from '../hooks/usePDFNote';
+import NoteStudySession from '../components/notes/NoteStudySession';
 
 // Utility function to ensure string values
 const ensureString = (value, defaultValue = '') => {
@@ -256,10 +257,11 @@ const NoteViewer = () => {
   console.log('Rendering NoteViewer - Proceeding to PDFViewer component.');
   return (
     <ErrorBoundary>
-      <PDFViewer
+      <NoteStudySession
         noteUrl={finalPdfUrl}
         noteTitle={finalNoteTitle}
         noteId={finalNoteId}
+        subject={note && (note.subject || finalNoteTitle)}
       />
     </ErrorBoundary>
   );
