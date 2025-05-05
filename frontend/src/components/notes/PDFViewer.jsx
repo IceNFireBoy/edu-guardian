@@ -240,7 +240,7 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
     // Find the note we just completed
     const existingNoteIndex = completedNotes.findIndex(note => note.id === noteId);
     
-    const completionData = {
+    const noteCompletionData = {
       id: noteId,
       completedAt: new Date().toISOString(),
       timeSpent: calculateTimeSpent(),
@@ -252,10 +252,10 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
     if (existingNoteIndex >= 0) {
       completedNotes[existingNoteIndex] = {
         ...completedNotes[existingNoteIndex],
-        ...completionData
+        ...noteCompletionData
       };
     } else {
-      completedNotes.push(completionData);
+      completedNotes.push(noteCompletionData);
     }
     
     localStorage.setItem('completedNotes', JSON.stringify(completedNotes));
