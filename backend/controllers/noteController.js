@@ -38,71 +38,18 @@ exports.getNotes = async (req, res) => {
       .exec();
     
     console.log("[Backend] getNotes: Found", notes.length, "notes");
+    console.log("[Backend] getNotes: Sample note:", notes[0] ? {
+      _id: notes[0]._id,
+      title: notes[0].title,
+      subject: notes[0].subject
+    } : "No notes found");
     
-    // Temporarily disable URL validation due to axios issues
-    // Return all notes without validation for now
+    // Return notes in standard format
     return res.status(200).json({
       success: true,
       count: notes.length,
       data: notes
     });
-    
-    /* URL validation disabled temporarily
-    // Validate Cloudinary URLs (if skipValidation is not set to true)
-    if (req.query.skipValidation !== 'true') {
-      const axios = require('axios');
-      
-      // Helper function to check if URL is accessible
-      const isUrlValid = async (url) => {
-        if (!url) return false;
-        try {
-          // Add timeout to avoid hanging
-          const response = await axios.head(url, { 
-            timeout: 3000,
-            validateStatus: false
-          });
-          return response.status < 400; // Consider all non-error status codes as valid
-        } catch (err) {
-          console.error(`[Backend] URL validation error for ${url}:`, err.message);
-          return false;
-        }
-      };
-      
-      // Process in smaller batches for performance
-      const batchSize = 5;
-      const validNotes = [];
-      
-      console.log("[Backend] Validating Cloudinary URLs...");
-      
-      for (let i = 0; i < notes.length; i += batchSize) {
-        const batch = notes.slice(i, i + batchSize);
-        const validationPromises = batch.map(async (note) => {
-          const url = note.fileUrl;
-          if (!url) return null;
-          
-          const isValid = await isUrlValid(url);
-          if (isValid) {
-            return note;
-          } else {
-            console.log(`[Backend] Found invalid URL: ${url}`);
-            return null;
-          }
-        });
-        
-        const results = await Promise.all(validationPromises);
-        validNotes.push(...results.filter(Boolean));
-      }
-      
-      console.log(`[Backend] Filtered out ${notes.length - validNotes.length} notes with invalid URLs`);
-      
-      // Return validated notes in standard format
-      return res.status(200).json({
-        success: true,
-        count: validNotes.length,
-        data: validNotes
-      });
-    }
-    */
   } catch (error) {
     console.error("[Backend] getNotes Error:", error);
     return res.status(500).json({ 

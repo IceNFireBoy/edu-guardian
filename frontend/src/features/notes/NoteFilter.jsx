@@ -399,25 +399,9 @@ const getAverageRating = (noteId) => {
 async function isFileAccessible(url) {
   if (!url) return false;
   try {
-    // Add a cache-busting parameter to avoid browser caching responses
-    // which can hide 404 errors for deleted Cloudinary resources
-    const urlWithNoCaching = `${url}${url.includes('?') ? '&' : '?'}_nocache=${Date.now()}`;
-    
-    // Use HEAD request to check if file exists without downloading it
-    const res = await fetch(urlWithNoCaching, { 
-      method: 'HEAD',
-      // Add a timeout to avoid long waits for unreachable resources
-      signal: AbortSignal.timeout(5000) 
-    });
-    
-    // Log deleted resources for debugging
-    if (!res.ok) {
-      debug(`[Frontend] Resource not accessible: ${url} (Status: ${res.status})`);
-    }
-    
+    const res = await fetch(url, { method: 'HEAD' });
     return res.ok;
-  } catch (err) {
-    debug(`[Frontend] Error checking resource accessibility: ${url} - ${err.message}`);
+  } catch {
     return false;
   }
 }
