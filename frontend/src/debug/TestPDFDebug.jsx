@@ -3,8 +3,6 @@ import { Route, Routes, Link, useNavigate } from 'react-router-dom';
 import PDFViewer from '../components/notes/PDFViewer';
 import ErrorBoundary from '../components/ErrorBoundary';
 
-const axios = require('axios');
-
 // Test component with various edge cases
 const TestPDFDebug = () => {
   const navigate = useNavigate();
