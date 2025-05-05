@@ -245,13 +245,41 @@ const NoteViewer = () => {
     );
   }
   
-  // Extract URL directly from note if the hook didn't work
-  const finalPdfUrl = pdfUrl || directNoteUrl || (note && (note.secure_url || note.fileUrl || note.url));
-  const finalNoteTitle = noteTitle || directNoteTitle || (note && (note.title || 'Untitled Note'));
-  const finalNoteId = processedNoteId || (note && (note._id || note.id || note.asset_id));
+  // Determine final values for PDFViewer props
+  let determinedPdfUrl = null;
+  let determinedNoteTitle = 'Untitled Note';
+  let determinedNoteId = null;
   
-  // Extra validation - if no valid URL exists, show error
-  if (!finalPdfUrl) {
+  if (note) {
+    // Prioritize hook results if available and successful (loading complete, no error)
+    if (!hookLoading && !hookError && pdfUrl) {
+      console.log('Using hook results for PDF data.');
+      determinedPdfUrl = pdfUrl;
+      determinedNoteTitle = noteTitle;
+      determinedNoteId = processedNoteId;
+    } else {
+      // Fallback to direct extraction from the note object if hook fails or is loading
+      console.log('Falling back to direct extraction from note object.');
+      determinedPdfUrl = note.secure_url || note.fileUrl || note.url || null;
+      determinedNoteTitle = note.title || (note.context && note.context.caption) || 'Untitled Note';
+      determinedNoteId = note._id || note.id || note.asset_id || null;
+      
+      // Log if direct extraction was necessary due to hook error
+      if (hookError) {
+        console.warn('Direct extraction used due to hook error:', hookError);
+      }
+    }
+  }
+  
+  console.log('Final determined values before check:', { 
+    determinedPdfUrl, 
+    determinedNoteTitle, 
+    determinedNoteId 
+  });
+  
+  // Final check: If NO valid URL could be determined AT ALL
+  if (!determinedPdfUrl) {
+    console.error('Condition !determinedPdfUrl is TRUE. Rendering error message.');
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
         <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-lg w-full shadow-md">
@@ -275,19 +303,20 @@ const NoteViewer = () => {
     );
   }
   
-  console.log('Rendering improved PDFViewer with:', { 
-    pdfUrl: finalPdfUrl, 
-    noteTitle: finalNoteTitle, 
-    noteId: finalNoteId 
+  // If we reach here, determinedPdfUrl is valid
+  console.log('Condition !determinedPdfUrl is FALSE. Rendering PDFViewer with:', { 
+    pdfUrl: determinedPdfUrl, 
+    noteTitle: determinedNoteTitle, 
+    noteId: determinedNoteId 
   });
   
   // Render the new PDFViewer within ErrorBoundary
   return (
     <ErrorBoundary>
       <PDFViewer 
-        noteUrl={finalPdfUrl} 
-        noteTitle={finalNoteTitle} 
-        noteId={finalNoteId} 
+        noteUrl={determinedPdfUrl} 
+        noteTitle={determinedNoteTitle} 
+        noteId={determinedNoteId} 
       />
     </ErrorBoundary>
   );
