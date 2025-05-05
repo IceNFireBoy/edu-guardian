@@ -336,7 +336,7 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
     const safeUrl = getSafeUrl();
     
     return (
-      <div className="relative w-full h-full">
+      <div className="w-full h-full">
         {!pdfLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-slate-800 z-10">
             <div className="text-center">
@@ -345,25 +345,29 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
             </div>
           </div>
         )}
-        {safeUrl && (
-          <iframe
-            ref={iframeRef}
-            src={safeUrl}
-            className="w-full h-full"
-            title={safeNoteTitle}
-            loading="lazy"
-            style={{ height: '100%', width: '100%', border: 'none' }}
-          />
-        )}
+        <iframe
+          ref={iframeRef}
+          src={safeUrl}
+          className="w-full border-0"
+          style={{
+            height: 'calc(100vh - 4rem)',
+            width: '100%',
+            border: 'none',
+            overflow: 'auto'
+          }}
+          title={safeNoteTitle}
+          loading="lazy"
+          scrolling="yes"
+        />
       </div>
     );
   };
   
   return (
     <ErrorBoundary>
-      <div className="flex flex-col h-screen bg-gray-100 dark:bg-slate-900 overflow-hidden">
-        {/* Header with timers - improved for mobile */}
-        <header className="bg-white dark:bg-slate-800 shadow-md py-2 px-2 sm:py-3 sm:px-4 flex-shrink-0">
+      <div className="flex flex-col h-screen bg-gray-100 dark:bg-slate-900">
+        {/* Compact header */}
+        <header className="bg-white dark:bg-slate-800 shadow-md py-2 px-2 sm:px-4 w-full z-10 flex-shrink-0">
           <div className="flex flex-wrap justify-between items-center gap-2 w-full">
             <div className="flex items-center">
               <button 
@@ -537,8 +541,8 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
           </div>
         </header>
         
-        {/* PDF Viewer - ensure it fills available space */}
-        <div className="flex-1 overflow-hidden relative w-full" style={{ height: 'calc(100vh - 56px)' }}>
+        {/* PDF container */}
+        <div className="flex-grow w-full">
           {renderPDFContent()}
         </div>
         
