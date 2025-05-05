@@ -3,8 +3,8 @@ import * as pdfjs from 'pdfjs-dist';
 import { debug } from '../../components/DebugPanel';
 import '../../styles/pdf-thumbnails.css';
 
-// Use pre-built worker and disable workers with disableWorker parameter
-pdfjs.GlobalWorkerOptions.workerSrc = null; // Don't use external worker
+// Don't set workerSrc at all and disable workers in the document parameters
+// pdfjs.GlobalWorkerOptions.workerSrc = null; // This line caused the error
 
 const PDFThumbnail = ({ url, alt = 'PDF preview', className = '', onError }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState('');
@@ -31,7 +31,7 @@ const PDFThumbnail = ({ url, alt = 'PDF preview', className = '', onError }) => 
         // Use no-worker solution for CSP compatibility
         loadingTask = pdfjs.getDocument({
           url: url,
-          disableWorker: true,
+          disableWorker: true,  // This is the key setting
           disableAutoFetch: true,
           disableStream: true,
           cMapUrl: null,

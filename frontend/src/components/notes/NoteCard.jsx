@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaBookOpen, FaFilePdf, FaImage, FaFileAlt, FaExclamationCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import StarRating from './StarRating';
 import { useStreak } from '../../hooks/useStreak';
 import PDFThumbnail from './PDFThumbnail';
+
+// Determine if we're in production mode
+const isProduction = import.meta.env.PROD || window.location.hostname === 'eduguardian.netlify.app';
 
 // Helper function to get average rating from localStorage
 const getAverageRating = (noteId) => {
@@ -174,11 +177,18 @@ const NoteCard = ({ note, onView, compact = false }) => {
   };
 
   // For PDF thumbnails with a fallback to icon
-  const [pdfThumbnailFailed, setPdfThumbnailFailed] = useState(false);
+  const [pdfThumbnailFailed, setPdfThumbnailFailed] = useState(true); // Default to failed in production
+  
+  // Set pdfThumbnailFailed to false initially in development environment
+  useEffect(() => {
+    if (!isProduction) {
+      setPdfThumbnailFailed(false);
+    }
+  }, []);
   
   const renderPDFThumbnail = () => {
-    // If we already know PDF thumbnail failed, use icon instead
-    if (pdfThumbnailFailed) {
+    // If we're in production or PDF rendering failed, use icon instead
+    if (isProduction || pdfThumbnailFailed) {
       return (
         <div className="w-full h-full flex items-center justify-center">
           {getIcon()}
@@ -186,6 +196,7 @@ const NoteCard = ({ note, onView, compact = false }) => {
       );
     }
     
+    // Only try to render PDF thumbnails in development environment
     return (
       <PDFThumbnail 
         url={getImageUrl()} 
