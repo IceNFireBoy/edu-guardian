@@ -243,7 +243,7 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
     const noteCompletionData = {
       id: noteId,
       completedAt: new Date().toISOString(),
-      timeSpent: calculateTimeSpent(),
+      timeSpent: completionData.timeSpent,
       feedback: completionData.feedback,
       subject: subject
     };
