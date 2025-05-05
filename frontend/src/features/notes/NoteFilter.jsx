@@ -65,91 +65,91 @@ const FilterForm = ({ filters, setFilters, onSubmit, hasFiltersApplied, clearAll
       </h2>
       
       <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="grade-select">Grade</label>
-            <select 
-              id="grade-select"
-              name="grade"
-              value={filters.grade}
-              onChange={handleChange}
-              className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
-              aria-label="Select grade"
-            >
-              <option value="">All Grades</option>
-              <option value="11">Grade 11</option>
-              <option value="12">Grade 12</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="semester-select">Semester</label>
-            <select 
-              id="semester-select"
-              name="semester"
-              value={filters.semester}
-              onChange={handleChange}
-              className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
-              aria-label="Select semester"
-            >
-              <option value="">All Semesters</option>
-              <option value="1">1st Semester</option>
-              <option value="2">2nd Semester</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="quarter-select">Quarter</label>
-            <select 
-              id="quarter-select"
-              name="quarter"
-              value={filters.quarter}
-              onChange={handleChange}
-              className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
-              aria-label="Select quarter"
-            >
-              <option value="">All Quarters</option>
-              <option value="1">Q1</option>
-              <option value="2">Q2</option>
-              <option value="3">Q3</option>
-              <option value="4">Q4</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="subject-select">Subject</label>
-            <select 
-              id="subject-select"
-              name="subject"
-              value={filters.subject}
-              onChange={handleChange}
-              className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
-              aria-label="Select subject"
-            >
-              <option value="">All Subjects</option>
-              {subjects.map((subject) => (
-                <option key={subject} value={subject}>{subject}</option>
-              ))}
-            </select>
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+          <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="grade-select">Grade</label>
+          <select 
+            id="grade-select"
+            name="grade"
+            value={filters.grade}
+            onChange={handleChange}
+            className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+            aria-label="Select grade"
+          >
+            <option value="">All Grades</option>
+            <option value="11">Grade 11</option>
+            <option value="12">Grade 12</option>
+          </select>
         </div>
         
-        <div className="mt-4">
-          <div className="relative">
-            <input
-              type="text"
-              name="topic"
-              value={filters.topic}
-              onChange={handleChange}
+        <div>
+          <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="semester-select">Semester</label>
+          <select 
+            id="semester-select"
+            name="semester"
+            value={filters.semester}
+            onChange={handleChange}
+            className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+            aria-label="Select semester"
+          >
+            <option value="">All Semesters</option>
+            <option value="1">1st Semester</option>
+            <option value="2">2nd Semester</option>
+          </select>
+        </div>
+        
+        <div>
+          <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="quarter-select">Quarter</label>
+          <select 
+            id="quarter-select"
+            name="quarter"
+            value={filters.quarter}
+            onChange={handleChange}
+            className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+            aria-label="Select quarter"
+          >
+            <option value="">All Quarters</option>
+            <option value="1">Q1</option>
+            <option value="2">Q2</option>
+            <option value="3">Q3</option>
+            <option value="4">Q4</option>
+          </select>
+        </div>
+        
+        <div>
+          <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="subject-select">Subject</label>
+          <select 
+            id="subject-select"
+            name="subject"
+            value={filters.subject}
+            onChange={handleChange}
+            className="w-full input bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100"
+            aria-label="Select subject"
+          >
+            <option value="">All Subjects</option>
+            {subjects.map((subject) => (
+              <option key={subject} value={subject}>{subject}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      
+      <div className="mt-4">
+        <div className="relative">
+          <input
+            type="text"
+            name="topic"
+            value={filters.topic}
+            onChange={handleChange}
               onKeyDown={handleKeyDown}
-              placeholder="Search by topic..."
-              className="w-full input pl-10 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
-              aria-label="Search by topic"
-            />
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-          </div>
+            placeholder="Search by topic..."
+            className="w-full input pl-10 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+            aria-label="Search by topic"
+          />
+          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
         </div>
-        
+      </div>
+      
         <div className="mt-4 flex justify-end gap-3">
           {hasFiltersApplied && (
             <button
@@ -161,14 +161,14 @@ const FilterForm = ({ filters, setFilters, onSubmit, hasFiltersApplied, clearAll
               Clear All Filters
             </button>
           )}
-          <button
+        <button
             type="submit"
-            className="w-full sm:w-auto btn btn-primary"
-            aria-label="Apply filters"
-          >
-            Apply Filters
-          </button>
-        </div>
+          className="w-full sm:w-auto btn btn-primary"
+          aria-label="Apply filters"
+        >
+          Apply Filters
+        </button>
+      </div>
       </form>
     </div>
   );
@@ -287,12 +287,12 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
           >
             <div className="p-4 border-b dark:border-slate-700 flex justify-between items-center">
               <div>
-                <h3 
-                  id="note-modal-title" 
-                  className="text-xl font-bold text-gray-800 dark:text-gray-100"
-                >
-                  {noteTitle}
-                </h3>
+              <h3 
+                id="note-modal-title" 
+                className="text-xl font-bold text-gray-800 dark:text-gray-100"
+              >
+                {noteTitle}
+              </h3>
                 
                 {/* Display topic prominently */}
                 {note.topic && (
@@ -716,7 +716,7 @@ const NoteFilter = () => {
             debug("[Frontend] No notes found for the applied filters");
           } else {
             toast.info("No notes available.");
-            debug("[Frontend] No notes found in response");
+          debug("[Frontend] No notes found in response");
           }
         } else {
           // Optional: show success toast

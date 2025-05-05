@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaArrowLeft, FaClock, FaCoffee, FaPlay, FaPause, FaTimes, FaExclamationTriangle, FaFilePdf } from 'react-icons/fa';
+import { FaArrowLeft, FaClock, FaCoffee, FaPlay, FaPause, FaTimes, FaExclamationTriangle, FaFilePdf, FaFlag } from 'react-icons/fa';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import ErrorBoundary from '../ErrorBoundary';
 import FinishStudyingButton from '../progress/FinishStudyingButton';
@@ -26,6 +26,7 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
   const [pdfError, setPdfError] = useState(null);
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [studyStartTime, setStudyStartTime] = useState(Date.now());
+  const [showFeedback, setShowFeedback] = useState(false);
   
   const sessionTimerRef = useRef(null);
   const breakTimerRef = useRef(null);
@@ -140,6 +141,34 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
       };
     }
   }, [validNoteUrl]);
+  
+  // Calculate time spent in minutes
+  const calculateTimeSpent = () => {
+    const now = Date.now();
+    const timeSpentMs = now - studyStartTime;
+    return Math.round(timeSpentMs / (1000 * 60)); // Convert to minutes
+  };
+  
+  // Handle when the Finish Studying button is clicked
+  const handleFinishClick = () => {
+    setShowFeedback(true);
+  };
+  
+  // Handle when a specific emoji is selected for feedback
+  const handleEmojiSelect = (emoji) => {
+    const timeSpent = calculateTimeSpent();
+    
+    // Pass the data to the main handler
+    handleFinishStudying({
+      noteId,
+      timeSpent,
+      feedback: emoji,
+      subject: 'Auto' // Will be determined in handleFinishStudying
+    });
+    
+    // Hide the feedback dialog
+    setShowFeedback(false);
+  };
   
   // Toggle pause/resume for session timer
   const togglePause = () => {
@@ -323,6 +352,7 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
             className="w-full h-full"
             title={safeNoteTitle}
             loading="lazy"
+            style={{ height: '100%', width: '100%', border: 'none' }}
           />
         )}
       </div>
@@ -331,42 +361,97 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
   
   return (
     <ErrorBoundary>
-      <div className="flex flex-col h-screen bg-gray-100 dark:bg-slate-900">
-        {/* Header with timers */}
-        <header className="bg-white dark:bg-slate-800 shadow-md py-3 px-4">
-          <div className="flex justify-between items-center max-w-7xl mx-auto">
+      <div className="flex flex-col h-screen bg-gray-100 dark:bg-slate-900 overflow-hidden">
+        {/* Header with timers - improved for mobile */}
+        <header className="bg-white dark:bg-slate-800 shadow-md py-2 px-2 sm:py-3 sm:px-4 flex-shrink-0">
+          <div className="flex flex-wrap justify-between items-center gap-2 w-full">
             <div className="flex items-center">
               <button 
                 onClick={() => navigate('/my-notes')}
-                className="p-2 mr-3 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+                className="p-1 sm:p-2 mr-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
                 aria-label="Go back"
               >
                 <FaArrowLeft className="text-gray-700 dark:text-gray-300" />
               </button>
-              <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100 truncate max-w-md">
+              <h1 className="text-base sm:text-xl font-semibold text-gray-800 dark:text-gray-100 truncate max-w-[200px] sm:max-w-md">
                 {safeNoteTitle}
               </h1>
             </div>
             
-            <div className="flex items-center space-x-4">
-              {/* Finish Studying Button */}
+            <div className="flex flex-wrap items-center gap-2 sm:space-x-4 mt-1 sm:mt-0">
+              {/* Finish Studying Button - with custom mobile styling */}
               {noteId && (
-                <FinishStudyingButton 
-                  noteId={noteId}
-                  onFinish={handleFinishStudying}
-                  initialStartTime={studyStartTime}
-                />
+                <div className="hidden sm:block">
+                  <FinishStudyingButton 
+                    noteId={noteId}
+                    onFinish={handleFinishStudying}
+                    initialStartTime={studyStartTime}
+                  />
+                </div>
+              )}
+              
+              {/* Mobile-optimized Finish Studying Button */}
+              {noteId && (
+                <div className="sm:hidden">
+                  <button
+                    onClick={handleFinishClick}
+                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-3 rounded-lg flex items-center transition-colors shadow-sm text-sm"
+                  >
+                    <FaFlag className="mr-1" />
+                    Finish
+                  </button>
+                  
+                  {/* Emoji Feedback Dialog for Mobile */}
+                  {showFeedback && (
+                    <div className="absolute z-50 top-0 right-0 mt-12 bg-white dark:bg-slate-800 rounded-lg shadow-lg p-3 w-60 border border-gray-200 dark:border-slate-700">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Rate this material
+                        </h3>
+                        <button 
+                          onClick={() => setShowFeedback(false)}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                        >
+                          <FaTimes />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1">
+                        <button
+                          onClick={() => handleEmojiSelect("🤓")}
+                          className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                        >
+                          <span className="text-xl mb-1">🤓</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-400">Understood</span>
+                        </button>
+                        <button
+                          onClick={() => handleEmojiSelect("🤔")}
+                          className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                        >
+                          <span className="text-xl mb-1">🤔</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-400">Confused</span>
+                        </button>
+                        <button
+                          onClick={() => handleEmojiSelect("❗")}
+                          className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                        >
+                          <span className="text-xl mb-1">❗</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-400">Need Help</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
               
               {/* Session Timer */}
-              <div className="flex items-center bg-gray-100 dark:bg-slate-700 px-3 py-2 rounded-lg">
-                <FaClock className="text-primary dark:text-primary-light mr-2" />
-                <span className="text-gray-800 dark:text-gray-100 font-mono">
+              <div className="flex items-center bg-gray-100 dark:bg-slate-700 px-2 py-1 sm:px-3 sm:py-2 rounded-lg">
+                <FaClock className="text-primary dark:text-primary-light mr-1 sm:mr-2" />
+                <span className="text-gray-800 dark:text-gray-100 font-mono text-sm sm:text-base">
                   {ensureString(formatTime(sessionTime))}
                 </span>
                 <button 
                   onClick={togglePause}
-                  className="ml-2 p-1 hover:bg-gray-200 dark:hover:bg-slate-600 rounded"
+                  className="ml-1 sm:ml-2 p-1 hover:bg-gray-200 dark:hover:bg-slate-600 rounded"
                   aria-label={isPaused ? "Resume timer" : "Pause timer"}
                 >
                   {isPaused ? (
@@ -380,14 +465,14 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
               {/* Break Timer */}
               <div className="relative">
                 {isBreakActive ? (
-                  <div className="flex items-center bg-blue-100 dark:bg-blue-900/30 px-3 py-2 rounded-lg">
-                    <FaCoffee className="text-blue-600 dark:text-blue-400 mr-2" />
-                    <span className="text-blue-800 dark:text-blue-300 font-mono">
+                  <div className="flex items-center bg-blue-100 dark:bg-blue-900/30 px-2 py-1 sm:px-3 sm:py-2 rounded-lg">
+                    <FaCoffee className="text-blue-600 dark:text-blue-400 mr-1 sm:mr-2 text-sm sm:text-base" />
+                    <span className="text-blue-800 dark:text-blue-300 font-mono text-sm sm:text-base">
                       Break: {ensureString(formatTime(breakTime))}
                     </span>
                     <button
                       onClick={cancelBreak}
-                      className="ml-2 p-1 hover:bg-blue-200 dark:hover:bg-blue-800/50 rounded"
+                      className="ml-1 sm:ml-2 p-1 hover:bg-blue-200 dark:hover:bg-blue-800/50 rounded"
                       aria-label="Cancel break"
                     >
                       <FaTimes className="text-blue-600 dark:text-blue-400" />
@@ -397,32 +482,32 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
                   <>
                     <button
                       onClick={() => setShowBreakOptions(prev => !prev)}
-                      className="flex items-center bg-blue-100 dark:bg-blue-900/30 px-3 py-2 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
+                      className="flex items-center bg-blue-100 dark:bg-blue-900/30 px-2 py-1 sm:px-3 sm:py-2 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
                       aria-label="Start a break"
                     >
-                      <FaCoffee className="text-blue-600 dark:text-blue-400 mr-2" />
-                      <span className="text-blue-800 dark:text-blue-300">
-                        Break Timer
+                      <FaCoffee className="text-blue-600 dark:text-blue-400 mr-1 sm:mr-2" />
+                      <span className="text-blue-800 dark:text-blue-300 text-sm sm:text-base">
+                        Break
                       </span>
                     </button>
                     
                     {showBreakOptions && (
                       <div
-                        className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-lg z-10 fade-in"
+                        className="absolute right-0 mt-2 w-48 sm:w-56 bg-white dark:bg-slate-800 rounded-lg shadow-lg z-10 fade-in"
                       >
-                        <div className="p-3 border-b dark:border-slate-700">
+                        <div className="p-2 sm:p-3 border-b dark:border-slate-700">
                           <div className="flex items-center">
                             <input
                               type="number"
                               value={customTime}
                               onChange={(e) => setCustomTime(e.target.value)}
-                              placeholder="Minutes"
-                              className="w-full px-3 py-2 rounded-lg mr-2 border dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                              placeholder="Min"
+                              className="w-full px-2 py-1 sm:px-3 sm:py-2 rounded-lg mr-2 border dark:border-slate-600 dark:bg-slate-700 dark:text-white text-sm"
                               min="1"
                             />
                             <button
                               onClick={startCustomBreak}
-                              className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                              className="px-2 py-1 sm:px-3 sm:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
                               disabled={!customTime || isNaN(customTime) || parseInt(customTime) <= 0}
                             >
                               Set
@@ -432,13 +517,13 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
                         <div className="p-2">
                           <button
                             onClick={startShortBreak}
-                            className="w-full text-left px-3 py-2 hover:bg-blue-100 dark:hover:bg-slate-700 rounded-lg mb-1"
+                            className="w-full text-left px-2 py-1 sm:px-3 sm:py-2 hover:bg-blue-100 dark:hover:bg-slate-700 rounded-lg mb-1 text-sm"
                           >
                             Short Break (10 min)
                           </button>
                           <button
                             onClick={startLongBreak}
-                            className="w-full text-left px-3 py-2 hover:bg-blue-100 dark:hover:bg-slate-700 rounded-lg"
+                            className="w-full text-left px-2 py-1 sm:px-3 sm:py-2 hover:bg-blue-100 dark:hover:bg-slate-700 rounded-lg text-sm"
                           >
                             Long Break (30 min)
                           </button>
@@ -452,8 +537,8 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
           </div>
         </header>
         
-        {/* PDF Viewer */}
-        <div className="flex-1 overflow-hidden">
+        {/* PDF Viewer - ensure it fills available space */}
+        <div className="flex-1 overflow-hidden relative w-full" style={{ height: 'calc(100vh - 56px)' }}>
           {renderPDFContent()}
         </div>
         
