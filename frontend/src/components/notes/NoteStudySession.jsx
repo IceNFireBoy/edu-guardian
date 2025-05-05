@@ -82,33 +82,43 @@ const NoteStudySession = ({ noteUrl, noteTitle, noteId, subject }) => {
     return Math.round((now - studyStartTime) / (1000 * 60));
   };
 
-  // UI
+  // Responsive toolbar placement
+  // On mobile: fixed bottom, on desktop: fixed top
+  // Use pointer-events-none on the bar, pointer-events-auto on controls
   return (
     <div className="relative w-full h-full">
-      {/* Overlay: Timers and Controls */}
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 flex flex-wrap gap-3 items-center bg-white/80 dark:bg-slate-900/80 px-4 py-2 rounded-lg shadow border border-gray-200 dark:border-slate-700">
+      {/* Responsive Toolbar */}
+      <div
+        className="fixed left-1/2 z-40 flex flex-wrap gap-2 sm:gap-4 items-center bg-white/90 dark:bg-slate-900/90 px-2 py-1 sm:px-4 sm:py-2 rounded-lg shadow border border-gray-200 dark:border-slate-700"
+        style={{
+          top: '16px',
+          transform: 'translateX(-50%)',
+          pointerEvents: 'none',
+          maxWidth: '98vw',
+        }}
+      >
         {/* Session Timer */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2" style={{ pointerEvents: 'auto' }}>
           <FaClock className="text-primary" />
-          <span className="font-mono text-base">{formatTime(sessionTime)}</span>
-          <button onClick={togglePause} className="ml-1 p-1 hover:bg-gray-200 dark:hover:bg-slate-600 rounded" aria-label={isPaused ? 'Resume timer' : 'Pause timer'}>
+          <span className="font-mono text-sm sm:text-base">{formatTime(sessionTime)}</span>
+          <button onClick={togglePause} className="ml-1 p-1 hover:bg-gray-200 dark:hover:bg-slate-600 rounded" aria-label={isPaused ? 'Resume timer' : 'Pause timer'} style={{ pointerEvents: 'auto' }}>
             {isPaused ? <FaPlay className="text-green-600" /> : <FaPause className="text-yellow-600" />}
           </button>
         </div>
-        {/* Break Timer */}
+        {/* Break Timer or Break Button */}
         {isBreakActive ? (
-          <div className="flex items-center gap-2 ml-4">
+          <div className="flex items-center gap-1 sm:gap-2 ml-2" style={{ pointerEvents: 'auto' }}>
             <FaCoffee className="text-blue-500" />
-            <span className="font-mono text-base">{formatTime(breakTime)}</span>
-            <button onClick={cancelBreak} className="ml-1 p-1 hover:bg-gray-200 dark:hover:bg-slate-600 rounded text-xs">End Break</button>
+            <span className="font-mono text-sm sm:text-base">{formatTime(breakTime)}</span>
+            <button onClick={cancelBreak} className="ml-1 p-1 hover:bg-gray-200 dark:hover:bg-slate-600 rounded text-xs" style={{ pointerEvents: 'auto' }}>End Break</button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 ml-4">
-            <button onClick={() => setShowBreakOptions((v) => !v)} className="p-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800 flex items-center gap-1">
+          <div className="flex items-center gap-1 sm:gap-2 ml-2" style={{ pointerEvents: 'auto' }}>
+            <button onClick={() => setShowBreakOptions((v) => !v)} className="p-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800 flex items-center gap-1 text-xs sm:text-base" style={{ pointerEvents: 'auto' }}>
               <FaStopwatch /> Break
             </button>
             {showBreakOptions && (
-              <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg p-3 z-50 flex flex-col gap-2 min-w-[200px]">
+              <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg p-3 z-50 flex flex-col gap-2 min-w-[200px]" style={{ pointerEvents: 'auto' }}>
                 <button onClick={startShortBreak} className="w-full text-left px-3 py-2 hover:bg-blue-100 dark:hover:bg-slate-700 rounded">Short Break (10 min)</button>
                 <button onClick={startLongBreak} className="w-full text-left px-3 py-2 hover:bg-blue-100 dark:hover:bg-slate-700 rounded">Long Break (30 min)</button>
                 <div className="flex items-center gap-2 mt-2">
@@ -120,7 +130,7 @@ const NoteStudySession = ({ noteUrl, noteTitle, noteId, subject }) => {
           </div>
         )}
         {/* Finish Studying Button */}
-        <div className="ml-4">
+        <div className="ml-2" style={{ pointerEvents: 'auto' }}>
           <FinishStudyingButton
             noteId={noteId}
             onFinish={() => {}}
