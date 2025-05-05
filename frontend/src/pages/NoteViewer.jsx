@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FaSpinner, FaExclamationTriangle, FaCoffee } from 'react-icons/fa';
 import PDFViewer from '../components/PDFViewer';
@@ -26,7 +26,15 @@ const NoteViewer = () => {
   const [loading, setLoading] = useState(true); // Loading state for initial fetch
   const [error, setError] = useState(null); // Error state for initial fetch
   const [note, setNote] = useState(null);
-  const [breakState, setBreakState] = useState({ isBreakActive: false, breakTime: 0, cancelBreak: () => {} });
+  const [sessionTime, setSessionTime] = useState(0); // in seconds
+  const [breakTime, setBreakTime] = useState(0); // in seconds
+  const [isBreakActive, setIsBreakActive] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [showBreakOptions, setShowBreakOptions] = useState(false);
+  const [customTime, setCustomTime] = useState('');
+  const [studyStartTime] = useState(Date.now());
+  const sessionTimerRef = useRef(null);
+  const breakTimerRef = useRef(null);
 
   // Get note ID from URL params or search params
   const getNoteIdFromUrl = () => {
@@ -257,6 +265,58 @@ const NoteViewer = () => {
 
   // --- If we have a URL, render the PDFViewer ---
   console.log('Rendering NoteViewer - Proceeding to PDFViewer component.');
+
+  // Session timer
+  useEffect(() => {
+    if (!isPaused && !isBreakActive) {
+      sessionTimerRef.current = setInterval(() => {
+        setSessionTime((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(sessionTimerRef.current);
+  }, [isPaused, isBreakActive]);
+
+  // Break timer
+  useEffect(() => {
+    if (isBreakActive && breakTime > 0) {
+      breakTimerRef.current = setInterval(() => {
+        setBreakTime((prev) => {
+          if (prev <= 1) {
+            setIsBreakActive(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(breakTimerRef.current);
+  }, [isBreakActive, breakTime]);
+
+  // Break controls
+  const startShortBreak = () => {
+    setBreakTime(10 * 60);
+    setIsBreakActive(true);
+    setShowBreakOptions(false);
+  };
+  const startLongBreak = () => {
+    setBreakTime(30 * 60);
+    setIsBreakActive(true);
+    setShowBreakOptions(false);
+  };
+  const startCustomBreak = () => {
+    const minutes = parseInt(customTime);
+    if (!minutes || minutes <= 0) return;
+    setBreakTime(minutes * 60);
+    setIsBreakActive(true);
+    setShowBreakOptions(false);
+    setCustomTime('');
+  };
+  const cancelBreak = () => {
+    setIsBreakActive(false);
+    setBreakTime(0);
+  };
+  const togglePause = () => setIsPaused((prev) => !prev);
+
   const studySessionPanel = (
     <NoteStudySession
       noteUrl={finalPdfUrl}
@@ -264,7 +324,20 @@ const NoteViewer = () => {
       noteId={finalNoteId}
       subject={note && (note.subject || finalNoteTitle)}
       sidebarMode
-      onBreakStateChange={setBreakState}
+      sessionTime={sessionTime}
+      isPaused={isPaused}
+      togglePause={togglePause}
+      isBreakActive={isBreakActive}
+      breakTime={breakTime}
+      startShortBreak={startShortBreak}
+      startLongBreak={startLongBreak}
+      startCustomBreak={startCustomBreak}
+      cancelBreak={cancelBreak}
+      showBreakOptions={showBreakOptions}
+      setShowBreakOptions={setShowBreakOptions}
+      customTime={customTime}
+      setCustomTime={setCustomTime}
+      studyStartTime={studyStartTime}
     />
   );
 
@@ -272,7 +345,7 @@ const NoteViewer = () => {
     <ErrorBoundary>
       <Sidebar studySessionPanel={studySessionPanel} />
       {/* Break Overlay */}
-      {breakState.isBreakActive && (
+      {isBreakActive && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-blue-900/80">
           <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-2xl max-w-md w-full flex flex-col items-center animate-pulse">
             <FaCoffee className="text-blue-600 dark:text-blue-400 text-6xl mb-4 animate-bounce" />
@@ -281,14 +354,14 @@ const NoteViewer = () => {
             </h2>
             <div className="text-center mb-6">
               <span className="text-5xl font-mono text-blue-600 dark:text-blue-400">
-                {formatTime(breakState.breakTime)}
+                {formatTime(breakTime)}
               </span>
             </div>
             <p className="text-gray-600 dark:text-gray-300 text-center mb-6">
               Take some time to rest your eyes and stretch. Your notes will be waiting for you when you return.
             </p>
             <button
-              onClick={breakState.cancelBreak}
+              onClick={cancelBreak}
               className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
               End Break Early

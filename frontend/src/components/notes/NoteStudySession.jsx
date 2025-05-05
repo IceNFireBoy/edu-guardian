@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import PDFViewer from './PDFViewer';
 import FinishStudyingButton from '../progress/FinishStudyingButton';
 import { FaClock, FaPause, FaPlay, FaCoffee, FaStopwatch } from 'react-icons/fa';
@@ -10,91 +10,27 @@ const formatTime = (timeInSeconds) => {
   return [hours, minutes, seconds].map((v) => v.toString().padStart(2, '0')).join(':');
 };
 
-const NoteStudySession = ({ noteUrl, noteTitle, noteId, subject, sidebarMode, onBreakStateChange }) => {
-  // Timers
-  const [sessionTime, setSessionTime] = useState(0); // in seconds
-  const [breakTime, setBreakTime] = useState(0); // in seconds
-  const [isBreakActive, setIsBreakActive] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [showBreakOptions, setShowBreakOptions] = useState(false);
-  const [customTime, setCustomTime] = useState('');
-  const [studyStartTime] = useState(Date.now());
-
-  const sessionTimerRef = useRef(null);
-  const breakTimerRef = useRef(null);
-
-  // Session timer
-  useEffect(() => {
-    if (!isPaused && !isBreakActive) {
-      sessionTimerRef.current = setInterval(() => {
-        setSessionTime((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(sessionTimerRef.current);
-  }, [isPaused, isBreakActive]);
-
-  // Break timer
-  useEffect(() => {
-    if (isBreakActive && breakTime > 0) {
-      breakTimerRef.current = setInterval(() => {
-        setBreakTime((prev) => {
-          if (prev <= 1) {
-            setIsBreakActive(false);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(breakTimerRef.current);
-  }, [isBreakActive, breakTime]);
-
-  // Notify parent of break state changes
-  useEffect(() => {
-    if (typeof onBreakStateChange === 'function') {
-      onBreakStateChange({
-        isBreakActive,
-        breakTime,
-        cancelBreak,
-      });
-    }
-    // Only update when break state changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isBreakActive, breakTime]);
-
-  // Break controls
-  const startShortBreak = () => {
-    setBreakTime(10 * 60);
-    setIsBreakActive(true);
-    setShowBreakOptions(false);
-  };
-  const startLongBreak = () => {
-    setBreakTime(30 * 60);
-    setIsBreakActive(true);
-    setShowBreakOptions(false);
-  };
-  const startCustomBreak = () => {
-    const minutes = parseInt(customTime);
-    if (!minutes || minutes <= 0) return;
-    setBreakTime(minutes * 60);
-    setIsBreakActive(true);
-    setShowBreakOptions(false);
-    setCustomTime('');
-  };
-  const cancelBreak = () => {
-    setIsBreakActive(false);
-    setBreakTime(0);
-  };
-
-  // Pause/resume
-  const togglePause = () => setIsPaused((prev) => !prev);
-
-  // Calculate time spent in minutes
-  const calculateTimeSpent = () => {
-    const now = Date.now();
-    return Math.round((now - studyStartTime) / (1000 * 60));
-  };
-
+const NoteStudySession = ({
+  noteUrl,
+  noteTitle,
+  noteId,
+  subject,
+  sidebarMode,
+  sessionTime,
+  isPaused,
+  togglePause,
+  isBreakActive,
+  breakTime,
+  startShortBreak,
+  startLongBreak,
+  startCustomBreak,
+  cancelBreak,
+  showBreakOptions,
+  setShowBreakOptions,
+  customTime,
+  setCustomTime,
+  studyStartTime
+}) => {
   // If sidebarMode, render only the controls (no overlay, no PDFViewer)
   if (sidebarMode) {
     return (
@@ -143,7 +79,6 @@ const NoteStudySession = ({ noteUrl, noteTitle, noteId, subject, sidebarMode, on
       </div>
     );
   }
-
   // (Legacy/future: overlay mode, not used now)
   return null;
 };
