@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FaBookOpen, FaFilePdf, FaImage, FaFileAlt, FaExclamationCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
@@ -173,6 +173,29 @@ const NoteCard = ({ note, onView, compact = false }) => {
            (note.resource_type === 'raw' && note.secure_url?.toLowerCase().endsWith('.pdf'));
   };
 
+  // For PDF thumbnails with a fallback to icon
+  const [pdfThumbnailFailed, setPdfThumbnailFailed] = useState(false);
+  
+  const renderPDFThumbnail = () => {
+    // If we already know PDF thumbnail failed, use icon instead
+    if (pdfThumbnailFailed) {
+      return (
+        <div className="w-full h-full flex items-center justify-center">
+          {getIcon()}
+        </div>
+      );
+    }
+    
+    return (
+      <PDFThumbnail 
+        url={getImageUrl()} 
+        alt={getTitle()} 
+        className="w-full h-full"
+        onError={() => setPdfThumbnailFailed(true)}
+      />
+    );
+  };
+
   // Render the component in a try/catch block to prevent rendering errors
   try {
     // Compact view for grid layouts
@@ -194,11 +217,7 @@ const NoteCard = ({ note, onView, compact = false }) => {
                 }}
               />
             ) : isPDF() ? (
-              <PDFThumbnail 
-                url={getImageUrl()} 
-                alt={getTitle()} 
-                className="w-full h-full"
-              />
+              renderPDFThumbnail()
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 {getIcon()}
@@ -253,11 +272,7 @@ const NoteCard = ({ note, onView, compact = false }) => {
               }}
             />
           ) : isPDF() ? (
-            <PDFThumbnail 
-              url={getImageUrl()} 
-              alt={getTitle()} 
-              className="w-full h-full"
-            />
+            renderPDFThumbnail()
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               {getIcon()}

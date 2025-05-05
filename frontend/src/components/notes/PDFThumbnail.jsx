@@ -3,11 +3,10 @@ import * as pdfjs from 'pdfjs-dist';
 import { debug } from '../../components/DebugPanel';
 import '../../styles/pdf-thumbnails.css';
 
-// Set worker source path
-const pdfjsWorker = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// Use pre-built worker and disable workers with disableWorker parameter
+pdfjs.GlobalWorkerOptions.workerSrc = null; // Don't use external worker
 
-const PDFThumbnail = ({ url, alt = 'PDF preview', className = '' }) => {
+const PDFThumbnail = ({ url, alt = 'PDF preview', className = '', onError }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -20,13 +19,25 @@ const PDFThumbnail = ({ url, alt = 'PDF preview', className = '' }) => {
       if (!url) {
         setError(true);
         setLoading(false);
+        if (onError && typeof onError === 'function') {
+          onError(new Error('No URL provided'));
+        }
         return;
       }
 
       try {
         setLoading(true);
-        // Load the PDF file
-        loadingTask = pdfjs.getDocument(url);
+        
+        // Use no-worker solution for CSP compatibility
+        loadingTask = pdfjs.getDocument({
+          url: url,
+          disableWorker: true,
+          disableAutoFetch: true,
+          disableStream: true,
+          cMapUrl: null,
+          cMapPacked: true
+        });
+        
         const pdf = await loadingTask.promise;
 
         // If component is unmounted, don't continue
@@ -63,6 +74,9 @@ const PDFThumbnail = ({ url, alt = 'PDF preview', className = '' }) => {
         if (isMounted) {
           setError(true);
           setLoading(false);
+          if (onError && typeof onError === 'function') {
+            onError(err);
+          }
         }
       }
     }
@@ -72,11 +86,15 @@ const PDFThumbnail = ({ url, alt = 'PDF preview', className = '' }) => {
     // Cleanup function
     return () => {
       isMounted = false;
-      if (loadingTask) {
-        loadingTask.destroy();
+      if (loadingTask && loadingTask._worker) {
+        try {
+          loadingTask.destroy();
+        } catch (e) {
+          console.error("Error destroying PDF task:", e);
+        }
       }
     };
-  }, [url]);
+  }, [url, onError]);
 
   if (loading) {
     return (
@@ -87,6 +105,11 @@ const PDFThumbnail = ({ url, alt = 'PDF preview', className = '' }) => {
   }
 
   if (error || !thumbnailUrl) {
+    // Call onError if not already called in the effect
+    if (error && onError && typeof onError === 'function') {
+      setTimeout(() => onError(new Error('Failed to generate thumbnail')), 0);
+    }
+    
     return (
       <div className={`pdf-error ${className}`}>
         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
