@@ -790,21 +790,23 @@ const NoteFilter = () => {
         </p>
         
         {/* Add buttons for creating a demo note and cleaning up resources */}
-        <div className="mt-2 flex flex-wrap gap-2">
-          <button 
-            onClick={addDemoNote}
-            className="bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-800/30 dark:text-purple-300 dark:hover:bg-purple-800/50 px-4 py-2 rounded-lg text-sm font-medium"
-          >
-            Create Test Note with Description
-          </button>
-          
-          <button 
-            onClick={cleanupDeletedResources}
-            className="bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800/30 dark:text-red-300 dark:hover:bg-red-800/50 px-4 py-2 rounded-lg text-sm font-medium flex items-center"
-          >
-            <span className="mr-1">🧹</span> Clean Up Missing Resources
-          </button>
-        </div>
+        {DEV_MODE && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button 
+              onClick={addDemoNote}
+              className="bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-800/30 dark:text-purple-300 dark:hover:bg-purple-800/50 px-4 py-2 rounded-lg text-sm font-medium"
+            >
+              Create Test Note with Description
+            </button>
+            
+            <button 
+              onClick={cleanupDeletedResources}
+              className="bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800/30 dark:text-red-300 dark:hover:bg-red-800/50 px-4 py-2 rounded-lg text-sm font-medium flex items-center"
+            >
+              <span className="mr-1">🧹</span> Clean Up Missing Resources
+            </button>
+          </div>
+        )}
       </div>
       
       <FilterForm 
