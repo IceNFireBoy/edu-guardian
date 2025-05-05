@@ -263,7 +263,11 @@ const NoteViewer = () => {
   // Render PDFViewer within ErrorBoundary
   return (
     <ErrorBoundary>
-      <PDFViewer noteUrl={noteUrl} noteTitle={noteTitle} />
+      <PDFViewer 
+        noteUrl={noteUrl} 
+        noteTitle={noteTitle} 
+        noteId={note._id || note.asset_id} 
+      />
     </ErrorBoundary>
   );
 };

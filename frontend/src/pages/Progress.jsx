@@ -1,56 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
-import 'react-circular-progressbar/dist/styles.css';
 import { FaTrophy, FaFire, FaStar, FaBook, FaCalendarAlt } from 'react-icons/fa';
 import { useStreak } from '../hooks/useStreak';
 
-// Progress Card component
-const ProgressCard = ({ title, value, total, color, icon }) => {
-  const percentage = Math.round((value / total) * 100);
-  
-  return (
-    <motion.div
-      whileHover={{ y: -5 }}
-      className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md"
-    >
-      <div className="flex items-start">
-        <div className="w-24 h-24 mr-4 flex-shrink-0">
-          <CircularProgressbar
-            value={percentage}
-            text={`${percentage}%`}
-            styles={buildStyles({
-              textSize: '22px',
-              pathColor: color,
-              textColor: 'var(--color-text)',
-              trailColor: '#f3f4f6',
-            })}
-          />
-        </div>
-        
-        <div className="flex-grow">
-          <div className="flex items-center mb-1">
-            <span className={`p-2 rounded-full ${color.replace('text', 'bg')}/10 mr-2`}>
-              {icon}
-            </span>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{title}</h3>
-          </div>
-          <p className="text-gray-600 dark:text-gray-300 mb-2">
-            {value} out of {total} completed
-          </p>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <div
-              className={`h-2 rounded-full ${color.replace('text', 'bg')}`}
-              style={{ width: `${percentage}%` }}
-            />
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
+// Import our new components
+import SubjectCard from '../components/progress/SubjectCard';
+import StudyRecommendation from '../components/progress/StudyRecommendation';
+import FocusBar from '../components/progress/FocusBar';
+import MotivationCards from '../components/progress/MotivationCards';
 
-// Stats Card component
+// Stats Card component (keeping from the original)
 const StatsCard = ({ title, value, icon, color }) => (
   <motion.div
     whileHover={{ scale: 1.03 }}
@@ -66,67 +25,214 @@ const StatsCard = ({ title, value, icon, color }) => (
   </motion.div>
 );
 
-// Subject Progress component
-const SubjectProgress = ({ subject, topics, completedTopics, color }) => {
-  const percentage = Math.round((completedTopics / topics) * 100);
-  
-  return (
-    <div className="flex items-center mb-4">
-      <div className="w-16 h-16 mr-4">
-        <CircularProgressbar
-          value={percentage}
-          text={`${percentage}%`}
-          styles={buildStyles({
-            textSize: '26px',
-            pathColor: color,
-            textColor: 'var(--color-text)',
-            trailColor: '#f3f4f6',
-          })}
-        />
-      </div>
-      <div className="flex-grow">
-        <h4 className="font-medium text-gray-800 dark:text-gray-100">{subject}</h4>
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          {completedTopics} of {topics} topics completed
-        </p>
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-1">
-          <div
-            className={`h-2 rounded-full ${color}`}
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const Progress = () => {
   const { streak, xp } = useStreak();
+  const [progressData, setProgressData] = useState(null);
   
-  // Dummy progress data - in a real app, this would come from a database
-  const progressData = [
-    { title: 'Mathematics', value: 8, total: 12, color: 'text-blue-500', icon: <FaBook className="text-blue-500" size={16} /> },
-    { title: 'Physics', value: 5, total: 10, color: 'text-purple-500', icon: <FaBook className="text-purple-500" size={16} /> },
-    { title: 'Chemistry', value: 3, total: 8, color: 'text-green-500', icon: <FaBook className="text-green-500" size={16} /> },
-    { title: 'Biology', value: 7, total: 9, color: 'text-red-500', icon: <FaBook className="text-red-500" size={16} /> }
-  ];
+  // Load progress data from localStorage on component mount
+  useEffect(() => {
+    // Load completion data
+    const loadProgressData = () => {
+      try {
+        // Get completed notes from localStorage
+        const completedNotes = JSON.parse(localStorage.getItem('completedNotes') || '[]');
+        
+        // Get all notes for reference
+        const allNotes = JSON.parse(localStorage.getItem('notes') || '[]');
+        
+        // Calculate completion data by subject
+        const subjectData = {};
+        const now = new Date();
+        
+        // Process completed notes
+        completedNotes.forEach(note => {
+          const subject = note.subject || 'Uncategorized';
+          
+          if (!subjectData[subject]) {
+            subjectData[subject] = {
+              completed: 0,
+              total: 0,
+              timeSpent: 0,
+              emojiStats: { "🤓": 0, "🤔": 0, "❗": 0 },
+              lastStudied: null
+            };
+          }
+          
+          // Increment completed count
+          subjectData[subject].completed++;
+          
+          // Add time spent
+          subjectData[subject].timeSpent += note.timeSpent || 0;
+          
+          // Track feedback
+          if (note.feedback) {
+            subjectData[subject].emojiStats[note.feedback] = 
+              (subjectData[subject].emojiStats[note.feedback] || 0) + 1;
+          }
+          
+          // Track last study date
+          if (note.completedAt) {
+            const completedDate = new Date(note.completedAt);
+            if (!subjectData[subject].lastStudied || completedDate > subjectData[subject].lastStudied) {
+              subjectData[subject].lastStudied = completedDate;
+            }
+          }
+        });
+        
+        // Count total notes per subject
+        allNotes.forEach(note => {
+          const subject = note.subject || 'Uncategorized';
+          
+          if (!subjectData[subject]) {
+            subjectData[subject] = {
+              completed: 0,
+              total: 0,
+              timeSpent: 0,
+              emojiStats: { "🤓": 0, "🤔": 0, "❗": 0 },
+              lastStudied: null
+            };
+          }
+          
+          // Increment total count
+          subjectData[subject].total++;
+        });
+        
+        // Calculate average time and days since last study
+        Object.keys(subjectData).forEach(subject => {
+          const data = subjectData[subject];
+          
+          // Calculate average time per note
+          data.avgTime = data.completed > 0 
+            ? `${Math.round(data.timeSpent / data.completed)} min`
+            : '0 min';
+            
+          // Calculate days since last study
+          if (data.lastStudied) {
+            const diffTime = Math.abs(now - data.lastStudied);
+            data.daysSinceLastStudy = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          }
+        });
+        
+        // Calculate inactive subjects (not studied in the last 7 days)
+        const inactiveSubjects = Object.entries(subjectData)
+          .filter(([_, data]) => data.completed > 0 && data.daysSinceLastStudy > 7)
+          .map(([subject, data]) => ({
+            name: subject,
+            days: data.daysSinceLastStudy
+          }))
+          .sort((a, b) => b.days - a.days);
+        
+        // Calculate total time spent per subject for focus bar
+        const subjectTimeData = {};
+        Object.entries(subjectData).forEach(([subject, data]) => {
+          if (data.timeSpent > 0) {
+            subjectTimeData[subject] = data.timeSpent;
+          }
+        });
+        
+        // Calculate completed notes this week
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        
+        const completedThisWeek = completedNotes.filter(note => {
+          if (!note.completedAt) return false;
+          const completedDate = new Date(note.completedAt);
+          return completedDate >= oneWeekAgo;
+        }).length;
+        
+        // Assemble progress data
+        setProgressData({
+          subjectsData: subjectData,
+          subjectTimeData,
+          inactiveSubjects,
+          completedThisWeek,
+          totalCompletedNotes: completedNotes.length,
+          currentStreak: streak,
+          subjectProgress: Object.fromEntries(
+            Object.entries(subjectData).map(([subject, data]) => [
+              subject,
+              {
+                ...data,
+                percentage: data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0
+              }
+            ])
+          )
+        });
+        
+      } catch (error) {
+        console.error('Error loading progress data:', error);
+        // Create fallback demo data if loading fails
+        setProgressData(getDemoProgressData());
+      }
+    };
+    
+    loadProgressData();
+  }, [streak]);
   
-  // Subject progress for detailed breakdown
-  const subjectsProgress = [
-    { subject: 'Mathematics', topics: 12, completedTopics: 8, color: 'bg-blue-500' },
-    { subject: 'Physics', topics: 10, completedTopics: 5, color: 'bg-purple-500' },
-    { subject: 'Chemistry', topics: 8, completedTopics: 3, color: 'bg-green-500' },
-    { subject: 'Biology', topics: 9, completedTopics: 7, color: 'bg-red-500' },
-    { subject: 'History', topics: 7, completedTopics: 4, color: 'bg-yellow-500' },
-    { subject: 'English', topics: 6, completedTopics: 5, color: 'bg-indigo-500' }
-  ];
+  // Demo data for testing/development
+  const getDemoProgressData = () => {
+    return {
+      subjectsData: {
+        'Mathematics': {
+          completed: 8,
+          total: 12,
+          timeSpent: 240,
+          avgTime: '30 min',
+          emojiStats: { "🤓": 5, "🤔": 2, "❗": 1 },
+          daysSinceLastStudy: 2
+        },
+        'Physics': {
+          completed: 5,
+          total: 10,
+          timeSpent: 150,
+          avgTime: '30 min',
+          emojiStats: { "🤓": 2, "🤔": 2, "❗": 1 },
+          daysSinceLastStudy: 4
+        },
+        'Chemistry': {
+          completed: 3,
+          total: 8,
+          timeSpent: 75,
+          avgTime: '25 min',
+          emojiStats: { "🤓": 1, "🤔": 1, "❗": 1 },
+          daysSinceLastStudy: 10
+        },
+        'Biology': {
+          completed: 7,
+          total: 9,
+          timeSpent: 210,
+          avgTime: '30 min',
+          emojiStats: { "🤓": 4, "🤔": 3, "❗": 0 },
+          daysSinceLastStudy: 3
+        }
+      },
+      subjectTimeData: {
+        'Mathematics': 240,
+        'Physics': 150,
+        'Chemistry': 75,
+        'Biology': 210
+      },
+      inactiveSubjects: [
+        { name: 'Chemistry', days: 10 }
+      ],
+      completedThisWeek: 4,
+      totalCompletedNotes: 23,
+      currentStreak: streak || 5,
+      subjectProgress: {
+        'Mathematics': { percentage: 67, completed: 8, total: 12 },
+        'Physics': { percentage: 50, completed: 5, total: 10 },
+        'Chemistry': { percentage: 38, completed: 3, total: 8 },
+        'Biology': { percentage: 78, completed: 7, total: 9 }
+      }
+    };
+  };
   
   // Stats data
   const statsData = [
     { title: 'Current Streak', value: `${streak} days`, icon: <FaFire className="text-orange-500" size={20} />, color: 'text-orange-500' },
     { title: 'XP Points', value: xp, icon: <FaStar className="text-yellow-500" size={20} />, color: 'text-yellow-500' },
-    { title: 'Total Notes Viewed', value: '23', icon: <FaBook className="text-green-500" size={20} />, color: 'text-green-500' },
-    { title: 'Days Active', value: '15', icon: <FaCalendarAlt className="text-blue-500" size={20} />, color: 'text-blue-500' }
+    { title: 'Total Notes Completed', value: progressData?.totalCompletedNotes || '0', icon: <FaBook className="text-green-500" size={20} />, color: 'text-green-500' },
+    { title: 'Days Active', value: streak > 0 ? streak : '0', icon: <FaCalendarAlt className="text-blue-500" size={20} />, color: 'text-blue-500' }
   ];
   
   return (
@@ -145,36 +251,40 @@ const Progress = () => {
         ))}
       </div>
       
-      {/* Progress Overview */}
+      {/* Focus Bar */}
+      <FocusBar subjectTimeData={progressData?.subjectTimeData} />
+      
+      {/* Study Recommendations */}
+      <StudyRecommendation subjectsData={progressData?.subjectsData} />
+      
+      {/* Subject Progress */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Subject Progress</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {progressData.map((progress, index) => (
-            <ProgressCard key={index} {...progress} />
+        <div className="space-y-6">
+          {progressData && Object.entries(progressData.subjectProgress).map(([subject, data]) => (
+            <SubjectCard 
+              key={subject}
+              subject={subject}
+              progress={{ completed: data.completed, total: data.total }}
+              avgTime={progressData.subjectsData[subject].avgTime}
+              emojiStats={progressData.subjectsData[subject].emojiStats}
+            />
           ))}
+          
+          {(!progressData || Object.keys(progressData.subjectProgress || {}).length === 0) && (
+            <div className="text-center py-8 bg-white dark:bg-slate-800 rounded-lg shadow">
+              <FaBook className="mx-auto text-gray-400 text-4xl mb-3" />
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">No Progress Data Yet</h3>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">
+                Start studying and completing notes to see your progress.
+              </p>
+            </div>
+          )}
         </div>
       </div>
       
-      {/* Detailed Breakdown */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
-        <div className="flex items-center mb-6">
-          <FaTrophy className="text-yellow-500 mr-2" size={20} />
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Detailed Breakdown</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-          {subjectsProgress.map((subject, index) => (
-            <SubjectProgress key={index} {...subject} />
-          ))}
-        </div>
-        
-        <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <h3 className="text-lg font-medium text-blue-700 dark:text-blue-300 mb-2">Study Recommendation</h3>
-          <p className="text-blue-600 dark:text-blue-300">
-            Based on your progress, consider focusing more on Chemistry to improve your understanding.
-          </p>
-        </div>
-      </div>
+      {/* Weekly Motivation Cards */}
+      <MotivationCards progressData={progressData} />
     </div>
   );
 };

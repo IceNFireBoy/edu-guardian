@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FaArrowLeft, FaClock, FaCoffee, FaPlay, FaPause, FaTimes, FaExclamationTriangle, FaFilePdf } from 'react-icons/fa';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import ErrorBoundary from '../ErrorBoundary';
+import FinishStudyingButton from '../progress/FinishStudyingButton';
 
 // Utility function to ensure string values
 const ensureString = (value, defaultValue = '') => {
@@ -15,7 +16,7 @@ const ensureString = (value, defaultValue = '') => {
   }
 };
 
-const PDFViewer = ({ noteUrl, noteTitle }) => {
+const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
   const [sessionTime, setSessionTime] = useState(0); // in seconds
   const [breakTime, setBreakTime] = useState(0); // in seconds
   const [isBreakActive, setIsBreakActive] = useState(false);
@@ -24,6 +25,7 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [pdfError, setPdfError] = useState(null);
   const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [studyStartTime, setStudyStartTime] = useState(Date.now());
   
   const sessionTimerRef = useRef(null);
   const breakTimerRef = useRef(null);
@@ -198,6 +200,17 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
     }
   };
   
+  // Handle when a note is marked as finished
+  const handleFinishStudying = (completionData) => {
+    console.log('Note completed:', { noteId, ...completionData });
+    
+    // Optionally navigate back to notes or stay on the page
+    // navigate('/my-notes');
+    
+    // Show success notification
+    alert('Study session completed successfully!');
+  };
+  
   // Render the PDF content with the appropriate fallbacks
   const renderPDFContent = () => {
     if (pdfError) {
@@ -283,6 +296,15 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
             </div>
             
             <div className="flex items-center space-x-4">
+              {/* Finish Studying Button */}
+              {noteId && (
+                <FinishStudyingButton 
+                  noteId={noteId}
+                  onFinish={handleFinishStudying}
+                  initialStartTime={studyStartTime}
+                />
+              )}
+              
               {/* Session Timer */}
               <div className="flex items-center bg-gray-100 dark:bg-slate-700 px-3 py-2 rounded-lg">
                 <FaClock className="text-primary dark:text-primary-light mr-2" />
