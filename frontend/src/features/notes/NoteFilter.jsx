@@ -10,6 +10,9 @@ import { useToast } from '../../components/ui/Toast';
 import { debug } from '../../components/DebugPanel';
 import { fetchNotes } from '../../api/notes';
 
+// Development mode for debugging
+const DEV_MODE = process.env.NODE_ENV === 'development';
+
 // Fallback toast implementation
 const createFallbackToast = () => {
   return {
@@ -327,7 +330,22 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
                 </div>
               </div>
               
-              <div className="flex flex-wrap gap-3 justify-between items-center">
+              {/* Description display */}
+              <div className="mb-4 bg-gray-50 dark:bg-slate-700/50 p-3 rounded-md">
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Description</h4>
+                <p className="text-gray-800 dark:text-gray-200">
+                  {note.description || note.context?.alt || "No description available"}
+                  
+                  {/* Debug info - remove in production */}
+                  {DEV_MODE && (
+                    <span className="block mt-2 text-xs text-red-500 dark:text-red-400">
+                      Debug: description={note.description}, alt={note.context?.alt}
+                    </span>
+                  )}
+                </p>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
                 <div className="flex flex-wrap gap-3">
                   <button 
                     className="btn flex items-center bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50"
@@ -445,6 +463,41 @@ const NoteFilter = () => {
     toastFromContext = createFallbackToast();
   }
   const toast = toastFromContext;
+  
+  // Add a demo note for testing
+  const addDemoNote = () => {
+    try {
+      const demoNote = {
+        _id: `demo-${Date.now()}`,
+        title: "Demo Note with Description",
+        description: "This is a test description that should be visible in the note card.",
+        fileUrl: "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
+        fileType: "image",
+        subject: "Computer Science",
+        grade: "12",
+        semester: "1",
+        quarter: "1",
+        topic: "Testing",
+        tags: ["demo", "test", "description"],
+        created_at: new Date().toISOString()
+      };
+      
+      // Add to state
+      setNotes(prev => [...prev, demoNote]);
+      toast.success("Demo note added!");
+      
+      // Optionally save to localStorage
+      try {
+        const existingNotes = JSON.parse(localStorage.getItem('notes') || '[]');
+        localStorage.setItem('notes', JSON.stringify([...existingNotes, demoNote]));
+      } catch (e) {
+        console.error('Could not save to localStorage', e);
+      }
+    } catch (err) {
+      console.error('Error adding demo note', err);
+      toast.error('Could not add demo note');
+    }
+  };
   
   // Derived state
   const hasFiltersApplied = Object.values(filters).some(value => value !== '');
@@ -572,6 +625,14 @@ const NoteFilter = () => {
         <p className="text-gray-600 dark:text-gray-300">
           Browse through available notes or filter to find what you need.
         </p>
+        
+        {/* Add button for creating a demo note */}
+        <button 
+          onClick={addDemoNote}
+          className="mt-2 bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-800/30 dark:text-purple-300 dark:hover:bg-purple-800/50 px-4 py-2 rounded-lg text-sm font-medium"
+        >
+          Create Test Note with Description
+        </button>
       </div>
       
       <FilterForm 

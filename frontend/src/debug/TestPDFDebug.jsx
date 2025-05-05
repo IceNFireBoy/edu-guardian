@@ -7,6 +7,44 @@ import ErrorBoundary from '../components/ErrorBoundary';
 const TestPDFDebug = () => {
   const navigate = useNavigate();
   
+  // Sample test note for debugging
+  const sampleNote = {
+    title: "Test PDF With Description",
+    description: "This is a test description that should be visible in the note card and note detail view.",
+    fileUrl: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
+    subject: "Computer Science",
+    grade: "12",
+    semester: "1",
+    quarter: "1",
+    topic: "Testing",
+    fileType: "pdf",
+    tags: ["test", "pdf", "debug"]
+  };
+  
+  // Add note to localStorage for testing
+  const saveTestNote = () => {
+    try {
+      // Get existing notes
+      const existingNotesJson = localStorage.getItem('notes') || '[]';
+      const existingNotes = JSON.parse(existingNotesJson);
+      
+      // Add sample note with unique ID
+      const noteWithId = {
+        ...sampleNote,
+        _id: `test-note-${Date.now()}`,
+        asset_id: `test-asset-${Date.now()}`
+      };
+      
+      // Save back to localStorage
+      localStorage.setItem('notes', JSON.stringify([...existingNotes, noteWithId]));
+      
+      alert('Test note added! Go to My Notes to see it.');
+    } catch (err) {
+      console.error('Error saving test note:', err);
+      alert('Failed to save test note: ' + err.message);
+    }
+  };
+  
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-6">PDF Viewer Debug Tests</h1>
@@ -55,6 +93,14 @@ const TestPDFDebug = () => {
               >
                 Test Null Title
               </Link>
+            </li>
+            <li>
+              <button 
+                onClick={saveTestNote}
+                className="inline-block px-4 py-2 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded"
+              >
+                Add Test Note with Description
+              </button>
             </li>
           </ul>
           

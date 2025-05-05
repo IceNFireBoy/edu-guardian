@@ -115,9 +115,19 @@ const NoteCard = ({ note, onView, compact = false }) => {
   // Get description from note
   const getDescription = () => {
     try {
-      return note.description || 
+      // Debug log to see what's happening with the description
+      const description = note.description || 
         (note.context && note.context.alt) || 
         'No description available';
+      
+      console.log('Note description debug:', { 
+        noteId: note._id || note.asset_id,
+        rawDescription: note.description,
+        contextAlt: note.context?.alt,
+        finalDescription: description
+      });
+      
+      return description;
     } catch (err) {
       console.error("Error getting note description:", err);
       return 'No description available';
