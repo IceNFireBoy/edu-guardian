@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
-import PDFViewer from '../components/notes/PDFViewer';
+import PDFViewer from '../components/PDFViewer';
 import ErrorBoundary from '../components/ErrorBoundary';
+import usePDFNote from '../hooks/usePDFNote';
 
 // Utility function to ensure string values
 const ensureString = (value, defaultValue = '') => {
@@ -43,48 +44,42 @@ const NoteViewer = () => {
   useEffect(() => {
     let isMounted = true;
     
-    const id = getNoteIdFromUrl();
-    
-    if (!id) {
-      console.warn('No note ID provided in URL');
-      if (isMounted) {
-        setError('No note ID provided');
-        setLoading(false);
-      }
-      return;
-    }
-    
     const fetchNoteData = async () => {
       try {
-        if (isMounted) {
-          setLoading(true);
+        const id = getNoteIdFromUrl();
+        
+        if (!id) {
+          setError('No note ID provided');
+          setLoading(false);
+          return;
         }
         
-        // Try to get from localStorage first to avoid API calls if possible
+        console.log('Attempting to fetch note with ID:', id);
+        
+        // First try to load from localStorage
         let foundNote = null;
         try {
-          const notesData = localStorage.getItem('notes');
-          if (notesData) {
-            const parsedNotes = JSON.parse(notesData);
-            if (Array.isArray(parsedNotes)) {
-              foundNote = parsedNotes.find(n => n && (n._id === id || n.asset_id === id));
+          const savedNotes = localStorage.getItem('notes');
+          if (savedNotes) {
+            const noteData = JSON.parse(savedNotes);
+            if (Array.isArray(noteData)) {
+              foundNote = noteData.find(n => n && (n._id === id || n.asset_id === id));
               
               if (foundNote) {
                 console.log('Note found in localStorage:', foundNote._id || foundNote.asset_id);
-                if (isMounted) {
-                  setNote(foundNote);
-                  setLoading(false);
-                }
+                setNote(foundNote);
+                setLoading(false);
                 return;
+              } else {
+                console.log('Note not found in localStorage, trying API...');
               }
             }
           }
-        } catch (parseError) {
-          console.error('Failed to parse localStorage notes data:', parseError);
-          // Continue to API fetch if localStorage parsing fails
+        } catch (localStorageError) {
+          console.error('Error reading from localStorage:', localStorageError);
         }
         
-        // If not found in localStorage, try to import the fetch function
+        // If not found in localStorage, try API
         try {
           const { fetchNotes } = await import('../api/notes');
           
@@ -137,8 +132,17 @@ const NoteViewer = () => {
     };
   }, [noteId, location.search]); // Add dependencies to rerun if the URL changes
   
+  // Use our custom hook to process the note data
+  const { pdfUrl, noteTitle, noteId: processedNoteId, loading: hookLoading, error: hookError } = usePDFNote(note);
+  
+  // Combine loading states
+  const isLoading = loading || hookLoading;
+  
+  // Combine error states
+  const errorMessage = error || hookError;
+  
   // Loading state
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
         <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">
@@ -150,7 +154,7 @@ const NoteViewer = () => {
   }
   
   // Error state
-  if (error) {
+  if (errorMessage) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
         <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-lg w-full shadow-md">
@@ -158,7 +162,7 @@ const NoteViewer = () => {
             <FaExclamationTriangle className="text-red-500 dark:text-red-400 mr-3 mt-1 flex-shrink-0 text-xl" />
             <div>
               <h3 className="font-bold text-red-700 dark:text-red-300 mb-2">Error Loading Note</h3>
-              <p className="text-red-600 dark:text-red-200 mb-4">{ensureString(error)}</p>
+              <p className="text-red-600 dark:text-red-200 mb-4">{ensureString(errorMessage)}</p>
               <button 
                 onClick={() => navigate('/my-notes')} 
                 className="px-4 py-2 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
@@ -195,46 +199,8 @@ const NoteViewer = () => {
     );
   }
   
-  // Get proper note URL and title with safeguards
-  let noteUrl;
-  let noteTitle;
-  
-  try {
-    // Check for common URL properties with fallbacks
-    noteUrl = note.secure_url || note.fileUrl || note.url || '';
-    
-    // Further validate the URL before passing to PDFViewer
-    if (noteUrl) {
-      // Ensure it's a string
-      noteUrl = ensureString(noteUrl, '');
-      
-      // Basic URL validation and fixes
-      if (noteUrl && !noteUrl.startsWith('http://') && !noteUrl.startsWith('https://')) {
-        console.warn('URL does not start with http:// or https://', noteUrl);
-        
-        // Try to prepend https:// if it's missing
-        if (noteUrl.includes('cloudinary.com') || noteUrl.startsWith('//')) {
-          noteUrl = 'https:' + (noteUrl.startsWith('//') ? noteUrl : '//' + noteUrl);
-          console.log('Fixed URL to:', noteUrl);
-        }
-      }
-    }
-    
-    // Get title with fallbacks
-    noteTitle = ensureString(
-      note.title || 
-      (note.context && note.context.caption) || 
-      note.filename,
-      'Untitled Note'
-    );
-  } catch (err) {
-    console.error('Error processing note data:', err);
-    noteUrl = '';
-    noteTitle = 'Error Processing Note';
-  }
-  
   // Extra validation - if no valid URL exists, show error
-  if (!noteUrl) {
+  if (!pdfUrl) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
         <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 max-w-lg w-full shadow-md">
@@ -258,15 +224,15 @@ const NoteViewer = () => {
     );
   }
   
-  console.log('Rendering PDFViewer with:', { noteUrl, noteTitle });
+  console.log('Rendering improved PDFViewer with:', { pdfUrl, noteTitle, processedNoteId });
   
-  // Render PDFViewer within ErrorBoundary
+  // Render the new PDFViewer within ErrorBoundary
   return (
     <ErrorBoundary>
       <PDFViewer 
-        noteUrl={noteUrl} 
+        noteUrl={pdfUrl} 
         noteTitle={noteTitle} 
-        noteId={note._id || note.asset_id} 
+        noteId={processedNoteId} 
       />
     </ErrorBoundary>
   );
