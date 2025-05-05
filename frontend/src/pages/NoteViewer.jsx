@@ -245,21 +245,26 @@ const NoteViewer = () => {
     );
   }
   
+  // Extract URL directly from note if the hook didn't work
+  const finalPdfUrl = pdfUrl || directNoteUrl || (note && (note.secure_url || note.fileUrl || note.url));
+  const finalNoteTitle = noteTitle || directNoteTitle || (note && (note.title || 'Untitled Note'));
+  const finalNoteId = processedNoteId || (note && (note._id || note.id || note.asset_id));
+  
   // Extra validation - if no valid URL exists, show error
-  if (!pdfUrl) {
+  if (!finalPdfUrl) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
-        <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 max-w-lg w-full shadow-md">
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-lg w-full shadow-md">
           <div className="flex items-start">
-            <FaExclamationTriangle className="text-yellow-500 dark:text-yellow-400 mr-3 mt-1 flex-shrink-0 text-xl" />
+            <FaExclamationTriangle className="text-red-500 dark:text-red-400 mr-3 mt-1 flex-shrink-0 text-xl" />
             <div>
-              <h3 className="font-bold text-yellow-700 dark:text-yellow-300 mb-2">Invalid Note</h3>
-              <p className="text-yellow-600 dark:text-yellow-200 mb-4">
-                This note doesn't have a valid document URL.
+              <h3 className="font-bold text-red-700 dark:text-red-300 mb-2">Error Loading Note</h3>
+              <p className="text-red-600 dark:text-red-200 mb-4">
+                No note data provided
               </p>
               <button 
                 onClick={() => navigate('/my-notes')} 
-                className="px-4 py-2 bg-yellow-100 dark:bg-yellow-800 text-yellow-700 dark:text-yellow-200 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-700 transition-colors"
+                className="px-4 py-2 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
               >
                 Back to Notes
               </button>
@@ -270,15 +275,19 @@ const NoteViewer = () => {
     );
   }
   
-  console.log('Rendering improved PDFViewer with:', { pdfUrl, noteTitle, processedNoteId });
+  console.log('Rendering improved PDFViewer with:', { 
+    pdfUrl: finalPdfUrl, 
+    noteTitle: finalNoteTitle, 
+    noteId: finalNoteId 
+  });
   
   // Render the new PDFViewer within ErrorBoundary
   return (
     <ErrorBoundary>
       <PDFViewer 
-        noteUrl={pdfUrl} 
-        noteTitle={noteTitle} 
-        noteId={processedNoteId} 
+        noteUrl={finalPdfUrl} 
+        noteTitle={finalNoteTitle} 
+        noteId={finalNoteId} 
       />
     </ErrorBoundary>
   );

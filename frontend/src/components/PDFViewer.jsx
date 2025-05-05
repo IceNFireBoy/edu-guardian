@@ -11,28 +11,54 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  // Validate input
+  useEffect(() => {
+    if (!noteUrl) {
+      console.error('PDFViewer received empty URL');
+      setError('No PDF URL provided');
+      setLoading(false);
+    } else {
+      console.log('PDFViewer received URL:', noteUrl);
+    }
+  }, [noteUrl]);
+
   // Safe URL handling
   const getSafeUrl = (url) => {
     if (!url) return '';
     
-    // Ensure standard URL format
-    if (!url.startsWith('http')) {
-      url = 'https:' + (url.startsWith('//') ? url : '//' + url);
+    try {
+      // Ensure standard URL format
+      if (!url.startsWith('http')) {
+        url = 'https:' + (url.startsWith('//') ? url : '//' + url);
+      }
+      
+      // Add a cache-busting parameter to avoid caching issues
+      const cacheBuster = `cb=${Date.now()}`;
+      const separator = url.includes('?') ? '&' : '?';
+      const safeUrl = url + separator + cacheBuster;
+      
+      console.log('Using direct URL with cache buster:', safeUrl);
+      return safeUrl;
+    } catch (err) {
+      console.error('Error creating safe URL:', err);
+      return url; // Return original if processing fails
     }
-    
-    // Add a cache-busting parameter to avoid caching issues
-    const cacheBuster = `?t=${Date.now()}`;
-    return url + (url.includes('?') ? '&cb=' + cacheBuster : cacheBuster);
   };
 
   // Get PDF.js viewer URL with proper scroll mode to ensure multi-page scrolling
   const getPDFjsViewerUrl = (url) => {
-    const safeUrl = getSafeUrl(url);
-    if (!safeUrl) return '';
-    
-    // Use PDF.js with explicit scroll mode parameter (1) to force continuous scrolling
-    // Also pass a fallback URL directly to PDF.js rather than trying to proxy through Mozilla
-    return `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/web/viewer.html?file=${encodeURIComponent(safeUrl)}&scrollMode=1`;
+    try {
+      const safeUrl = getSafeUrl(url);
+      if (!safeUrl) return '';
+      
+      // Use PDF.js with explicit scroll mode parameter (1) to force continuous scrolling
+      const viewerUrl = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/web/viewer.html?file=${encodeURIComponent(safeUrl)}&scrollMode=1`;
+      console.log('Created viewer URL:', viewerUrl);
+      return viewerUrl;
+    } catch (err) {
+      console.error('Error creating PDF.js viewer URL:', err);
+      return ''; // Return empty if processing fails
+    }
   };
 
   // Try to load PDF when component mounts
@@ -41,22 +67,38 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
       setLoading(true);
       setError(null);
       
+      console.log('Checking URL access:', noteUrl);
+      
       // Simulate checking if URL is valid
       const checkUrl = async () => {
         try {
-          const response = await fetch(getSafeUrl(noteUrl), { method: 'HEAD' });
-          if (!response.ok) {
-            throw new Error(`Failed to access PDF: ${response.status} ${response.statusText}`);
-          }
+          const safeUrl = getSafeUrl(noteUrl);
+          
+          const response = await fetch(safeUrl, { 
+            method: 'HEAD',
+            mode: 'no-cors', // Try no-cors to at least check if resource exists
+            cache: 'no-cache'
+          });
+          
+          // Since no-cors will almost always return opaque response, we continue
+          // but we don't actually know if it worked until iframe loads
+          console.log('URL check completed, proceeding to load PDF');
           setLoading(false);
         } catch (err) {
-          console.error('Error checking PDF URL:', err);
-          setError('Could not access the PDF file. It may be unavailable or restricted.');
+          console.warn('Error checking PDF URL, will try direct loading:', err);
+          // Don't set error here, let the iframe attempt to load
           setLoading(false);
         }
       };
       
-      checkUrl();
+      // Set a timeout to prevent hanging on URL check
+      const timeoutId = setTimeout(() => {
+        console.log('URL check timed out, proceeding to load PDF directly');
+        setLoading(false);
+      }, 3000);
+      
+      // Start the check
+      checkUrl().finally(() => clearTimeout(timeoutId));
     } else {
       setError('No PDF URL provided');
       setLoading(false);

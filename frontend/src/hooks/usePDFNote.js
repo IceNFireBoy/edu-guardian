@@ -19,10 +19,28 @@ const usePDFNote = (noteData) => {
     }
 
     try {
+      console.log('Note data being processed:', { noteData });
+      
+      // Handle notes that might be nested (e.g., in a 'resource' or 'data' property)
+      const note = noteData.resource || noteData.data || noteData;
+      
       // Extract URL from various possible locations in the data
-      let url = noteData.noteUrl || noteData.fileUrl || noteData.secure_url || noteData.url;
-      const title = noteData.noteTitle || noteData.title || 'Untitled Note';
-      const id = noteData.noteId || noteData._id || noteData.id || noteData.asset_id;
+      let url = note.noteUrl || note.fileUrl || note.secure_url || note.url;
+      
+      // Handle resource_type 'image' with URLs in public_id
+      if (!url && note.public_id && note.resource_type === 'image') {
+        url = `https://res.cloudinary.com/${note.cloud_name || 'demo'}/${note.resource_type}/${note.type || 'upload'}/${note.public_id}`;
+      }
+      
+      // Try harder to extract from complex nested data structures
+      if (!url && note.context && typeof note.context === 'object') {
+        url = note.context.url || note.context.secure_url || note.context.fileUrl;
+      }
+      
+      const title = note.noteTitle || note.title || (note.context && note.context.caption) || 'Untitled Note';
+      const id = note.noteId || note._id || note.id || note.asset_id;
+      
+      console.log('Extracted data:', { url, title, id });
       
       // Basic URL validation
       if (!url) {
