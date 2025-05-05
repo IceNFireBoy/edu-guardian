@@ -39,6 +39,15 @@ exports.getNotes = async (req, res) => {
     
     console.log("[Backend] getNotes: Found", notes.length, "notes");
     
+    // Temporarily disable URL validation due to axios issues
+    // Return all notes without validation for now
+    return res.status(200).json({
+      success: true,
+      count: notes.length,
+      data: notes
+    });
+    
+    /* URL validation disabled temporarily
     // Validate Cloudinary URLs (if skipValidation is not set to true)
     if (req.query.skipValidation !== 'true') {
       const axios = require('axios');
@@ -93,13 +102,7 @@ exports.getNotes = async (req, res) => {
         data: validNotes
       });
     }
-    
-    // Return notes in standard format if validation is skipped
-    return res.status(200).json({
-      success: true,
-      count: notes.length,
-      data: notes
-    });
+    */
   } catch (error) {
     console.error("[Backend] getNotes Error:", error);
     return res.status(500).json({ 
