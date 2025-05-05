@@ -204,8 +204,61 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
   const handleFinishStudying = (completionData) => {
     console.log('Note completed:', { noteId, ...completionData });
     
-    // Optionally navigate back to notes or stay on the page
-    // navigate('/my-notes');
+    // Extract subject from note title if possible
+    let subject = 'Uncategorized';
+    if (safeNoteTitle) {
+      // First, check for specific formats we know exist in the app
+      if (safeNoteTitle.includes('Biology 12') || safeNoteTitle.toLowerCase().includes('biology')) {
+        subject = 'Biology';
+      } else {
+        // Check for common subject patterns in the title
+        const subjectMatches = [
+          // Match patterns like "Biology 12" or "Math 10" at the beginning
+          /^(Biology|Chemistry|Physics|Mathematics|Math|English|History|Geography|Computer Science|Economics)(?:\s*\d*)/i,
+          // Or match patterns like "Chapter 5 - Biology" after a dash or colon
+          /[-:]\s*(Biology|Chemistry|Physics|Mathematics|Math|English|History|Geography|Computer Science|Economics)/i,
+          // Or match subject in parentheses like "(Biology)"
+          /\(?(Biology|Chemistry|Physics|Mathematics|Math|English|History|Geography|Computer Science|Economics)\)?/i
+        ];
+        
+        for (const pattern of subjectMatches) {
+          const match = safeNoteTitle.match(pattern);
+          if (match && match[1]) {
+            // Get the main subject (Biology, Math, etc.)
+            subject = match[1].trim();
+            // Standardize some subjects
+            if (subject.toLowerCase() === 'math') subject = 'Mathematics';
+            break;
+          }
+        }
+      }
+    }
+    
+    // Get completed notes
+    const completedNotes = JSON.parse(localStorage.getItem('completedNotes') || '[]');
+    
+    // Find the note we just completed
+    const existingNoteIndex = completedNotes.findIndex(note => note.id === noteId);
+    
+    const completionData = {
+      id: noteId,
+      completedAt: new Date().toISOString(),
+      timeSpent: calculateTimeSpent(),
+      feedback: completionData.feedback,
+      subject: subject
+    };
+    
+    // Update or add the note
+    if (existingNoteIndex >= 0) {
+      completedNotes[existingNoteIndex] = {
+        ...completedNotes[existingNoteIndex],
+        ...completionData
+      };
+    } else {
+      completedNotes.push(completionData);
+    }
+    
+    localStorage.setItem('completedNotes', JSON.stringify(completedNotes));
     
     // Show success notification
     alert('Study session completed successfully!');

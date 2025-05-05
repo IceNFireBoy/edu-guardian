@@ -46,7 +46,13 @@ const Progress = () => {
         
         // Process completed notes
         completedNotes.forEach(note => {
-          const subject = note.subject || 'Uncategorized';
+          // Standardize subject names
+          let subject = note.subject || 'Uncategorized';
+          
+          // Handle "Biology 12" and similar variants
+          if (subject.includes('Biology') || subject === 'Biology 12') {
+            subject = 'Biology';
+          }
           
           if (!subjectData[subject]) {
             subjectData[subject] = {
@@ -81,7 +87,15 @@ const Progress = () => {
         
         // Count total notes per subject
         allNotes.forEach(note => {
-          const subject = note.subject || 'Uncategorized';
+          // Attempt to detect subject from note title if not explicitly set
+          let subject = note.subject || 'Uncategorized';
+          
+          // Check if title contains a subject
+          if (note.title) {
+            if (note.title.includes('Biology') || note.title.toLowerCase().includes('biology')) {
+              subject = 'Biology';
+            }
+          }
           
           if (!subjectData[subject]) {
             subjectData[subject] = {

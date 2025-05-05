@@ -4,7 +4,7 @@ import { FaFlag, FaTimes } from 'react-icons/fa';
 /**
  * Component that allows marking a note as completed with emoji-based feedback
  */
-const FinishStudyingButton = ({ noteId, onFinish, initialStartTime }) => {
+const FinishStudyingButton = ({ noteId, onFinish, initialStartTime, subject }) => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [startTime, setStartTime] = useState(initialStartTime || Date.now());
   
@@ -38,6 +38,12 @@ const FinishStudyingButton = ({ noteId, onFinish, initialStartTime }) => {
   const handleEmojiSelect = (emoji) => {
     const timeSpent = calculateTimeSpent();
     
+    // Standardize subject
+    let standardizedSubject = subject || 'Uncategorized';
+    if (standardizedSubject.includes('Biology') || standardizedSubject === 'Biology 12') {
+      standardizedSubject = 'Biology';
+    }
+    
     // Store completion data in localStorage
     const completedNotes = JSON.parse(localStorage.getItem('completedNotes') || '[]');
     
@@ -49,7 +55,7 @@ const FinishStudyingButton = ({ noteId, onFinish, initialStartTime }) => {
       completedAt: new Date().toISOString(),
       timeSpent: timeSpent,
       feedback: emoji,
-      subject: null // This will be set from the note metadata in onFinish
+      subject: standardizedSubject
     };
     
     // Update or add the note
@@ -69,7 +75,8 @@ const FinishStudyingButton = ({ noteId, onFinish, initialStartTime }) => {
       onFinish({
         noteId,
         timeSpent,
-        feedback: emoji
+        feedback: emoji,
+        subject: completionData.subject
       });
     }
     
