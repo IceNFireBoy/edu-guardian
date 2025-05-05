@@ -27,6 +27,8 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [studyStartTime, setStudyStartTime] = useState(Date.now());
   const [showFeedback, setShowFeedback] = useState(false);
+  const [useFallbackViewer, setUseFallbackViewer] = useState(false);
+  const [attemptedDirectLoad, setAttemptedDirectLoad] = useState(false);
   
   const sessionTimerRef = useRef(null);
   const breakTimerRef = useRef(null);
@@ -104,6 +106,25 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
     }
   }, [isBreakActive]);
   
+  // When direct loading fails, try the fallback viewer
+  useEffect(() => {
+    // If we've already tried direct loading and it failed, switch to fallback
+    if (attemptedDirectLoad && !pdfLoaded) {
+      setUseFallbackViewer(true);
+    }
+  }, [attemptedDirectLoad, pdfLoaded]);
+  
+  // Handle direct PDF loading failure after a timeout
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!pdfLoaded) {
+        setAttemptedDirectLoad(true);
+      }
+    }, 3000); // Wait 3 seconds before trying fallback
+    
+    return () => clearTimeout(timer);
+  }, [pdfLoaded]);
+  
   // Handle iframe load and error events
   useEffect(() => {
     // Only set up listeners if we have a valid URL
@@ -119,7 +140,7 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
     
     const handleIframeError = (e) => {
       console.error("PDF iframe failed to load:", e);
-      setPdfError("Failed to load PDF. The file might be invalid or inaccessible.");
+      setAttemptedDirectLoad(true); // Trigger fallback
       setPdfLoaded(false);
     };
     
@@ -208,17 +229,17 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
     setBreakTime(0);
   };
   
-  // Create a safe URL for the iframe
+  // Create a safe URL for the iframe with proper PDF.js viewer options
   const getSafeUrl = () => {
     try {
       if (!validNoteUrl) return '';
       
-      // Check if URL is valid and add toolbar parameter safely
+      // Check if URL is valid
       let url = noteUrl;
       
-      // Add toolbar parameter if URL doesn't already have parameters
-      if (url && url.indexOf('#') === -1) {
-        url = `${url}#toolbar=0`;
+      // Ensure standard URL format
+      if (!url.startsWith('http')) {
+        url = 'https:' + (url.startsWith('//') ? url : '//' + url);
       }
       
       return url;
@@ -227,6 +248,13 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
       setPdfError("Failed to process PDF URL");
       return '';
     }
+  };
+  
+  // Get a Google Docs viewer URL for the PDF as a fallback
+  const getGoogleDocsViewerUrl = () => {
+    const url = getSafeUrl();
+    if (!url) return '';
+    return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
   };
   
   // Handle when a note is marked as finished
@@ -333,10 +361,8 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
       );
     }
     
-    const safeUrl = getSafeUrl();
-    
     return (
-      <div className="w-full h-full">
+      <div className="w-full h-full relative">
         {!pdfLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-slate-800 z-10">
             <div className="text-center">
@@ -345,20 +371,37 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
             </div>
           </div>
         )}
-        <iframe
-          ref={iframeRef}
-          src={safeUrl}
-          className="w-full border-0"
-          style={{
-            height: 'calc(100vh - 4rem)',
-            width: '100%',
-            border: 'none',
-            overflow: 'auto'
-          }}
-          title={safeNoteTitle}
-          loading="lazy"
-          scrolling="yes"
-        />
+        
+        {useFallbackViewer ? (
+          // Google Docs viewer as fallback (better for mobile)
+          <iframe 
+            src={getGoogleDocsViewerUrl()}
+            className="w-full h-full"
+            style={{
+              height: 'calc(100vh - 4rem)',
+              width: '100%',
+              border: 'none'
+            }}
+            frameBorder="0"
+            allowFullScreen={true}
+            title={`${safeNoteTitle} (Fallback Viewer)`}
+          />
+        ) : (
+          // Direct embed as primary method
+          <iframe 
+            ref={iframeRef}
+            src={getSafeUrl()}
+            className="w-full h-full"
+            style={{
+              height: 'calc(100vh - 4rem)',
+              width: '100%',
+              border: 'none'
+            }}
+            frameBorder="0"
+            allowFullScreen={true}
+            title={safeNoteTitle}
+          />
+        )}
       </div>
     );
   };
