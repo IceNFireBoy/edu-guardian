@@ -8,6 +8,7 @@ const Sidebar = ({ studySessionPanel }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isOpen, setIsOpen] = useState(!isMobile);
   const [showStudyPanel, setShowStudyPanel] = useState(false);
+  const [studyPanelCollapsed, setStudyPanelCollapsed] = useState(false);
   
   // Handle window resize
   useEffect(() => {
@@ -23,7 +24,9 @@ const Sidebar = ({ studySessionPanel }) => {
   
   // Show study session panel only on /view-note or /view-note/:id
   useEffect(() => {
-    setShowStudyPanel(/^\/view-note(\/|$)/.test(location.pathname));
+    const shouldShow = /^\/view-note(\/|$)/.test(location.pathname);
+    setShowStudyPanel(shouldShow);
+    if (!shouldShow) setStudyPanelCollapsed(false); // reset collapse if not on note
   }, [location.pathname]);
   
   // Menu items
@@ -111,19 +114,31 @@ const Sidebar = ({ studySessionPanel }) => {
               </ul>
             </nav>
             {/* Study Session Panel */}
-            {showStudyPanel && (
-              <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+            {showStudyPanel && !studyPanelCollapsed && (
+              <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex flex-col">
                 <button
                   className="w-full flex items-center justify-between px-3 py-2 bg-primary/10 dark:bg-primary/20 rounded-lg text-primary dark:text-primary-light font-semibold mb-2"
-                  onClick={() => setShowStudyPanel((v) => !v)}
-                  aria-expanded={showStudyPanel}
+                  onClick={() => setStudyPanelCollapsed(true)}
+                  aria-expanded={!studyPanelCollapsed}
                 >
                   Study Session
-                  <span>{showStudyPanel ? '▲' : '▼'}</span>
+                  <span>▼</span>
                 </button>
-                <div className={showStudyPanel ? '' : 'hidden'}>
+                <div>
                   {studySessionPanel}
                 </div>
+              </div>
+            )}
+            {/* Sticky button to reopen Study Session when collapsed */}
+            {showStudyPanel && studyPanelCollapsed && (
+              <div className="absolute bottom-4 left-0 w-full flex justify-center">
+                <button
+                  className="px-4 py-2 bg-primary text-white rounded-lg shadow hover:bg-primary-dark transition-colors"
+                  onClick={() => setStudyPanelCollapsed(false)}
+                  aria-label="Open Study Session"
+                >
+                  Study Session ▲
+                </button>
               </div>
             )}
           </motion.div>

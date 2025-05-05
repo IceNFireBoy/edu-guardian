@@ -271,7 +271,9 @@ const NoteViewer = () => {
       {/* Main content area: PDFViewer will be rendered full width */}
       <div className="flex flex-col min-h-screen md:ml-64">
         {/* ... header and main content ... */}
-        <PDFViewer noteUrl={finalPdfUrl} noteTitle={finalNoteTitle} noteId={finalNoteId} />
+        <div className="flex-1 flex flex-col w-full h-[100vh] p-0 m-0">
+          <PDFViewer noteUrl={finalPdfUrl} noteTitle={finalNoteTitle} noteId={finalNoteId} />
+        </div>
       </div>
     </ErrorBoundary>
   );
