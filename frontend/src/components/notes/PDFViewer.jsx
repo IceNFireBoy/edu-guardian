@@ -16,6 +16,15 @@ const ensureString = (value, defaultValue = '') => {
   }
 };
 
+// Detect if device is mobile
+const isMobileDevice = () => {
+  return (
+    typeof window !== 'undefined' && 
+    (window.innerWidth <= 768 || 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+  );
+};
+
 const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
   const [sessionTime, setSessionTime] = useState(0); // in seconds
   const [breakTime, setBreakTime] = useState(0); // in seconds
@@ -27,7 +36,7 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [studyStartTime, setStudyStartTime] = useState(Date.now());
   const [showFeedback, setShowFeedback] = useState(false);
-  const [useFallbackViewer, setUseFallbackViewer] = useState(false);
+  const [useFallbackViewer, setUseFallbackViewer] = useState(isMobileDevice());
   const [attemptedDirectLoad, setAttemptedDirectLoad] = useState(false);
   
   const sessionTimerRef = useRef(null);
@@ -38,6 +47,14 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
   // Validate props - with more thorough validation
   const validNoteUrl = Boolean(noteUrl && typeof noteUrl === 'string' && noteUrl.trim() !== '');
   const safeNoteTitle = ensureString(noteTitle, 'Untitled Note');
+  
+  // Check device type and orient on mount
+  useEffect(() => {
+    if (isMobileDevice()) {
+      setUseFallbackViewer(true);
+      console.log("Mobile device detected - using fallback viewer");
+    }
+  }, []);
   
   // Format time in HH:MM:SS
   const formatTime = (timeInSeconds) => {
@@ -257,6 +274,19 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
     return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
   };
   
+  // Use PDF.js as a second fallback option for better scrolling
+  const getPDFjsViewerUrl = () => {
+    const url = getSafeUrl();
+    if (!url) return '';
+    return `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(url)}`;
+  };
+  
+  // Get a mobile-optimized PDF URL
+  const getMobileOptimizedUrl = () => {
+    // First try PDF.js which has good mobile support
+    return getPDFjsViewerUrl();
+  };
+  
   // Handle when a note is marked as finished
   const handleFinishStudying = (completionData) => {
     console.log('Note completed:', { noteId, ...completionData });
@@ -361,8 +391,11 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
       );
     }
     
+    // Check if this is a mobile device
+    const isMobile = isMobileDevice();
+    
     return (
-      <div className="w-full h-full relative">
+      <div className="w-full h-full relative overflow-hidden">
         {!pdfLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-slate-800 z-10">
             <div className="text-center">
@@ -373,34 +406,53 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
         )}
         
         {useFallbackViewer ? (
-          // Google Docs viewer as fallback (better for mobile)
-          <iframe 
-            src={getGoogleDocsViewerUrl()}
-            className="w-full h-full"
-            style={{
-              height: 'calc(100vh - 4rem)',
-              width: '100%',
-              border: 'none'
-            }}
-            frameBorder="0"
-            allowFullScreen={true}
-            title={`${safeNoteTitle} (Fallback Viewer)`}
-          />
+          // Mobile optimized viewer
+          <div className="w-full h-full" style={{ height: 'calc(100vh - 4rem)' }}>
+            <iframe 
+              src={getMobileOptimizedUrl()}
+              className="w-full h-full"
+              style={{
+                height: '100%',
+                width: '100%', 
+                border: 'none',
+                overflow: 'auto'
+              }}
+              frameBorder="0"
+              scrolling="yes"
+              allowFullScreen={true}
+              title={`${safeNoteTitle} (Mobile Viewer)`}
+            />
+          </div>
         ) : (
-          // Direct embed as primary method
-          <iframe 
-            ref={iframeRef}
-            src={getSafeUrl()}
+          // Direct embed for desktop with object tag (better than iframe)
+          <object
+            data={getSafeUrl()} 
+            type="application/pdf"
             className="w-full h-full"
             style={{
               height: 'calc(100vh - 4rem)',
               width: '100%',
-              border: 'none'
+              border: 'none',
+              overflow: 'auto'
             }}
-            frameBorder="0"
-            allowFullScreen={true}
-            title={safeNoteTitle}
-          />
+          >
+            {/* Fallback for older browsers */}
+            <iframe 
+              ref={iframeRef}
+              src={getSafeUrl()}
+              className="w-full h-full"
+              style={{
+                height: 'calc(100vh - 4rem)',
+                width: '100%',
+                border: 'none',
+                overflow: 'auto'
+              }}
+              frameBorder="0"
+              scrolling="yes"
+              allowFullScreen={true}
+              title={safeNoteTitle}
+            />
+          </object>
         )}
       </div>
     );
