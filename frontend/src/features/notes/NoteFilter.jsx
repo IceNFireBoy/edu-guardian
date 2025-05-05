@@ -542,6 +542,62 @@ const NoteFilter = () => {
     }
   };
   
+  // Clean up deleted Cloudinary resources
+  const cleanupDeletedResources = async () => {
+    try {
+      setLoading(true);
+      // Get notes from localStorage or state
+      const storedNotes = JSON.parse(localStorage.getItem('notes') || '[]');
+      const notesToCheck = storedNotes.length > 0 ? storedNotes : notes;
+      
+      if (notesToCheck.length === 0) {
+        toast.info("No notes to check");
+        setLoading(false);
+        return;
+      }
+      
+      // Check each note's fileUrl to see if it still exists
+      const validNotes = [];
+      let removedCount = 0;
+      
+      for (const note of notesToCheck) {
+        if (!note.fileUrl) {
+          validNotes.push(note);
+          continue;
+        }
+        
+        try {
+          const accessible = await isFileAccessible(note.fileUrl);
+          if (accessible) {
+            validNotes.push(note);
+          } else {
+            removedCount++;
+            debug(`[Frontend] Removed inaccessible resource: ${note.fileUrl}`);
+          }
+        } catch (e) {
+          // Keep the note if we can't check it
+          validNotes.push(note);
+        }
+      }
+      
+      // Update localStorage and state with valid notes
+      localStorage.setItem('notes', JSON.stringify(validNotes));
+      setNotes(validNotes);
+      
+      // Show success message
+      if (removedCount > 0) {
+        toast.success(`Removed ${removedCount} inaccessible resources`);
+      } else {
+        toast.info("No inaccessible resources found");
+      }
+    } catch (err) {
+      debug("[Frontend] Error cleaning up resources:", err.message);
+      toast.error("Failed to clean up resources");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Derived state
   const hasFiltersApplied = Object.values(filters).some(value => value !== '');
   
@@ -669,13 +725,22 @@ const NoteFilter = () => {
           Browse through available notes or filter to find what you need.
         </p>
         
-        {/* Add button for creating a demo note */}
-        <button 
-          onClick={addDemoNote}
-          className="mt-2 bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-800/30 dark:text-purple-300 dark:hover:bg-purple-800/50 px-4 py-2 rounded-lg text-sm font-medium"
-        >
-          Create Test Note with Description
-        </button>
+        {/* Add buttons for creating a demo note and cleaning up resources */}
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button 
+            onClick={addDemoNote}
+            className="bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-800/30 dark:text-purple-300 dark:hover:bg-purple-800/50 px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            Create Test Note with Description
+          </button>
+          
+          <button 
+            onClick={cleanupDeletedResources}
+            className="bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800/30 dark:text-red-300 dark:hover:bg-red-800/50 px-4 py-2 rounded-lg text-sm font-medium flex items-center"
+          >
+            <span className="mr-1">🧹</span> Clean Up Missing Resources
+          </button>
+        </div>
       </div>
       
       <FilterForm 
