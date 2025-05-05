@@ -265,12 +265,24 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
             className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
           >
             <div className="p-4 border-b dark:border-slate-700 flex justify-between items-center">
-              <h3 
-                id="note-modal-title" 
-                className="text-xl font-bold text-gray-800 dark:text-gray-100"
-              >
-                {noteTitle}
-              </h3>
+              <div>
+                <h3 
+                  id="note-modal-title" 
+                  className="text-xl font-bold text-gray-800 dark:text-gray-100"
+                >
+                  {noteTitle}
+                </h3>
+                
+                {/* Display topic prominently */}
+                {note.topic && (
+                  <div className="mt-1">
+                    <span className="inline-block px-3 py-1 text-sm bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-full font-medium">
+                      {note.topic}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
               <button
                 onClick={onClose}
                 className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-2xl"
@@ -343,6 +355,37 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
                     </span>
                   )}
                 </p>
+              </div>
+              
+              {/* Metadata section */}
+              <div className="mb-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {note.subject && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-md">
+                    <h4 className="text-xs font-medium text-blue-500 dark:text-blue-400">Subject</h4>
+                    <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">{note.subject}</p>
+                  </div>
+                )}
+                
+                {note.grade && (
+                  <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
+                    <h4 className="text-xs font-medium text-green-500 dark:text-green-400">Grade</h4>
+                    <p className="text-sm font-semibold text-green-700 dark:text-green-300">{note.grade}</p>
+                  </div>
+                )}
+                
+                {note.semester && (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 p-2 rounded-md">
+                    <h4 className="text-xs font-medium text-amber-500 dark:text-amber-400">Semester</h4>
+                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">{note.semester}</p>
+                  </div>
+                )}
+                
+                {note.quarter && (
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-2 rounded-md">
+                    <h4 className="text-xs font-medium text-purple-500 dark:text-purple-400">Quarter</h4>
+                    <p className="text-sm font-semibold text-purple-700 dark:text-purple-300">{note.quarter}</p>
+                  </div>
+                )}
               </div>
               
               <div className="flex flex-col sm:flex-row sm:justify-between gap-2">

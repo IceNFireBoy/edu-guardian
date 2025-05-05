@@ -198,6 +198,15 @@ const NoteCard = ({ note, onView, compact = false }) => {
               {getTitle()}
             </h3>
             
+            {/* Topic tag */}
+            {note.topic && (
+              <div className="mb-auto">
+                <span className="inline-block px-2 py-0.5 text-xs bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-full">
+                  {note.topic}
+                </span>
+              </div>
+            )}
+            
             <div className="mt-auto flex justify-between items-center">
               <button
                 onClick={handleView}
@@ -241,6 +250,16 @@ const NoteCard = ({ note, onView, compact = false }) => {
           <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-1 line-clamp-1">
             {getTitle()}
           </h3>
+          
+          {/* Topic tag */}
+          {note.topic && (
+            <div className="mb-2">
+              <span className="inline-block px-2 py-1 text-xs bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-full">
+                {note.topic}
+              </span>
+            </div>
+          )}
+          
           <p className="text-gray-600 dark:text-gray-300 text-sm mb-2 line-clamp-2">
             {getDescription()}
           </p>
