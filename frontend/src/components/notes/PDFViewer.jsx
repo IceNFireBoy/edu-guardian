@@ -256,7 +256,6 @@ const PDFViewer = ({ noteUrl, noteTitle }) => {
             src={safeUrl}
             className="w-full h-full"
             title={safeNoteTitle}
-            sandbox="allow-scripts allow-same-origin"
             loading="lazy"
           />
         )}
