@@ -5,6 +5,7 @@ import PDFViewer from '../components/PDFViewer';
 import ErrorBoundary from '../components/ErrorBoundary';
 import usePDFNote from '../hooks/usePDFNote';
 import NoteStudySession from '../components/notes/NoteStudySession';
+import Sidebar from '../components/layout/Sidebar';
 
 // Utility function to ensure string values
 const ensureString = (value, defaultValue = '') => {
@@ -255,14 +256,23 @@ const NoteViewer = () => {
 
   // --- If we have a URL, render the PDFViewer ---
   console.log('Rendering NoteViewer - Proceeding to PDFViewer component.');
+  const studySessionPanel = (
+    <NoteStudySession
+      noteUrl={finalPdfUrl}
+      noteTitle={finalNoteTitle}
+      noteId={finalNoteId}
+      subject={note && (note.subject || finalNoteTitle)}
+      sidebarMode
+    />
+  );
   return (
     <ErrorBoundary>
-      <NoteStudySession
-        noteUrl={finalPdfUrl}
-        noteTitle={finalNoteTitle}
-        noteId={finalNoteId}
-        subject={note && (note.subject || finalNoteTitle)}
-      />
+      <Sidebar studySessionPanel={studySessionPanel} />
+      {/* Main content area: PDFViewer will be rendered full width */}
+      <div className="flex flex-col min-h-screen md:ml-64">
+        {/* ... header and main content ... */}
+        <PDFViewer noteUrl={finalPdfUrl} noteTitle={finalNoteTitle} noteId={finalNoteId} />
+      </div>
     </ErrorBoundary>
   );
 };

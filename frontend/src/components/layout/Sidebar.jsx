@@ -3,10 +3,11 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaHome, FaBook, FaUpload, FaChartLine, FaCog, FaBars, FaTimes, FaTrophy, FaAward, FaMedal, FaHeart } from 'react-icons/fa';
 
-const Sidebar = () => {
+const Sidebar = ({ studySessionPanel }) => {
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isOpen, setIsOpen] = useState(!isMobile);
+  const [showStudyPanel, setShowStudyPanel] = useState(false);
   
   // Handle window resize
   useEffect(() => {
@@ -19,6 +20,11 @@ const Sidebar = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+  
+  // Show study session panel only on /view-note or /view-note/:id
+  useEffect(() => {
+    setShowStudyPanel(/^\/view-note(\/|$)/.test(location.pathname));
+  }, [location.pathname]);
   
   // Menu items
   const menuItems = [
@@ -68,7 +74,7 @@ const Sidebar = () => {
             animate={{ x: 0 }}
             exit={isMobile ? { x: -280 } : { x: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed top-0 left-0 h-full w-64 bg-white dark:bg-slate-800 shadow-lg z-40"
+            className="fixed top-0 left-0 h-full w-64 bg-white dark:bg-slate-800 shadow-lg z-40 flex flex-col"
           >
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
               <h1 className="text-xl font-bold text-primary dark:text-primary-light">
@@ -84,7 +90,7 @@ const Sidebar = () => {
                 </button>
               )}
             </div>
-            <nav className="p-4">
+            <nav className="p-4 flex-1 overflow-y-auto">
               <ul className="space-y-2">
                 {menuItems.map((item) => (
                   <li key={item.path}>
@@ -104,6 +110,22 @@ const Sidebar = () => {
                 ))}
               </ul>
             </nav>
+            {/* Study Session Panel */}
+            {showStudyPanel && (
+              <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                <button
+                  className="w-full flex items-center justify-between px-3 py-2 bg-primary/10 dark:bg-primary/20 rounded-lg text-primary dark:text-primary-light font-semibold mb-2"
+                  onClick={() => setShowStudyPanel((v) => !v)}
+                  aria-expanded={showStudyPanel}
+                >
+                  Study Session
+                  <span>{showStudyPanel ? '▲' : '▼'}</span>
+                </button>
+                <div className={showStudyPanel ? '' : 'hidden'}>
+                  {studySessionPanel}
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
