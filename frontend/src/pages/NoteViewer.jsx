@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FaSpinner, FaExclamationTriangle, FaCoffee } from 'react-icons/fa';
 import PDFViewer from '../components/PDFViewer';
@@ -20,31 +20,21 @@ const ensureString = (value, defaultValue = '') => {
 };
 
 const NoteViewer = () => {
-  const { noteId: paramNoteId } = useParams(); // Renamed to avoid conflict
+  const { noteId: paramNoteId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true); // Loading state for initial fetch
-  const [error, setError] = useState(null); // Error state for initial fetch
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [note, setNote] = useState(null);
-  const [sessionTime, setSessionTime] = useState(0); // in seconds
-  const [breakTime, setBreakTime] = useState(0); // in seconds
-  const [isBreakActive, setIsBreakActive] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [showBreakOptions, setShowBreakOptions] = useState(false);
-  const [customTime, setCustomTime] = useState('');
-  const [studyStartTime] = useState(Date.now());
-  const sessionTimerRef = useRef(null);
-  const breakTimerRef = useRef(null);
+  const [breakState, setBreakState] = useState({ isBreakActive: false, breakTime: 0, cancelBreak: () => {} });
 
   // Get note ID from URL params or search params
   const getNoteIdFromUrl = () => {
     try {
-      // First try to get from route params
       if (paramNoteId) {
         console.log("Found ID in route params:", paramNoteId);
         return paramNoteId;
       }
-      // Then try to get from query params
       const searchParams = new URLSearchParams(location.search);
       const queryId = searchParams.get('id');
       if (queryId) {
@@ -63,9 +53,9 @@ const NoteViewer = () => {
   useEffect(() => {
     let isMounted = true;
     const fetchNoteData = async () => {
-      setLoading(true); // Start loading
-      setError(null);   // Clear previous errors
-      setNote(null);    // Clear previous note data
+      setLoading(true);
+      setError(null);
+      setNote(null);
 
       const id = getNoteIdFromUrl();
       if (!id) {
@@ -90,11 +80,11 @@ const NoteViewer = () => {
                 console.log('Note found in localStorage:', foundNote._id || foundNote.asset_id);
                 if (isMounted) {
                   setNote(foundNote);
-                  setLoading(false); // Found in local, stop loading
+                  setLoading(false);
                 }
-                return; // Exit early, no need for API call
+                return;
               } else {
-                 console.log('Note not found in localStorage cache.');
+                console.log('Note not found in localStorage cache.');
               }
             }
           }
@@ -104,11 +94,10 @@ const NoteViewer = () => {
 
         // If not in localStorage, try API
         console.log('Attempting to fetch notes from API...');
-        // Dynamically import fetchNotes to potentially improve initial load
         const { fetchNotes } = await import('../api/notes');
         const response = await fetchNotes();
 
-        if (!isMounted) return; // Check if component is still mounted
+        if (!isMounted) return;
 
         if (response && response.success && Array.isArray(response.data)) {
           foundNote = response.data.find(n => n && (n._id === id || n.asset_id === id));
@@ -130,37 +119,34 @@ const NoteViewer = () => {
         }
       } finally {
         if (isMounted) {
-          setLoading(false); // Fetch attempt finished, stop loading
+          setLoading(false);
         }
       }
     };
 
     fetchNoteData();
 
-    // Cleanup function
     return () => {
       isMounted = false;
     };
-  }, [paramNoteId, location.search]); // Re-run if ID or query changes
+  }, [paramNoteId, location.search]);
 
-  // Use our custom hook to process the note data *once available*
-  // Pass null if note is not yet loaded to avoid unnecessary processing
+  // Use our custom hook to process the note data
   const { pdfUrl: hookPdfUrl, noteTitle: hookNoteTitle, noteId: hookNoteId, loading: hookLoading, error: hookError } = usePDFNote(note);
 
   // Log state right before render checks
   console.log('Rendering NoteViewer - States:', {
-    loading, // from fetch
-    error,   // from fetch
-    note: note ? 'Exists' : 'null', // Log existence, not the whole object
+    loading,
+    error,
+    note: note ? 'Exists' : 'null',
     hookLoading,
     hookError,
-    hookPdfUrl: hookPdfUrl ? 'Exists' : 'null', // Log existence
+    hookPdfUrl: hookPdfUrl ? 'Exists' : 'null',
     hookNoteTitle,
-    hookNoteId: hookNoteId ? 'Exists' : 'null', // Log existence
+    hookNoteId: hookNoteId ? 'Exists' : 'null',
   });
 
   // Combined Loading state check
-  // Consider fetch loading OR hook loading if note is present but hook is still processing
   const isLoading = loading || (note && hookLoading);
   if (isLoading) {
     console.log('Rendering NoteViewer - Showing Loading State');
@@ -174,7 +160,7 @@ const NoteViewer = () => {
     );
   }
 
-  // Combined Error state check (fetch error OR hook error)
+  // Combined Error state check
   const errorMessage = error || hookError;
   if (errorMessage) {
     console.log('Rendering NoteViewer - Showing Error State:', errorMessage);
@@ -199,10 +185,10 @@ const NoteViewer = () => {
     );
   }
 
-  // No Note Found state (if fetch finished without error, but note is still null)
+  // No Note Found state
   if (!note) {
     console.log('Rendering NoteViewer - Showing No Note Found State (note is null after loading)');
-     return (
+    return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
         <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 max-w-lg w-full shadow-md">
           <div className="flex items-start">
@@ -223,9 +209,7 @@ const NoteViewer = () => {
     );
   }
 
-  // --- If we pass all above checks: note exists, no loading, no errors ---
-
-  // Determine final props directly here using the hook results or direct extraction
+  // Determine final props
   const finalPdfUrl = hookPdfUrl || (note.secure_url || note.fileUrl || note.url) || null;
   const finalNoteTitle = hookNoteTitle || (note.title || (note.context && note.context.caption)) || 'Untitled Note';
   const finalNoteId = hookNoteId || note._id || note.id || note.asset_id || null;
@@ -236,87 +220,34 @@ const NoteViewer = () => {
     finalNoteId: finalNoteId ? 'Exists' : 'null',
   });
 
-  // Final URL Check: If after everything, we still have no URL
+  // Final URL Check
   if (!finalPdfUrl) {
     console.error('Rendering NoteViewer - Final URL Check FAILED. No URL could be determined.');
     return (
-     <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
-       <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-lg w-full shadow-md">
-         {/* Using the same error message structure */}
-         <div className="flex items-start">
-           <FaExclamationTriangle className="text-red-500 dark:text-red-400 mr-3 mt-1 flex-shrink-0 text-xl" />
-           <div>
-             <h3 className="font-bold text-red-700 dark:text-red-300 mb-2">Error Loading Note</h3>
-             <p className="text-red-600 dark:text-red-200 mb-4">
-               Could not determine a valid URL for the note document.
-             </p>
-             <button
-               onClick={() => navigate('/my-notes')}
-               className="px-4 py-2 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
-             >
-               Back to Notes
-             </button>
-           </div>
-         </div>
-       </div>
-     </div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-lg w-full shadow-md">
+          <div className="flex items-start">
+            <FaExclamationTriangle className="text-red-500 dark:text-red-400 mr-3 mt-1 flex-shrink-0 text-xl" />
+            <div>
+              <h3 className="font-bold text-red-700 dark:text-red-300 mb-2">Error Loading Note</h3>
+              <p className="text-red-600 dark:text-red-200 mb-4">
+                Could not determine a valid URL for the note document.
+              </p>
+              <button
+                onClick={() => navigate('/my-notes')}
+                className="px-4 py-2 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+              >
+                Back to Notes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
-  // --- If we have a URL, render the PDFViewer ---
+  // Render the PDFViewer
   console.log('Rendering NoteViewer - Proceeding to PDFViewer component.');
-
-  // Session timer
-  useEffect(() => {
-    if (!isPaused && !isBreakActive) {
-      sessionTimerRef.current = setInterval(() => {
-        setSessionTime((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(sessionTimerRef.current);
-  }, [isPaused, isBreakActive]);
-
-  // Break timer
-  useEffect(() => {
-    if (isBreakActive && breakTime > 0) {
-      breakTimerRef.current = setInterval(() => {
-        setBreakTime((prev) => {
-          if (prev <= 1) {
-            setIsBreakActive(false);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(breakTimerRef.current);
-  }, [isBreakActive, breakTime]);
-
-  // Break controls
-  const startShortBreak = () => {
-    setBreakTime(10 * 60);
-    setIsBreakActive(true);
-    setShowBreakOptions(false);
-  };
-  const startLongBreak = () => {
-    setBreakTime(30 * 60);
-    setIsBreakActive(true);
-    setShowBreakOptions(false);
-  };
-  const startCustomBreak = () => {
-    const minutes = parseInt(customTime);
-    if (!minutes || minutes <= 0) return;
-    setBreakTime(minutes * 60);
-    setIsBreakActive(true);
-    setShowBreakOptions(false);
-    setCustomTime('');
-  };
-  const cancelBreak = () => {
-    setIsBreakActive(false);
-    setBreakTime(0);
-  };
-  const togglePause = () => setIsPaused((prev) => !prev);
-
   const studySessionPanel = (
     <NoteStudySession
       noteUrl={finalPdfUrl}
@@ -324,20 +255,7 @@ const NoteViewer = () => {
       noteId={finalNoteId}
       subject={note && (note.subject || finalNoteTitle)}
       sidebarMode
-      sessionTime={sessionTime}
-      isPaused={isPaused}
-      togglePause={togglePause}
-      isBreakActive={isBreakActive}
-      breakTime={breakTime}
-      startShortBreak={startShortBreak}
-      startLongBreak={startLongBreak}
-      startCustomBreak={startCustomBreak}
-      cancelBreak={cancelBreak}
-      showBreakOptions={showBreakOptions}
-      setShowBreakOptions={setShowBreakOptions}
-      customTime={customTime}
-      setCustomTime={setCustomTime}
-      studyStartTime={studyStartTime}
+      onBreakStateChange={setBreakState}
     />
   );
 
@@ -345,7 +263,7 @@ const NoteViewer = () => {
     <ErrorBoundary>
       <Sidebar studySessionPanel={studySessionPanel} />
       {/* Break Overlay */}
-      {isBreakActive && (
+      {breakState.isBreakActive && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-blue-900/80">
           <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-2xl max-w-md w-full flex flex-col items-center animate-pulse">
             <FaCoffee className="text-blue-600 dark:text-blue-400 text-6xl mb-4 animate-bounce" />
@@ -354,14 +272,14 @@ const NoteViewer = () => {
             </h2>
             <div className="text-center mb-6">
               <span className="text-5xl font-mono text-blue-600 dark:text-blue-400">
-                {formatTime(breakTime)}
+                {formatTime(breakState.breakTime)}
               </span>
             </div>
             <p className="text-gray-600 dark:text-gray-300 text-center mb-6">
               Take some time to rest your eyes and stretch. Your notes will be waiting for you when you return.
             </p>
             <button
-              onClick={cancelBreak}
+              onClick={breakState.cancelBreak}
               className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
               End Break Early

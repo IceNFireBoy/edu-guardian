@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 
 /**
  * Custom hook to handle PDF note data
@@ -8,8 +8,7 @@ const usePDFNote = (noteData) => {
   const [pdfUrl, setPdfUrl] = useState(null);
   const [noteTitle, setNoteTitle] = useState('');
   const [noteId, setNoteId] = useState(null);
-  // Default loading to true ONLY if initial noteData exists
-  const [loading, setLoading] = useState(!!noteData);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -18,15 +17,13 @@ const usePDFNote = (noteData) => {
       setPdfUrl(null);
       setNoteTitle('');
       setNoteId(null);
-      setError(null); // Clear any previous errors
-      setLoading(false); // Not loading if no data
-      console.log('usePDFNote: No note data provided, resetting state.');
+      setLoading(false);
+      setError(null);
       return;
     }
 
-    // If we have noteData, start processing
-    setLoading(true);
-    setError(null); // Clear previous errors before processing new data
+    // Clear previous errors before processing new data
+    setError(null);
     
     try {
       console.log('usePDFNote: Processing provided note data...', { noteData: 'Exists' });
@@ -56,14 +53,14 @@ const usePDFNote = (noteData) => {
       if (!url) {
         console.error('usePDFNote: No valid URL found after extraction.');
         setError('No valid URL found in the note data');
-        setPdfUrl(null); // Ensure pdfUrl is null on error
+        setPdfUrl(null);
         setNoteTitle('');
         setNoteId(null);
         setLoading(false);
         return;
       }
 
-      // Fix Cloudinary URLs if needed (ensure this happens *after* validation)
+      // Fix Cloudinary URLs if needed
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         if (url.includes('cloudinary.com') || url.startsWith('//')) {
           url = 'https:' + (url.startsWith('//') ? url : '//' + url);
@@ -71,7 +68,7 @@ const usePDFNote = (noteData) => {
         }
       }
       
-      // Apply cache-busting (ensure this happens *after* validation)
+      // Apply cache-busting
       if (url.includes('cloudinary.com')) {
         const timestamp = Date.now();
         url = url.includes('?') ? `${url}&t=${timestamp}` : `${url}?t=${timestamp}`;
@@ -82,19 +79,19 @@ const usePDFNote = (noteData) => {
       setPdfUrl(url);
       setNoteTitle(title);
       setNoteId(id);
-      setError(null); // Explicitly clear error on success
+      setError(null);
       setLoading(false);
       console.log('usePDFNote: Processing successful.');
       
     } catch (err) {
       console.error('usePDFNote: Error parsing PDF note data:', err);
       setError('Failed to process note data');
-      setPdfUrl(null); // Clear state on error
+      setPdfUrl(null);
       setNoteTitle('');
       setNoteId(null);
       setLoading(false);
     }
-  }, [noteData]); // Rerun effect if noteData object reference changes
+  }, [noteData]);
 
   return { pdfUrl, noteTitle, noteId, loading, error };
 };

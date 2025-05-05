@@ -12,7 +12,7 @@ import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 /**
  * PDF Viewer component using @react-pdf-viewer
  */
-const PDFViewer = ({ noteUrl, noteTitle, noteId }) => { // Keep noteId prop if needed for other features later
+const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
   const navigate = useNavigate();
 
   // Create instance of the default layout plugin
@@ -44,7 +44,7 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => { // Keep noteId prop if n
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 dark:bg-slate-900">
-      {/* Header (similar to the old one) */}
+      {/* Header */}
       <header className="bg-white dark:bg-slate-800 shadow-md py-3 px-4 w-full z-10 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center">
           <button 
@@ -58,7 +58,6 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => { // Keep noteId prop if n
             {noteTitle || 'PDF Document'}
           </h1>
         </div>
-        {/* Optional: Add other header elements if needed */}
       </header>
       
       {/* PDF Viewer container */}
