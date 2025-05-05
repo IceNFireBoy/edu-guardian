@@ -321,19 +321,17 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
     const url = getSafeUrl();
     if (!url) return '';
     
-    // Use a CDN version of PDF.js instead of Mozilla's site which might be slow
-    return `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/web/viewer.html?file=${encodeURIComponent(url)}`;
+    // Use PDF.js with explicit scroll mode parameter to force continuous scrolling
+    return `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/web/viewer.html?file=${encodeURIComponent(url)}&scrollMode=1`;
   };
   
   // Get a mobile-optimized PDF URL - try multiple options
   const getMobileOptimizedUrl = () => {
-    // If we've timed out, try direct PDF URL which might work better
-    if (loadingTimeout) {
-      return getSafeUrl();
-    }
-    
-    // Otherwise use PDF.js which has good mobile support
-    return getPDFjsViewerUrl();
+    // Always use PDF.js with scroll mode for mobile
+    // The scroll mode parameter (1) forces continuous scrolling through all pages
+    const url = getSafeUrl();
+    if (!url) return '';
+    return `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/web/viewer.html?file=${encodeURIComponent(url)}&scrollMode=1`;
   };
   
   // Handle when a note is marked as finished
@@ -456,6 +454,9 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
     // Check if this is a mobile device
     const isMobile = isMobileDevice();
     
+    // Always use the PDF.js viewer for better scrolling on all devices
+    const shouldUsePDFjs = true;
+    
     return (
       <div className="w-full h-full relative overflow-hidden">
         {/* Always show loading UI until PDF is confirmed loaded */}
@@ -491,8 +492,8 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
           </div>
         )}
         
-        {useFallbackViewer ? (
-          // Mobile optimized viewer
+        {shouldUsePDFjs ? (
+          // PDF.js viewer - works on all devices with proper scrolling
           <div className="w-full h-full" style={{ height: 'calc(100vh - 4rem)' }}>
             <iframe 
               src={getMobileOptimizedUrl()}
@@ -501,19 +502,19 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
                 height: '100%',
                 width: '100%', 
                 border: 'none',
-                overflow: 'auto'
+                overflow: 'visible' // Allow content to be visible beyond the frame
               }}
               frameBorder="0"
               scrolling="yes"
               allowFullScreen={true}
-              title={`${safeNoteTitle} (Mobile Viewer)`}
+              title={`${safeNoteTitle} (PDF Viewer)`}
               onLoad={() => {
-                console.log("Mobile viewer iframe loaded");
+                console.log("PDF.js viewer iframe loaded");
                 setPdfLoaded(true);
                 setShowLoadingUI(false);
               }}
               onError={(e) => {
-                console.error("Mobile viewer failed to load", e);
+                console.error("PDF.js viewer failed to load", e);
                 setLoadingTimeout(true);
                 setPdfLoaded(false);
                 setShowLoadingUI(true);
@@ -521,7 +522,7 @@ const PDFViewer = ({ noteUrl, noteTitle, noteId }) => {
             />
           </div>
         ) : (
-          // Direct embed for desktop with object tag (better than iframe)
+          // This fallback is for completeness only, we're now always using PDF.js
           <object
             data={getSafeUrl()} 
             type="application/pdf"
