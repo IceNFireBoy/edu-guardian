@@ -9,6 +9,7 @@ import NoteCard from '../../components/notes/NoteCard';
 import { useToast } from '../../components/ui/Toast';
 import { debug } from '../../components/DebugPanel';
 import { fetchNotes } from '../../api/notes';
+import { subjectColors, getSubjectColor } from '../../components/notes/NoteCard';
 
 // Development mode for debugging
 const DEV_MODE = process.env.NODE_ENV === 'development';
@@ -220,6 +221,9 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
   
   if (!isOpen || !note) return null;
   
+  // Get color theme for subject
+  const colorTheme = note.subject ? getSubjectColor(note.subject) : subjectColors.default;
+  
   const handleRatingChange = (newRating) => {
     try {
       // Save rating to localStorage
@@ -274,8 +278,14 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
       });
   };
   
-  const noteContent = note.description || note.context?.alt || "This note doesn't have enough content for processing.";
-  const noteTitle = note.title || note.context?.caption || "Untitled Note";
+  // Get note title
+  const noteTitle = note.title || 
+    (note.context && note.context.caption) || 
+    note.public_id?.split('/').pop() || 
+    'Untitled Note';
+    
+  // Get note content for summarizer
+  const noteContent = note.description || note.context?.alt || "";
 
   return (
     <AnimatePresence>
@@ -284,34 +294,42 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="note-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border-t-4"
+            style={{ borderColor: note.subject ? `var(--${colorTheme.text.replace('text-', '')})` : 'var(--color-primary)' }}
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-labelledby="note-modal-title"
+            aria-modal="true"
           >
             <div className="p-4 border-b dark:border-slate-700 flex justify-between items-center">
               <div>
-              <h3 
-                id="note-modal-title" 
-                className="text-xl font-bold text-gray-800 dark:text-gray-100"
-              >
-                {noteTitle}
-              </h3>
+                <h3 
+                  id="note-modal-title" 
+                  className="text-xl font-bold text-gray-800 dark:text-gray-100"
+                >
+                  {noteTitle}
+                </h3>
                 
-                {/* Display topic prominently */}
-                {note.topic && (
-                  <div className="mt-1">
+                {/* Display subject and topic with appropriate colors */}
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {note.subject && (
+                    <span className={`inline-block px-3 py-1 text-sm ${colorTheme.light} ${colorTheme.text} ${colorTheme.dark} ${colorTheme.darkText} rounded-full font-medium`}>
+                      {note.subject}
+                    </span>
+                  )}
+                  {note.topic && (
                     <span className="inline-block px-3 py-1 text-sm bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-full font-medium">
                       {note.topic}
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
               
               <button
@@ -391,9 +409,9 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
               {/* Metadata section */}
               <div className="mb-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {note.subject && (
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-md">
-                    <h4 className="text-xs font-medium text-blue-500 dark:text-blue-400">Subject</h4>
-                    <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">{note.subject}</p>
+                  <div className={`${colorTheme.light} ${colorTheme.dark} p-2 rounded-md`}>
+                    <h4 className={`text-xs font-medium ${colorTheme.text} ${colorTheme.darkText}`}>Subject</h4>
+                    <p className={`text-sm font-semibold ${colorTheme.text} ${colorTheme.darkText}`}>{note.subject}</p>
                   </div>
                 )}
                 
@@ -465,11 +483,12 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
       />
       
       {/* Flashcard Generator */}
-      <FlashcardGenerator
+      <FlashcardGenerator 
         isOpen={showFlashcards}
         onClose={() => setShowFlashcards(false)}
         noteContent={noteContent}
         noteTitle={noteTitle}
+        subject={note?.subject || ""}
       />
     </AnimatePresence>
   );

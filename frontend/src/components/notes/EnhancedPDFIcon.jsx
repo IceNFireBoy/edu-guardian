@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaFilePdf, FaCalendarAlt, FaBookOpen } from 'react-icons/fa';
+import { getSubjectColor } from './NoteCard';
 
 const EnhancedPDFIcon = ({ note, className = '' }) => {
   // Extract title and other metadata
@@ -23,14 +24,16 @@ const EnhancedPDFIcon = ({ note, className = '' }) => {
 
   // Get subject if available
   const subject = note.subject || '';
+  // Get the color theme for the subject
+  const colorTheme = getSubjectColor(subject);
   
   return (
     <div className={`enhanced-pdf-preview ${className}`}>
       {/* PDF content area */}
       <div className="pdf-content-area">
-        {/* "Biology" badge if subject is available */}
+        {/* Subject badge with appropriate color */}
         {subject && (
-          <div className="pdf-subject-badge">
+          <div className={`pdf-subject-badge ${colorTheme.light} ${colorTheme.text} ${colorTheme.dark} ${colorTheme.darkText}`}>
             <FaBookOpen className="inline-block mr-1 text-xs" />
             <span>{subject}</span>
           </div>
