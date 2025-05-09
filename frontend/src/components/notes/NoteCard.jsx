@@ -246,13 +246,8 @@ const NoteCard = ({ note, onView, compact = false }) => {
           whileHover={{ y: -5 }}
           className="bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden h-full flex flex-col"
         >
-          <div className="h-32 overflow-hidden bg-gray-100 dark:bg-slate-700 flex items-center justify-center relative">
-            {/* Subject color bar on the left */}
-            <div 
-              className="absolute left-0 top-0 h-full w-3" 
-              style={{ backgroundColor: `var(--${getSubjectColor(note.subject).text.replace('text-', '')})` }}
-            ></div>
-            
+          <div className="h-32 overflow-hidden bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+            {/* No subject color left bar */}
             {note.resource_type === 'image' || note.fileType === 'image' ? (
               <img 
                 src={getImageUrl()} 
@@ -273,6 +268,12 @@ const NoteCard = ({ note, onView, compact = false }) => {
           </div>
           
           <div className="p-3 flex-1 flex flex-col">
+            {/* Minimalist top border with subject color */}
+            <div 
+              className="w-16 h-0.5 mb-2 rounded-full"
+              style={{ backgroundColor: `var(--${getSubjectColor(note.subject).text.replace('text-', '')})` }}
+            ></div>
+            
             <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-1 line-clamp-1">
               {getTitle()}
             </h3>
@@ -312,11 +313,13 @@ const NoteCard = ({ note, onView, compact = false }) => {
         whileHover={{ y: -5 }}
         className="bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden"
       >
-        {/* Subject color bar at the top */}
-        <div 
-          className="w-full h-6" 
-          style={{ backgroundColor: `var(--${getSubjectColor(note.subject).text.replace('text-', '')})` }}
-        ></div>
+        {/* Minimalist header with subtle gradient */}
+        <div className="relative h-1 bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent">
+          <div 
+            className="absolute left-1/2 transform -translate-x-1/2 top-0 w-24 h-1 rounded-b-md"
+            style={{ backgroundColor: `var(--${getSubjectColor(note.subject).text.replace('text-', '')})` }}
+          ></div>
+        </div>
         
         <div className="h-40 overflow-hidden bg-gray-100 dark:bg-slate-700">
           {note.resource_type === 'image' || note.fileType === 'image' ? (
