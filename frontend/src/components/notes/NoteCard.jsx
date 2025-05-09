@@ -245,9 +245,14 @@ const NoteCard = ({ note, onView, compact = false }) => {
         <motion.div
           whileHover={{ y: -5 }}
           className="bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden h-full flex flex-col"
-          style={{ borderLeft: `4px solid var(--${getSubjectColor(note.subject).text.replace('text-', '')})` }}
         >
-          <div className="h-32 overflow-hidden bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+          <div className="h-32 overflow-hidden bg-gray-100 dark:bg-slate-700 flex items-center justify-center relative">
+            {/* Subject color bar on the left */}
+            <div 
+              className="absolute left-0 top-0 h-full w-3" 
+              style={{ backgroundColor: `var(--${getSubjectColor(note.subject).text.replace('text-', '')})` }}
+            ></div>
+            
             {note.resource_type === 'image' || note.fileType === 'image' ? (
               <img 
                 src={getImageUrl()} 
@@ -306,8 +311,13 @@ const NoteCard = ({ note, onView, compact = false }) => {
       <motion.div
         whileHover={{ y: -5 }}
         className="bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden"
-        style={{ borderTop: `4px solid var(--${getSubjectColor(note.subject).text.replace('text-', '')})` }}
       >
+        {/* Subject color bar at the top */}
+        <div 
+          className="w-full h-6" 
+          style={{ backgroundColor: `var(--${getSubjectColor(note.subject).text.replace('text-', '')})` }}
+        ></div>
+        
         <div className="h-40 overflow-hidden bg-gray-100 dark:bg-slate-700">
           {note.resource_type === 'image' || note.fileType === 'image' ? (
             <img 
