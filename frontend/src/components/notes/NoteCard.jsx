@@ -11,25 +11,25 @@ import EnhancedPDFIcon from './EnhancedPDFIcon';
 export const subjectColors = {
   'Biology': { bg: 'bg-red-500', light: 'bg-red-100', text: 'text-red-500', dark: 'dark:bg-red-900/30', darkText: 'dark:text-red-400' },
   'Business Mathematics': { bg: 'bg-blue-500', light: 'bg-blue-100', text: 'text-blue-500', dark: 'dark:bg-blue-900/30', darkText: 'dark:text-blue-400' },
-  'Calculus': { bg: 'bg-indigo-500', light: 'bg-indigo-100', text: 'text-indigo-500', dark: 'dark:bg-indigo-900/30', darkText: 'dark:text-indigo-400' },
+  'Calculus': { bg: 'bg-cyan-500', light: 'bg-cyan-100', text: 'text-cyan-500', dark: 'dark:bg-cyan-900/30', darkText: 'dark:text-cyan-400' },
   'Chemistry': { bg: 'bg-green-500', light: 'bg-green-100', text: 'text-green-500', dark: 'dark:bg-green-900/30', darkText: 'dark:text-green-400' },
-  'Computer': { bg: 'bg-cyan-500', light: 'bg-cyan-100', text: 'text-cyan-500', dark: 'dark:bg-cyan-900/30', darkText: 'dark:text-cyan-400' },
-  'Creative Writing': { bg: 'bg-pink-500', light: 'bg-pink-100', text: 'text-pink-500', dark: 'dark:bg-pink-900/30', darkText: 'dark:text-pink-400' },
+  'Computer': { bg: 'bg-slate-500', light: 'bg-slate-100', text: 'text-slate-500', dark: 'dark:bg-slate-900/30', darkText: 'dark:text-slate-400' },
+  'Creative Writing': { bg: 'bg-emerald-500', light: 'bg-emerald-100', text: 'text-emerald-500', dark: 'dark:bg-emerald-900/30', darkText: 'dark:text-emerald-400' },
   'Disciplines in the Social Sciences': { bg: 'bg-orange-500', light: 'bg-orange-100', text: 'text-orange-500', dark: 'dark:bg-orange-900/30', darkText: 'dark:text-orange-400' },
-  'Drafting': { bg: 'bg-slate-500', light: 'bg-slate-100', text: 'text-slate-500', dark: 'dark:bg-slate-900/30', darkText: 'dark:text-slate-400' },
-  'English': { bg: 'bg-indigo-500', light: 'bg-indigo-100', text: 'text-indigo-500', dark: 'dark:bg-indigo-900/30', darkText: 'dark:text-indigo-400' },
+  'Drafting': { bg: 'bg-neutral-500', light: 'bg-neutral-100', text: 'text-neutral-500', dark: 'dark:bg-neutral-900/30', darkText: 'dark:text-neutral-400' },
+  'English': { bg: 'bg-sky-500', light: 'bg-sky-100', text: 'text-sky-500', dark: 'dark:bg-sky-900/30', darkText: 'dark:text-sky-400' },
   'Filipino': { bg: 'bg-yellow-500', light: 'bg-yellow-100', text: 'text-yellow-500', dark: 'dark:bg-yellow-900/30', darkText: 'dark:text-yellow-400' },
-  'Fundamentals of Accounting': { bg: 'bg-emerald-500', light: 'bg-emerald-100', text: 'text-emerald-500', dark: 'dark:bg-emerald-900/30', darkText: 'dark:text-emerald-400' },
-  'General Mathematics': { bg: 'bg-blue-500', light: 'bg-blue-100', text: 'text-blue-500', dark: 'dark:bg-blue-900/30', darkText: 'dark:text-blue-400' },
-  'Introduction to World Religion': { bg: 'bg-violet-500', light: 'bg-violet-100', text: 'text-violet-500', dark: 'dark:bg-violet-900/30', darkText: 'dark:text-violet-400' },
+  'Fundamentals of Accounting': { bg: 'bg-zinc-500', light: 'bg-zinc-100', text: 'text-zinc-500', dark: 'dark:bg-zinc-900/30', darkText: 'dark:text-zinc-400' },
+  'General Mathematics': { bg: 'bg-violet-500', light: 'bg-violet-100', text: 'text-violet-500', dark: 'dark:bg-violet-900/30', darkText: 'dark:text-violet-400' },
+  'Introduction to World Religion': { bg: 'bg-stone-500', light: 'bg-stone-100', text: 'text-stone-500', dark: 'dark:bg-stone-900/30', darkText: 'dark:text-stone-400' },
   'Organization and Management': { bg: 'bg-amber-500', light: 'bg-amber-100', text: 'text-amber-500', dark: 'dark:bg-amber-900/30', darkText: 'dark:text-amber-400' },
-  'Photography': { bg: 'bg-sky-500', light: 'bg-sky-100', text: 'text-sky-500', dark: 'dark:bg-sky-900/30', darkText: 'dark:text-sky-400' },
-  'Physics': { bg: 'bg-purple-500', light: 'bg-purple-100', text: 'text-purple-500', dark: 'dark:bg-purple-900/30', darkText: 'dark:text-purple-400' },
-  'Religion': { bg: 'bg-violet-500', light: 'bg-violet-100', text: 'text-violet-500', dark: 'dark:bg-violet-900/30', darkText: 'dark:text-violet-400' },
+  'Photography': { bg: 'bg-rose-500', light: 'bg-rose-100', text: 'text-rose-500', dark: 'dark:bg-rose-900/30', darkText: 'dark:text-rose-400' },
+  'Physics': { bg: 'bg-fuchsia-500', light: 'bg-fuchsia-100', text: 'text-fuchsia-500', dark: 'dark:bg-fuchsia-900/30', darkText: 'dark:text-fuchsia-400' },
+  'Religion': { bg: 'bg-indigo-500', light: 'bg-indigo-100', text: 'text-indigo-500', dark: 'dark:bg-indigo-900/30', darkText: 'dark:text-indigo-400' },
   'Research': { bg: 'bg-teal-500', light: 'bg-teal-100', text: 'text-teal-500', dark: 'dark:bg-teal-900/30', darkText: 'dark:text-teal-400' },
   'Science': { bg: 'bg-lime-500', light: 'bg-lime-100', text: 'text-lime-500', dark: 'dark:bg-lime-900/30', darkText: 'dark:text-lime-400' },
-  'Social Science': { bg: 'bg-orange-500', light: 'bg-orange-100', text: 'text-orange-500', dark: 'dark:bg-orange-900/30', darkText: 'dark:text-orange-400' },
-  'Trends, Networks, and Critical Thinking': { bg: 'bg-fuchsia-500', light: 'bg-fuchsia-100', text: 'text-fuchsia-500', dark: 'dark:bg-fuchsia-900/30', darkText: 'dark:text-fuchsia-400' },
+  'Social Science': { bg: 'bg-pink-500', light: 'bg-pink-100', text: 'text-pink-500', dark: 'dark:bg-pink-900/30', darkText: 'dark:text-pink-400' },
+  'Trends, Networks, and Critical Thinking': { bg: 'bg-purple-500', light: 'bg-purple-100', text: 'text-purple-500', dark: 'dark:bg-purple-900/30', darkText: 'dark:text-purple-400' },
   'default': { bg: 'bg-gray-500', light: 'bg-gray-100', text: 'text-gray-500', dark: 'dark:bg-gray-700', darkText: 'dark:text-gray-400' }
 };
 
@@ -244,8 +244,8 @@ const NoteCard = ({ note, onView, compact = false }) => {
       return (
         <motion.div
           whileHover={{ y: -5 }}
-          className="bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden h-full flex flex-col border-l-4 border-t-0 border-r-0 border-b-0"
-          style={{ borderColor: `var(--${getSubjectColor(note.subject).text.replace('text-', '')})` }}
+          className="bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden h-full flex flex-col"
+          style={{ borderLeft: `4px solid var(--${getSubjectColor(note.subject).text.replace('text-', '')})` }}
         >
           <div className="h-32 overflow-hidden bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
             {note.resource_type === 'image' || note.fileType === 'image' ? (
@@ -305,8 +305,8 @@ const NoteCard = ({ note, onView, compact = false }) => {
     return (
       <motion.div
         whileHover={{ y: -5 }}
-        className="bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden border-t-4 border-l-0 border-r-0 border-b-0"
-        style={{ borderColor: `var(--${getSubjectColor(note.subject).text.replace('text-', '')})` }}
+        className="bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden"
+        style={{ borderTop: `4px solid var(--${getSubjectColor(note.subject).text.replace('text-', '')})` }}
       >
         <div className="h-40 overflow-hidden bg-gray-100 dark:bg-slate-700">
           {note.resource_type === 'image' || note.fileType === 'image' ? (

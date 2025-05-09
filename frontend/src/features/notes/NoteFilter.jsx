@@ -301,8 +301,8 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 50, opacity: 0 }}
-            className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border-t-4"
-            style={{ borderColor: note.subject ? `var(--${colorTheme.text.replace('text-', '')})` : 'var(--color-primary)' }}
+            className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+            style={{ borderTop: `4px solid ${note.subject ? `var(--${colorTheme.text.replace('text-', '')})` : 'var(--color-primary)'}` }}
             onClick={e => e.stopPropagation()}
             role="dialog"
             aria-labelledby="note-modal-title"
