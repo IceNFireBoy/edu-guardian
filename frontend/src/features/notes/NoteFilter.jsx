@@ -307,14 +307,6 @@ const NoteDetailModal = ({ note, isOpen, onClose }) => {
             aria-labelledby="note-modal-title"
             aria-modal="true"
           >
-            {/* Minimalist header with subtle gradient */}
-            <div className="relative h-1 bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent">
-              <div 
-                className="absolute left-1/2 transform -translate-x-1/2 top-0 w-24 h-1 rounded-b-md"
-                style={{ backgroundColor: note.subject ? `var(--${colorTheme.text.replace('text-', '')})` : 'var(--color-primary)' }}
-              ></div>
-            </div>
-            
             <div className="p-4 border-b dark:border-slate-700 flex justify-between items-center">
               <div>
                 <h3 
