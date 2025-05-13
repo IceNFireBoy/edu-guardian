@@ -1,5 +1,9 @@
 # EduGuardian 🎓✨
 
+[![Test Coverage](https://codecov.io/gh/yourusername/edu-guardian/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/edu-guardian)
+[![CI Status](https://github.com/IceNFireBoy/edu-guardian/workflows/Test%20%26%20Coverage/badge.svg)](https://github.com/IceNFireBoy/edu-guardian/actions)
+[![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=yourusername_edu-guardian&metric=alert_status)](https://sonarcloud.io/dashboard?id=yourusername_edu-guardian)
+
 A full-stack, modular academic dashboard for students. EduGuardian provides a gamified, secure, and filterable educational web app for uploading, managing, and discovering academic notes.
 
 ## Features

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
-import BadgeService from '../../services/BadgeService';
-import User, { IUser, IUserActivity } from '../../models/User';
-import Badge, { IBadge } from '../../models/Badge';
+import { BadgeService } from '../../services/BadgeService';
+import { Badge } from '../../models/Badge';
+import { User } from '../../models/User';
 import { mockUser, mockUserActivity } from '../factories/user.factory';
 import { mockBadge } from '../factories/badge.factory';
 import { NotFoundError } from '../../utils/customErrors';
@@ -26,6 +26,176 @@ function mockDate(isoDate: string) {
 }
 
 describe('BadgeService', () => {
+  beforeAll(async () => {
+    await mongoose.connect(process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/eduguardian_test');
+  });
+
+  afterAll(async () => {
+    await mongoose.connection.dropDatabase();
+    await mongoose.connection.close();
+  });
+
+  beforeEach(async () => {
+    await Badge.deleteMany({});
+    await User.deleteMany({});
+  });
+
+  describe('createBadge', () => {
+    it('should create a new badge', async () => {
+      const badgeData = {
+        name: 'Test Badge',
+        description: 'Test Description',
+        icon: 'test-icon',
+        category: 'engagement',
+        rarity: 'common',
+        level: 'bronze',
+        xpReward: 100
+      };
+
+      const badge = await BadgeService.createBadge(badgeData);
+
+      expect(badge).toBeDefined();
+      expect(badge.name).toBe(badgeData.name);
+      expect(badge.description).toBe(badgeData.description);
+      expect(badge.icon).toBe(badgeData.icon);
+      expect(badge.category).toBe(badgeData.category);
+      expect(badge.rarity).toBe(badgeData.rarity);
+      expect(badge.level).toBe(badgeData.level);
+      expect(badge.xpReward).toBe(badgeData.xpReward);
+      expect(badge.slug).toBe('test-badge');
+    });
+  });
+
+  describe('getBadges', () => {
+    it('should return all badges', async () => {
+      const badges = [
+        {
+          name: 'Badge 1',
+          description: 'Description 1',
+          icon: 'icon1',
+          category: 'engagement',
+          rarity: 'common',
+          level: 'bronze',
+          xpReward: 100
+        },
+        {
+          name: 'Badge 2',
+          description: 'Description 2',
+          icon: 'icon2',
+          category: 'achievement',
+          rarity: 'rare',
+          level: 'silver',
+          xpReward: 200
+        }
+      ];
+
+      await Badge.insertMany(badges);
+
+      const result = await BadgeService.getBadges();
+
+      expect(result).toHaveLength(2);
+      expect(result[0].name).toBe('Badge 1');
+      expect(result[1].name).toBe('Badge 2');
+    });
+  });
+
+  describe('getBadgeById', () => {
+    it('should return a badge by id', async () => {
+      const badge = await Badge.create({
+        name: 'Test Badge',
+        description: 'Test Description',
+        icon: 'test-icon',
+        category: 'engagement',
+        rarity: 'common',
+        level: 'bronze',
+        xpReward: 100
+      });
+
+      const result = await BadgeService.getBadgeById(badge._id);
+
+      expect(result).toBeDefined();
+      expect(result?.name).toBe('Test Badge');
+    });
+
+    it('should return null for non-existent badge', async () => {
+      const result = await BadgeService.getBadgeById(new mongoose.Types.ObjectId());
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('updateBadge', () => {
+    it('should update a badge', async () => {
+      const badge = await Badge.create({
+        name: 'Test Badge',
+        description: 'Test Description',
+        icon: 'test-icon',
+        category: 'engagement',
+        rarity: 'common',
+        level: 'bronze',
+        xpReward: 100
+      });
+
+      const updateData = {
+        name: 'Updated Badge',
+        description: 'Updated Description'
+      };
+
+      const updatedBadge = await BadgeService.updateBadge(badge._id, updateData);
+
+      expect(updatedBadge).toBeDefined();
+      expect(updatedBadge?.name).toBe('Updated Badge');
+      expect(updatedBadge?.description).toBe('Updated Description');
+      expect(updatedBadge?.slug).toBe('updated-badge');
+    });
+  });
+
+  describe('deleteBadge', () => {
+    it('should delete a badge', async () => {
+      const badge = await Badge.create({
+        name: 'Test Badge',
+        description: 'Test Description',
+        icon: 'test-icon',
+        category: 'engagement',
+        rarity: 'common',
+        level: 'bronze',
+        xpReward: 100
+      });
+
+      await BadgeService.deleteBadge(badge._id);
+
+      const deletedBadge = await Badge.findById(badge._id);
+      expect(deletedBadge).toBeNull();
+    });
+  });
+
+  describe('awardBadge', () => {
+    it('should award a badge to a user', async () => {
+      const user = await User.create({
+        name: 'Test User',
+        email: 'test@example.com',
+        password: 'password123'
+      });
+
+      const badge = await Badge.create({
+        name: 'Test Badge',
+        description: 'Test Description',
+        icon: 'test-icon',
+        category: 'engagement',
+        rarity: 'common',
+        level: 'bronze',
+        xpReward: 100
+      });
+
+      const result = await BadgeService.awardBadge(user._id, badge._id, 'Test criteria');
+
+      expect(result).toBeDefined();
+      expect(result.badges).toHaveLength(1);
+      expect(result.badges[0].badge.toString()).toBe(badge._id.toString());
+      expect(result.badges[0].criteriaMet).toBe('Test criteria');
+      expect(result.xp).toBe(100); // XP should be increased by badge's xpReward
+    });
+  });
+
   let badgeService: BadgeService;
   let testUser: IUser & { _id: mongoose.Types.ObjectId }; // Ensure _id is ObjectId for Mongoose ops
 

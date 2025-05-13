@@ -1,0 +1,66 @@
+name: Test & Coverage
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [backend, frontend]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: ${{ matrix.project }}/package-lock.json
+
+    - name: Install dependencies
+      run: |
+        cd ${{ matrix.project }}
+        npm ci
+
+    - name: Run tests with coverage
+      run: |
+        cd ${{ matrix.project }}
+        if [ "${{ matrix.project }}" = "backend" ]; then
+          npm run test:coverage
+        else
+          npm run test:coverage
+        fi
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        directory: ${{ matrix.project }}/coverage
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.project }}-coverage
+        path: ${{ matrix.project }}/coverage
+        retention-days: 7
+
+  sonarcloud:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} 

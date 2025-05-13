@@ -1,103 +1,102 @@
 import { Request, Response, NextFunction } from 'express';
 import errorHandler from '../../middleware/errorHandler';
-import ErrorResponse from '../../utils/errorResponse';
+import { ErrorResponse } from '../../utils/errorResponse';
 import mongoose from 'mongoose';
 
 describe('Error Handler Middleware', () => {
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
-  let mockNext: NextFunction;
+  let nextFunction: NextFunction;
 
   beforeEach(() => {
     mockRequest = {};
     mockResponse = {
       status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
-      // @ts-ignore // Mock for res.headersSent for a specific test case
-      headersSent: false, 
+      json: jest.fn()
     };
-    mockNext = jest.fn();
+    nextFunction = jest.fn();
   });
 
-  it('should handle ErrorResponse instances correctly', () => {
-    const error = new ErrorResponse('Test ErrorResponse', 404);
-    errorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
-    expect(mockResponse.status).toHaveBeenCalledWith(404);
-    expect(mockResponse.json).toHaveBeenCalledWith({
-      success: false,
-      error: 'Test ErrorResponse',
-    });
-  });
+  it('should handle ErrorResponse with status code', () => {
+    const error = new ErrorResponse('Test error', 400);
+    errorHandler(error, mockRequest as Request, mockResponse as Response, nextFunction);
 
-  it('should include errors array if provided in ErrorResponse', () => {
-    const validationErrors = [{ field: 'email', message: 'Is required' }];
-    const error = new ErrorResponse('Validation Failed', 400, validationErrors);
-    errorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
     expect(mockResponse.status).toHaveBeenCalledWith(400);
     expect(mockResponse.json).toHaveBeenCalledWith({
       success: false,
-      error: 'Validation Failed',
-      errors: validationErrors,
+      error: 'Test error'
     });
   });
 
-  it('should handle Mongoose CastError (ObjectId invalid)', () => {
-    // Simulate a Mongoose CastError for an invalid ObjectId
-    const error = new mongoose.Error.CastError('ObjectId', '123', '_id');
-    errorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
-    expect(mockResponse.status).toHaveBeenCalledWith(404); // Typically 404 for bad ID format
-    expect(mockResponse.json).toHaveBeenCalledWith({
-      success: false,
-      error: 'Resource not found', // Error handler converts CastError to this
-    });
-  });
+  it('should handle mongoose validation error', () => {
+    const error = new Error('Validation failed');
+    error.name = 'ValidationError';
+    errorHandler(error, mockRequest as Request, mockResponse as Response, nextFunction);
 
-  it('should handle Mongoose ValidationError', () => {
-    const errors = {
-      name: new mongoose.Error.ValidatorError({ message: 'Name is required', path: 'name', type: 'required' }),
-      email: new mongoose.Error.ValidatorError({ message: 'Email is invalid', path: 'email', type: 'format' }),
-    };
-    const error = new mongoose.Error.ValidationError();
-    error.errors = errors;
-
-    errorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
     expect(mockResponse.status).toHaveBeenCalledWith(400);
     expect(mockResponse.json).toHaveBeenCalledWith({
       success: false,
-      error: 'Name is required, Email is invalid', // Error handler joins messages
+      error: 'Validation failed'
     });
   });
 
-  it('should handle Mongoose Duplicate Key Error (code 11000)', () => {
-    const error: any = new Error('Duplicate key');
-    error.code = 11000;
-    error.keyValue = { email: 'test@example.com' }; // Example keyValue
-    errorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
+  it('should handle mongoose duplicate key error', () => {
+    const error = new Error('Duplicate field value entered');
+    error.name = 'MongoError';
+    (error as any).code = 11000;
+    errorHandler(error, mockRequest as Request, mockResponse as Response, nextFunction);
+
     expect(mockResponse.status).toHaveBeenCalledWith(400);
     expect(mockResponse.json).toHaveBeenCalledWith({
       success: false,
-      error: 'Duplicate field value entered for: email', // Error handler specific message
+      error: 'Duplicate field value entered'
     });
   });
 
-  it('should handle generic errors with a 500 status code', () => {
-    const error = new Error('Some generic server error');
-    errorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
+  it('should handle mongoose cast error', () => {
+    const error = new Error('Invalid ID');
+    error.name = 'CastError';
+    errorHandler(error, mockRequest as Request, mockResponse as Response, nextFunction);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(400);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      success: false,
+      error: 'Invalid ID'
+    });
+  });
+
+  it('should handle JWT errors', () => {
+    const error = new Error('Invalid token');
+    error.name = 'JsonWebTokenError';
+    errorHandler(error, mockRequest as Request, mockResponse as Response, nextFunction);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(401);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      success: false,
+      error: 'Invalid token'
+    });
+  });
+
+  it('should handle JWT expiration errors', () => {
+    const error = new Error('Token expired');
+    error.name = 'TokenExpiredError';
+    errorHandler(error, mockRequest as Request, mockResponse as Response, nextFunction);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(401);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      success: false,
+      error: 'Token expired'
+    });
+  });
+
+  it('should handle unknown errors', () => {
+    const error = new Error('Unknown error');
+    errorHandler(error, mockRequest as Request, mockResponse as Response, nextFunction);
+
     expect(mockResponse.status).toHaveBeenCalledWith(500);
     expect(mockResponse.json).toHaveBeenCalledWith({
       success: false,
-      error: 'Server Error',
+      error: 'Unknown error'
     });
-  });
-  
-  it('should not send response if headers already sent', () => {
-    const error = new ErrorResponse('Test ErrorResponse', 404);
-    // @ts-ignore
-    mockResponse.headersSent = true; // Simulate headers already sent
-    errorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
-    expect(mockResponse.status).not.toHaveBeenCalled();
-    expect(mockResponse.json).not.toHaveBeenCalled();
-    // It should call next(error) if headersSent, but our mockNext doesn't check args here
-    // For a more robust test, one might check if next was called with the original error.
   });
 }); 

@@ -1,58 +1,92 @@
-import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import dotenv from 'dotenv';
+import path from 'path';
 
-// Load environment variables
-dotenv.config({ path: './config/config.env' });
+// Load environment variables from .env.test
+dotenv.config({ path: path.join(__dirname, '../../.env.test') });
 
-// Set test environment
+// Set test environment variables
 process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'test-secret';
+process.env.JWT_EXPIRE = '1d';
+process.env.MONGODB_URI_TEST = process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/edu_guardian_test';
+process.env.PORT = '5001';
 
-// Extend timeout for database operations
-jest.setTimeout(60000); // Increase timeout to 60 seconds
-
-// Declare the variable in a wider scope
-let mongoServer: MongoMemoryServer;
-
-// Connect to test database
+// Global setup
 beforeAll(async () => {
+  if (!process.env.MONGODB_URI_TEST) {
+    throw new Error('MONGODB_URI_TEST environment variable is not set');
+  }
+
   try {
-    mongoServer = await MongoMemoryServer.create({
-      instance: {
-        dbName: 'eduguardian_test',
-        storageEngine: 'wiredTiger',
-      },
-      binary: {
-        version: '6.0.5', // Specify a more stable version
-        downloadDir: './.cache/mongodb-binaries', // Cache binaries between test runs
-      }
-    });
-    const mongoUri = mongoServer.getUri();
-    await mongoose.connect(mongoUri);
-    console.log('Connected to in-memory database');
+    await mongoose.connect(process.env.MONGODB_URI_TEST);
+    console.log('Connected to test database');
   } catch (error) {
-    console.error('Test database connection error:', error);
-    process.exit(1);
+    console.error('Error connecting to test database:', error);
+    throw error;
   }
 });
 
-// Clear database between tests
-beforeEach(async () => {
-  if (!mongoose.connection.db) {
-    throw new Error('Database not connected');
-  }
-  const collections = await mongoose.connection.db.collections();
-  for (const collection of collections) {
-    await collection.deleteMany({});
-  }
-});
-
-// Close database connection after all tests
+// Global teardown
 afterAll(async () => {
-  if (mongoose.connection) {
+  try {
+    if (mongoose.connection.db) {
+      await mongoose.connection.db.dropDatabase();
+      console.log('Test database dropped');
+    }
     await mongoose.connection.close();
+    console.log('Database connection closed');
+  } catch (error) {
+    console.error('Error during test cleanup:', error);
+    throw error;
   }
-  if (mongoServer) {
-    await mongoServer.stop();
+});
+
+// Clean up after each test
+afterEach(async () => {
+  try {
+    if (mongoose.connection.db) {
+      const collections = await mongoose.connection.db.collections();
+      for (const collection of collections) {
+        await collection.deleteMany({});
+      }
+      console.log('Collections cleaned up');
+    }
+  } catch (error) {
+    console.error('Error cleaning up collections:', error);
+    throw error;
   }
-}); 
+});
+
+// Mock OpenAI
+jest.mock('openai', () => ({
+  OpenAI: jest.fn().mockImplementation(() => ({
+    chat: {
+      completions: {
+        create: jest.fn().mockResolvedValue({
+          choices: [
+            {
+              message: {
+                content: 'Mock AI response',
+              },
+            },
+          ],
+        }),
+      },
+    },
+  })),
+}));
+
+// Mock Cloudinary
+jest.mock('cloudinary', () => ({
+  v2: {
+    config: jest.fn(),
+    uploader: {
+      upload: jest.fn().mockResolvedValue({
+        secure_url: 'https://mock-cloudinary-url.com/image.jpg',
+        public_id: 'mock-public-id',
+      }),
+      destroy: jest.fn().mockResolvedValue({ result: 'ok' }),
+    },
+  },
+})); 

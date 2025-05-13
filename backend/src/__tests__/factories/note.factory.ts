@@ -75,7 +75,7 @@ export const mockNote = (overrides?: Partial<INote>): INote => {
     isModified: jest.fn().mockReturnValue(false),
   } as any;
 
-  const mergedNote = { ...defaultNote, ...overrides };
+  const mergedNote = { ...defaultNote, ...overrides } as INote;
   mergedNote.id = mergedNote._id.toString();
 
   // If user is provided as a full object, use its _id

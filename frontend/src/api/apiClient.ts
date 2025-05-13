@@ -13,12 +13,12 @@ const apiClient = axios.create({
 });
 
 // Function to call authenticated endpoints
-export const callAuthenticatedApi = async (
+export const callAuthenticatedApi = async <T>(
   endpoint: string,
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
   data: any = null,
   headers: any = {}
-) => {
+): Promise<T> => {
   try {
     const config = {
       headers: {

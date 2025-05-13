@@ -1,20 +1,21 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import jwt, { SignOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
 // Interface for individual badge entry in user's badges array
 export interface IUserBadge extends Document { // Can be a sub-document if not needing _id, or just an object type
   badge: mongoose.Types.ObjectId; // Reference to Badge model
   earnedAt: Date;
+  criteriaMet: string;
 }
 
 // Interface for individual activity entry
 export interface IUserActivity extends Document { // Sub-document or object type
-  action: 'upload' | 'download' | 'comment' | 'rate' | 'share' | 'login' | 'earn_badge' | 'earn_xp' | 'ai_summary_generated' | 'ai_flashcards_generated';
-  description?: string;
-  xpEarned: number;
-  createdAt: Date;
+  action: 'study' | 'comment' | 'upload' | 'download' | 'rate' | 'share' | 'login' | 'earn_badge' | 'earn_xp' | 'ai_summary_generated' | 'ai_flashcards_generated';
+  description: string;
+  xpEarned?: number;
+  timestamp: Date;
 }
 
 // Interface for individual subject entry
@@ -43,6 +44,7 @@ export interface IUser extends Document {
     max: number;
     lastUsed: Date;
   };
+  lastActive: Date;
   badges: IUserBadge[];
   activity: IUserActivity[];
   subjects: IUserSubject[];
@@ -58,7 +60,9 @@ export interface IUser extends Document {
   };
   totalSummariesGenerated: number; // Added for lifetime count
   totalFlashcardsGenerated: number; // Added for lifetime count
+  favoriteNotes: mongoose.Types.ObjectId[];
   createdAt: Date;
+  updatedAt: Date;
 
   // Instance Methods (declare signatures)
   getSignedJwtToken(): string;
@@ -67,7 +71,7 @@ export interface IUser extends Document {
   getEmailVerificationToken(): string;
   calculateLevel(): number;
   updateStreak(): number;
-  addActivity(action: IUserActivity['action'], description?: string, xpEarned?: number): IUserActivity;
+  addActivity(action: IUserActivity['action'], description: string, xpEarned?: number): void;
 }
 
 // User Schema
@@ -84,7 +88,7 @@ const UserSchema = new Schema<IUser>(
       required: [true, 'Please add an email'],
       unique: true,
       match: [
-        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
         'Please add a valid email'
       ]
     },
@@ -125,22 +129,27 @@ const UserSchema = new Schema<IUser>(
       max: { type: Number, default: 0 },
       lastUsed: { type: Date, default: Date.now }
     },
+    lastActive: {
+      type: Date,
+      default: Date.now
+    },
     badges: [
       {
         badge: { type: Schema.Types.ObjectId, ref: 'Badge' },
-        earnedAt: { type: Date, default: Date.now }
+        earnedAt: { type: Date, default: Date.now },
+        criteriaMet: { type: String, required: true }
       }
     ],
     activity: [
       {
         action: {
           type: String,
-          enum: ['upload', 'download', 'comment', 'rate', 'share', 'login', 'earn_badge', 'earn_xp', 'ai_summary_generated', 'ai_flashcards_generated'],
+          enum: ['study', 'comment', 'upload', 'download', 'rate', 'share', 'login', 'earn_badge', 'earn_xp', 'ai_summary_generated', 'ai_flashcards_generated'],
           required: true
         },
         description: String,
         xpEarned: { type: Number, default: 0 },
-        createdAt: { type: Date, default: Date.now }
+        timestamp: { type: Date, default: Date.now }
       }
     ],
     subjects: [
@@ -161,7 +170,9 @@ const UserSchema = new Schema<IUser>(
     },
     totalSummariesGenerated: { type: Number, default: 0 }, // Added for lifetime count
     totalFlashcardsGenerated: { type: Number, default: 0 }, // Added for lifetime count
-    createdAt: { type: Date, default: Date.now }
+    favoriteNotes: [{ type: Schema.Types.ObjectId, ref: 'Note' }],
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
   },
   { // Schema options
     timestamps: true, // if you want Mongoose to add createdAt and updatedAt automatically
@@ -202,7 +213,7 @@ UserSchema.methods.getSignedJwtToken = function(this: IUser): string {
 };
 
 // Match user entered password to hashed password in database
-UserSchema.methods.matchPassword = async function(this: IUser, enteredPassword: string): Promise<boolean> {
+UserSchema.methods.matchPassword = async function(enteredPassword: string): Promise<boolean> {
   if (!this.password) return false; // Should not happen if password is required
   return await bcrypt.compare(enteredPassword, this.password);
 };
@@ -264,27 +275,27 @@ UserSchema.methods.updateStreak = function(this: IUser): number {
 UserSchema.methods.addActivity = function(
   this: IUser, 
   action: IUserActivity['action'], 
-  description: string = '', 
+  description: string, 
   xpEarned: number = 0
-): IUserActivity {
+): void {
   const newActivity: IUserActivity = {
     action,
     description,
     xpEarned,
-    createdAt: new Date()
+    timestamp: new Date()
   } as IUserActivity; // Type assertion
 
   this.activity.unshift(newActivity);
-
-  if (this.activity.length > 100) {
-    this.activity = this.activity.slice(0, 100);
-  }
 
   if (xpEarned > 0) {
     this.xp += xpEarned;
     this.calculateLevel();
   }
-  return this.activity[0];
+
+  // Keep only the last 100 activities
+  if (this.activity.length > 100) {
+    this.activity = this.activity.slice(0, 100);
+  }
 };
 
 // Static model type
