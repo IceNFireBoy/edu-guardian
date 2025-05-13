@@ -1,0 +1,30 @@
+# Netlify configuration file
+
+# Build settings
+[build]
+  # Base directory to be used
+  base = "."
+  # Directory where production-ready files will be located
+  publish = "dist"
+  # Command to run after build
+  command = "npm run build"
+
+# Redirects and headers
+[[headers]]
+  # Define headers for all files
+  for = "/*"
+  [headers.values]
+    # Content-Security-Policy defined in _headers file takes precedence
+    # Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; connect-src 'self' https://edu-guardian-backend.onrender.com https://res.cloudinary.com; img-src 'self' data: blob: https://res.cloudinary.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://res.cloudinary.com; object-src 'self' https://res.cloudinary.com; worker-src 'self' blob:;"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    # Enable cross-origin isolation for SharedArrayBuffer (if needed by PDF.js)
+    Cross-Origin-Embedder-Policy = "require-corp"
+    Cross-Origin-Opener-Policy = "same-origin"
+
+# SPA redirect for client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200 

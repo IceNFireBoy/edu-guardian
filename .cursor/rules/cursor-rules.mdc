@@ -1,0 +1,48 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# .cursor/rules
+
+Always read [EduGuardian_Project_Context_Rules.md](mdc:EduGuardian_Project_Context_Rules.md), [EduGuardian_Todo_AI_Features.md](mdc:EduGuardian_Todo_AI_Features.md) and all the README.md or .md files in general for context in ALL prompts
+
+frontend:
+  components:
+    naming: "PascalCase (filename = component name, e.g. MyButton.jsx)"
+    fileStructure: "feature-based grouping; each feature folder contains related components, hooks, and styles"
+    hooks:
+      naming: "use prefix, camelCase (e.g. useAuth)"
+      usage: "Extract reusable logic into custom hooks"
+    styles: "Use CSS modules or styled-components; filename matches component"
+
+backend:
+  controllers:
+    naming: "PascalCase with 'Controller' suffix (e.g. UserController.js)"
+    location: "controllers/ directory"
+  services:
+    naming: "PascalCase with 'Service' suffix (e.g. EmailService.js)"
+    location: "services/ directory"
+    role: "Contain business logic, called by controllers"
+  routes:
+    naming: "kebab-case (e.g. users.js for /users endpoints)"
+    location: "routes/ directory"
+    convention: "Define HTTP methods; map to controller methods"
+  models:
+    naming: "PascalCase for schema files (e.g. User.js)"
+    location: "models/ directory"
+  middleware:
+    naming: "camelCase (e.g. authMiddleware.js, errorHandler.js)"
+    location: "middleware/ directory"
+    usage: "Stateless functions, use next()"
+  utils:
+    naming: "camelCase or kebab-case for helper files"
+    location: "utils/ directory"
+  env:
+    usage: "All secrets/config in .env; no hard-coded credentials"
+  general:
+    style: "ESLint and Prettier formatting (2-space indent, semicolons off)"
+    imports: "Absolute paths or module aliases (no deep relative imports)"
+    files: "Limit files to ~200 lines; split large files"
+
+After performing all tasks, kindly refer to [PROJECT_TASKS.md](mdc:docs/PROJECT_TASKS.md) and update it dynamically after every prompt. Edit the document so it remaains updated and relevant.

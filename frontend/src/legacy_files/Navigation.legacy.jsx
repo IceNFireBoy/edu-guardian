@@ -1,0 +1,3 @@
+// This Navigation.jsx component appears to be superseded by Header.tsx and Sidebar.tsx.
+// Moved to legacy_files for reference during the TS refactor.
+// ... existing code ... 

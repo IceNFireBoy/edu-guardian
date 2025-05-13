@@ -1,0 +1,732 @@
+import Note, { INote } from '../models/Note';
+import User, { IUser } from '../models/User'; // For user-related operations if needed
+import { NotFoundError, BadRequestError, QuotaExceededError } from '../utils/customErrors'; // Import if needed directly
+import userService from './UserService'; // Import UserService instance
+import BadgeService from './BadgeService'; // Import BadgeService
+import ErrorResponse from '../utils/errorResponse';
+import { FilterQuery, PopulateOptions } from 'mongoose';
+import { extractTextFromFile } from '../utils/extractTextFromFile';
+import OpenAI from 'openai';
+import { OPENAI_CHAT_MODEL, AI_FEATURE_TYPES, FLASHCARD_DIFFICULTY_LEVELS, IUserBadgeEarnedAPIResponse } from '../config/constants'; // Import constants & new type
+import { IBadge } from '../models/Badge'; // Implied import for IBadge type
+
+// Define a type for the response of AI generation methods that includes newly awarded badges
+interface AIGenerationResponse<T> {
+  data: T;
+  newlyAwardedBadges: IUserBadgeEarnedAPIResponse[]; // Using a specific type for API response
+}
+
+// For multer file type
+interface MulterFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  destination: string;
+  filename: string;
+  path: string;
+  buffer: Buffer;
+}
+
+// Define a type for pagination options
+interface PaginationOptions {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+// Define a type for note query filters
+export interface NoteQueryFilters extends FilterQuery<INote> {
+  grade?: string;
+  subject?: string;
+  semester?: string;
+  quarter?: string;
+  topic?: string;
+  // Add other filterable fields from INote as needed
+}
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+class NoteService {
+  public async getAllNotes(
+    filters: NoteQueryFilters,
+    pagination: PaginationOptions
+  ): Promise<{ notes: INote[], count: number, totalPages: number, currentPage: number }> {
+    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = pagination;
+    const skip = (page - 1) * limit;
+
+    // Build query
+    let query = Note.find(filters);
+
+    // Sorting
+    const sort: { [key: string]: 1 | -1 } = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    query = query.sort(sort);
+
+    // Pagination
+    query = query.skip(skip).limit(limit);
+
+    // Populate user details (example, adjust fields as needed)
+    const userPopulateOptions: PopulateOptions = {
+        path: 'user',
+        select: 'name username profileImage' // Select specific fields from the user
+    };
+    query = query.populate(userPopulateOptions);
+    
+    // Optionally populate ratings.user as well if needed for display
+    // const ratingsUserPopulateOptions: PopulateOptions = {
+    //     path: 'ratings.user',
+    //     select: 'name username'
+    // };
+    // query = query.populate(ratingsUserPopulateOptions);
+
+    // Lean for performance if not modifying docs
+    query = query.lean() as any; // Type assertion to resolve compatibility issue
+
+    const notes = await query.exec();
+    const count = await Note.countDocuments(filters);
+    const totalPages = Math.ceil(count / limit);
+
+    return { notes, count, totalPages, currentPage: page };
+  }
+
+  public async getNoteById(noteId: string): Promise<INote | null> {
+    const note = await Note.findById(noteId)
+                           .populate({ path: 'user', select: 'name username profileImage' })
+                           // .populate({ path: 'ratings.user', select: 'name username' })
+                           .lean(); // Using lean if no save operations after fetch
+
+    if (!note) {
+      // ErrorResponse will be thrown by controller if service returns null
+      return null;
+    }
+
+    // Increment view count (if not using lean() or handle separately)
+    // If using lean, this update needs to be a separate operation
+    await Note.findByIdAndUpdate(noteId, { $inc: { viewCount: 1 } });
+
+    // Re-fetch if you need the absolute latest viewCount and still want to use lean for the main fetch
+    // Or, return note and increment viewCount in the background (less critical for immediate response)
+    // For simplicity here, we assume viewCount on the initially fetched lean doc is acceptable for response.
+    // To return the updated doc, remove .lean() or re-fetch.
+    
+    return { ...note, viewCount: (note.viewCount || 0) + 1 }; // Manually increment for lean response
+  }
+
+  public async createNote(noteData: Partial<INote>, userId: string): Promise<INote> {
+    // Ensure the user ID is added to the note data
+    const dataToSave: Partial<INote> = {
+      ...noteData,
+      user: userId as any // mongoose.Types.ObjectId will be handled by Mongoose
+    };
+
+    // Title, subject, grade, semester, quarter, topic, fileUrl, fileType, fileSize are required by schema/routes
+    // Other fields like description, tags are optional
+    // slug will be auto-generated by pre-save hook
+    // viewCount, downloadCount, averageRating, ratings, flashcards, aiSummary will have defaults or be empty initially
+
+    const note = await Note.create(dataToSave);
+    // No need to manually populate user here as we are creating.
+    // If client needs populated user immediately, a separate getById call might be cleaner or adjust response.
+    return note;
+  }
+
+  public async updateNoteById(noteId: string, userId: string, noteData: Partial<INote>): Promise<INote | null> {
+    let note = await Note.findById(noteId);
+
+    if (!note) {
+      return null; // Controller will send 404
+    }
+
+    // Check ownership
+    // Convert note.user (which could be ObjectId) to string for comparison
+    if (note.user.toString() !== userId) {
+      // Throw an error that will be caught by asyncHandler and passed to the error handler
+      // This results in a 401 or 403, which is more appropriate than returning null here
+      throw new ErrorResponse('User not authorized to update this note', 401);
+    }
+
+    // Update allowed fields
+    // Client should only send fields they intend to change.
+    // Fields like 'user', 'slug' (unless title changes), 'ratings', 'averageRating', 'flashcards', 'aiSummary' 
+    // 'viewCount', 'downloadCount' are generally not updated directly via this method.
+    // 'fileUrl', 'fileType', 'fileSize' might be updated if a new file is uploaded, handled separately or here.
+    // For simplicity, allowing update of most textual and descriptive fields. 
+    // More granular control can be added if needed.
+
+    // List of fields that can be updated by the user:
+    const updatableFields: (keyof INote)[] = [
+        'title',
+        'description',
+        'subject',
+        'grade',
+        'semester',
+        'quarter',
+        'topic',
+        'tags',
+        'isPublic',
+        // If file re-upload is part of this, add fileUrl, fileType, fileSize, publicId, assetId
+        'fileUrl', 
+        'fileType',
+        'fileSize',
+        'publicId',
+        'assetId'
+    ];
+
+    let hasChanges = false;
+    for (const field of updatableFields) {
+        if (noteData[field] !== undefined && noteData[field] !== (note as any)[field]) {
+            (note as any)[field] = noteData[field];
+            if (field === 'title') {
+                // If title changes, slug should be regenerated by pre-save hook
+                note.isModified('title'); // Mark title as modified for pre-save hook
+            }
+            hasChanges = true;
+        }
+    }
+
+    if (!hasChanges) {
+        // If no actual changes to updatable fields, just return the current note
+        // Or, could throw an error/return specific message indicating no changes were made.
+        return note;
+    }
+
+    // The pre-save hook for slug and averageRating (if ratings were part of updateData, which they are not here)
+    // will run automatically upon saving.
+    note = await note.save();
+    
+    // Optionally, populate user details after saving if needed for the response
+    // await note.populate({ path: 'user', select: 'name username profileImage' });
+
+    return note;
+  }
+
+  public async deleteNoteById(noteId: string, userId: string): Promise<INote | null> {
+    const note = await Note.findById(noteId);
+    if (!note) {
+      return null; // Controller will handle 404
+    }
+    if (note.user.toString() !== userId) {
+      throw new ErrorResponse('User not authorized to delete this note', 401);
+    }
+    // Instead of remove, which is deprecated, use deleteOne or findByIdAndDelete
+    // await note.remove(); deprecated
+    await Note.findByIdAndDelete(noteId);
+    return note; // Return the note that was deleted
+  }
+
+  public async getUserNotes(userId: string): Promise<INote[]> {
+    // Add population for user details if needed on these notes
+    const notes = await Note.find({ user: userId }).lean();
+    return notes;
+  }
+
+  public async getMyNotes(userId: string): Promise<INote[]> {
+     // Similar to getUserNotes, but could have different logic if "my notes" implies more
+    const notes = await Note.find({ user: userId })
+                            .populate({ path: 'user', select: 'name username profileImage' })
+                            .lean();
+    return notes;
+  }
+
+  public async getTopRatedNotes(limit: number = 10): Promise<INote[]> {
+    const notes = await Note.find({ isPublic: true }) // Assuming only public notes
+                            .sort({ averageRating: -1 })
+                            .limit(limit)
+                            .populate({ path: 'user', select: 'name username profileImage' })
+                            .lean();
+    return notes;
+  }
+
+  public async getNotesBySubject(subject: string): Promise<INote[]> {
+    const notes = await Note.find({ subject: subject, isPublic: true }) // Assuming public notes
+                            .populate({ path: 'user', select: 'name username profileImage' })
+                            .lean();
+    return notes;
+  }
+
+  public async addFlashcardsToNote(noteId: string, userId: string, flashcardsData: Array<{ question: string; answer: string; difficulty?: 'easy' | 'medium' | 'hard' }>): Promise<INote | null> {
+    const note = await Note.findById(noteId);
+    if (!note) {
+      return null;
+    }
+    if (note.user.toString() !== userId) {
+      throw new ErrorResponse('User not authorized to add flashcards to this note', 401);
+    }
+    
+    // Add new flashcards to the existing ones
+    flashcardsData.forEach(fc => {
+        note.flashcards.push({
+            question: fc.question,
+            answer: fc.answer,
+            difficulty: fc.difficulty || 'medium', // Default difficulty
+        } as any); // Cast to any to satisfy INoteFlashcard structure if subdocument _id is an issue
+    });
+    
+    await note.save();
+    return note;
+  }
+
+  public async searchNotes(searchTerm: string): Promise<INote[]> {
+    // Basic text search, can be expanded with more specific fields or regex
+    const notes = await Note.find({ 
+        $text: { $search: searchTerm }, 
+        isPublic: true 
+    })
+    .populate({ path: 'user', select: 'name username profileImage' })
+    .lean();
+    return notes;
+  }
+
+  public async uploadNoteFile(noteId: string, userId: string, file: MulterFile): Promise<INote | null> {
+    // This is a placeholder. Actual implementation will involve:
+    // 1. Uploading file to a cloud storage (e.g., Cloudinary, S3)
+    // 2. Getting the URL and other details from the storage service
+    // 3. Updating the note document with these details (fileUrl, fileSize, fileType, publicId, assetId)
+    // console.log('File upload service method called for note:', noteId, 'by user:', userId); // Removed
+    // console.log('File details:', file); // Removed
+
+    const note = await Note.findById(noteId);
+    if (!note) {
+        throw new ErrorResponse('Note not found', 404);
+    }
+    if (note.user.toString() !== userId) {
+        throw new ErrorResponse('User not authorized to upload file for this note', 401);
+    }
+
+    // Example update (replace with actual file handling logic)
+    note.fileUrl = `https://example.com/uploads/${file.filename}`; // Placeholder URL
+    note.fileType = file.mimetype.split('/')[1] as INote['fileType']; // Basic type extraction
+    note.fileSize = file.size;
+    // note.publicId = ... // from cloudinary or other service
+    // note.assetId = ... // from cloudinary or other service
+    
+    await note.save();
+    return note.populate({ path: 'user', select: 'name username profileImage' });
+  }
+
+  public async getNotesByFilters(filters: any): Promise<INote[]> {
+    // This is a placeholder. Implementation depends on how 'filters' string is structured.
+    // Needs parsing and conversion into a Mongoose query object.
+    console.log('getNotesByFilters called with:', filters);
+    // Example: if filters is a JSON string of NoteQueryFilters
+    try {
+        const parsedFilters: NoteQueryFilters = typeof filters === 'string' ? JSON.parse(filters) : filters;
+        parsedFilters.isPublic = true; // Assuming only public notes
+        const notes = await Note.find(parsedFilters)
+                                .populate({ path: 'user', select: 'name username profileImage' })
+                                .lean();
+        return notes;
+    } catch (error) {
+        throw new ErrorResponse('Invalid filters format', 400);
+    }
+  }
+
+  public async rateNote(noteId: string, userId: string, ratingValue: number): Promise<INote | null> {
+    const note = await Note.findById(noteId);
+    if (!note) return null;
+
+    // Check if the user has already rated this note
+    const existingRatingIndex = note.ratings.findIndex(r => r.user.toString() === userId);
+
+    if (existingRatingIndex >= 0) {
+      // Update existing rating
+      note.ratings[existingRatingIndex].value = ratingValue;
+    } else {
+      // Add new rating using a MongoDB update operation instead of push
+      await Note.findByIdAndUpdate(
+        noteId,
+        { $push: { ratings: { user: userId, value: ratingValue } } }
+      );
+      
+      // Reload the note with the new rating
+      const updatedNote = await Note.findById(noteId);
+      if (!updatedNote) return null;
+      
+      // Recalculate average rating
+      updatedNote.getAverageRating();
+      await updatedNote.save();
+      return updatedNote;
+    }
+
+    // Don't need this if we're using the update approach above
+    note.getAverageRating();
+    await note.save();
+    return note;
+  }
+
+  public async incrementDownloads(noteId: string, userId: string): Promise<INote | null> {
+    // userId might be used for logging or restrictions, not strictly needed for incrementing
+    const note = await Note.findByIdAndUpdate(
+      noteId, 
+      { $inc: { downloadCount: 1 } },
+      { new: true } // Return the updated document
+    ).populate({ path: 'user', select: 'name username profileImage' }).lean();
+    
+    if (!note) {
+        return null;
+    }
+    return note;
+  }
+
+  public async createFlashcardForNote(noteId: string, userId: string, question: string, answer: string, difficulty: 'easy' | 'medium' | 'hard' = 'medium'): Promise<INote | null> {
+    const note = await Note.findById(noteId);
+    if (!note) {
+      return null;
+    }
+    if (note.user.toString() !== userId) {
+      throw new ErrorResponse('User not authorized to add flashcards to this note', 401);
+    }
+    note.flashcards.push({ question, answer, difficulty } as any);
+    await note.save();
+    return note.populate({ path: 'user', select: 'name username profileImage' });
+  }
+
+  public async generateAISummaryForNote(noteId: string, userId: string): Promise<AIGenerationResponse<Partial<INote>>> {
+    console.log(`[NoteService] Attempting to generate AI summary for note ${noteId} by user ${userId}`);
+
+    // 0. Fetch user for activity logging
+    const user = await User.findById(userId);
+    if (!user) {
+        // This should ideally not happen if userId is validated upstream or by checkUserQuota
+        throw new NotFoundError('User not found for AI summary generation');
+    }
+
+    // 1. Check user's AI quota using UserService
+    try {
+      await userService.checkUserQuota(userId, 'summary');
+    } catch (error) {
+      if (error instanceof QuotaExceededError) {
+        console.warn(`[NoteService] Quota exceeded for user ${userId} for summary generation.`);
+        // Let the error propagate to be handled by the controller/error middleware
+      }
+      // Rethrow to ensure it's caught by the global error handler or controller
+      throw error;
+    }
+
+    const note = await Note.findById(noteId).populate('user');
+    if (!note) {
+      console.error(`[NoteService] Note with ID ${noteId} not found for AI summary generation.`);
+      throw new NotFoundError('Note not found');
+    }
+
+    // Check ownership or if user is admin (optional, depending on rules for AI generation)
+    // if (note.user._id.toString() !== userId && (note.user as IUser).role !== 'admin') {
+    //   throw new ForbiddenError('User not authorized to generate summary for this note');
+    // }
+    
+    console.log(`[NoteService] Note found: ${note.title}. Extracting text content.`);
+
+    let content = '';
+    try {
+      content = await extractTextFromFile(note.fileUrl);
+      if (!content || content.trim().length === 0) {
+        throw new ErrorResponse('No content found in the note file to summarize.', 400);
+      }
+    } catch (err: any) {
+      console.error('[AI] Text extraction failed:', err.message);
+      if (err instanceof ErrorResponse) throw err;
+      throw new ErrorResponse('Failed to extract text from note file. The file might be corrupted or in an unsupported format.', 500);
+    }
+
+    let summary = '';
+    let keyPoints: string[] = [];
+
+    try {
+      const prompt = `Generate a concise summary (around 150-200 words) and 3-5 key bullet points for the provided academic note content. 
+      Return a valid JSON object with "summary" (string) and "keyPoints" (array of strings) keys. 
+      Example: {"summary":"The note discusses cell division...","keyPoints":["Mitosis results in two identical daughter cells. Sourced from page 1.","Meiosis leads to genetic variation. Sourced from page 3."]}
+      Content:\n\n${content.slice(0, 12000)}`; // Max length based on typical context limits
+      
+      const response = await openai.chat.completions.create({
+        model: OPENAI_CHAT_MODEL, // Use constant
+        messages: [
+          { role: 'system', content: 'You are an expert academic summarizer. Respond ONLY with a valid JSON object as specified.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 500, // Adjusted based on expected output length
+        temperature: 0.5
+      });
+
+      const rawResponse = response.choices[0].message.content?.trim();
+      if (!rawResponse) {
+        throw new Error('OpenAI returned an empty response.');
+      }
+
+      try {
+        const parsedResponse = JSON.parse(rawResponse);
+        summary = parsedResponse.summary || '';
+        keyPoints = Array.isArray(parsedResponse.keyPoints) ? parsedResponse.keyPoints : [];
+        if (!summary && keyPoints.length === 0) {
+            throw new Error('AI generated an empty summary and no key points.');
+        }
+      } catch (parseError: any) {
+        console.error('[AI] Failed to parse JSON response from OpenAI:', rawResponse, parseError.message);
+        // Fallback: try to extract summary if JSON parsing fails and response is just a string
+        if (typeof rawResponse === 'string' && !rawResponse.startsWith('{')) {
+            summary = rawResponse; // Assume the entire response is the summary
+            keyPoints = []; // No key points if parsing failed
+        } else {
+            throw new Error('AI returned a response in an unexpected format.');
+        }
+      }
+
+    } catch (err: any) {
+      console.error('[AI] OpenAI summarization failed:', err.message);
+      // More specific error messages based on error type could be added here
+      if (err.response && err.response.status === 401) {
+        throw new ErrorResponse('AI service authentication failed. Please check API key configuration.', 500);
+      }
+      if (err.response && err.response.status === 429) {
+        throw new ErrorResponse('AI service rate limit hit or quota exceeded on their end. Please try again later.', 503);
+      }
+      throw new ErrorResponse(`AI summarization service failed: ${err.message || 'Unknown error'}`, 500);
+    }
+
+    note.aiSummary = {
+      content: summary,
+      generatedAt: new Date(),
+      modelUsed: OPENAI_CHAT_MODEL, // Store the model used
+    };
+    await note.save();
+    console.log(`[NoteService] AI summary generated and saved successfully for note ${noteId}.`);
+
+    // 2. Increment AI usage (also increments lifetime totals in UserService)
+    await userService.incrementAIUsage(userId, 'summary');
+    
+    // 3. Log activity
+    user.addActivity('ai_summary_generated', `Generated AI summary for note: ${note.title || noteId}`, 0); // XP for badge, not for action itself
+
+    // 4. Update user's AI streak (this will also save the user initially)
+    const updatedUser = await userService.updateUserAIStreak(userId); // userService saves the user
+
+    // 5. Check for badges related to summary generation and streak
+    const badgeService = new BadgeService(); // Instantiate BadgeService
+    const newlyAwardedSummaryBadges = await badgeService.checkAndAwardBadges(userId, 'ai_summary_generated', { noteId, title: note.title });
+    const newlyAwardedStreakBadges = await badgeService.checkAndAwardBadges(userId, 'ai_streak', { currentStreak: updatedUser.streak.current });
+    
+    const allNewlyAwardedBadges = [...newlyAwardedSummaryBadges, ...newlyAwardedStreakBadges].filter((v,i,a)=>a.findIndex(t=>(t.badge.toString() === v.badge.toString()))===i); // Deduplicate
+
+    // User object might have been modified by badge service (XP, new badges), so save if not done by badgeService or streak.
+    // BadgeService saves the user if badges are awarded. updateUserAIStreak also saves.
+    // If BadgeService didn't save and streak didn't change, an explicit save might be needed if addActivity doesn't save.
+    // User.addActivity pushes to an array; save is needed to persist.
+    // Since updateUserAIStreak saves, and badgeService.checkAndAwardBadges saves, this should be covered.
+    // Let's ensure addActivity changes are saved. The save in updateUserAIStreak should cover it.
+
+    return { 
+      data: { _id: note._id, aiSummary: note.aiSummary }, 
+      newlyAwardedBadges: allNewlyAwardedBadges.map(b => {
+        const populatedBadge = b.badge as unknown as IBadge; // b.badge is now populated IBadge
+        return {
+          badgeId: populatedBadge._id.toString(),
+          name: populatedBadge.name,
+          icon: populatedBadge.icon,
+          level: populatedBadge.level,
+          xpReward: populatedBadge.xpReward
+        };
+      })
+    };
+  }
+
+  public async generateAIFlashcardsForNote(noteId: string, userId: string): Promise<AIGenerationResponse<Pick<INote, 'flashcards'>>> {
+    console.log(`[NoteService] Attempting to generate AI flashcards for note ${noteId} by user ${userId}`);
+
+    // 0. Fetch user for activity logging
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new NotFoundError('User not found for AI flashcards generation');
+    }
+
+    // 1. Check user's AI quota using UserService
+    try {
+      await userService.checkUserQuota(userId, 'flashcard');
+    } catch (error) {
+      if (error instanceof QuotaExceededError) {
+        console.warn(`[NoteService] Quota exceeded for user ${userId} for flashcard generation.`);
+      }
+      throw error;
+    }
+
+    const note = await Note.findById(noteId);
+    if (!note) {
+      console.error(`[NoteService] Note ${noteId} not found for flashcard generation.`);
+      throw new NotFoundError('Note not found');
+    }
+    
+    console.log(`[NoteService] Note found: ${note.title}. Extracting text for flashcards.`);
+
+    let content = '';
+    try {
+      content = await extractTextFromFile(note.fileUrl);
+      if (!content || content.trim().length === 0) {
+        throw new ErrorResponse('No content found in the note file to generate flashcards.', 400);
+      }
+    } catch (err: any) {
+      console.error('[AI] Flashcard text extraction failed:', err.message);
+      if (err instanceof ErrorResponse) throw err;
+      throw new ErrorResponse('Failed to extract text from note file for flashcards. File might be corrupted or unsupported.', 500);
+    }
+
+    let generatedFlashcards: Array<{ question: string; answer: string; difficulty?: 'easy' | 'medium' | 'hard' }> = [];
+
+    try {
+      const prompt = `Generate 3-5 high-quality flashcards for studying the provided academic note content. 
+      Each flashcard MUST be a JSON object with "question" (string), "answer" (string), and "difficulty" (enum: '${FLASHCARD_DIFFICULTY_LEVELS.join('', '')}') keys. 
+      Return a valid JSON array of these objects. 
+      Example: [{"question":"What is mitosis?","answer":"A type of cell division...","difficulty":"${FLASHCARD_DIFFICULTY_LEVELS[1]}"}]
+      Content:\n\n${content.slice(0, 8000)}`;
+
+      const response = await openai.chat.completions.create({
+        model: OPENAI_CHAT_MODEL, // Use constant
+        messages: [
+          { role: 'system', content: 'You are an expert academic flashcard generator. Respond ONLY with a valid JSON array of flashcard objects as specified.' },
+          { role: 'user', content: prompt }
+        ],
+        response_format: { type: "json_object" }, // Enable JSON mode
+        max_tokens: 700, // Adjusted for potentially 5 flashcards
+        temperature: 0.6 // Slightly lower for more factual flashcards
+      });
+
+      const rawResponse = response.choices[0].message.content?.trim();
+      if (!rawResponse) {
+        throw new Error('OpenAI returned an empty response for flashcards.');
+      }
+
+      try {
+        // The response_format: { type: "json_object" } should ensure the response is a JSON object.
+        // The prompt asks for an array, so the AI might wrap it in a key e.g. {"flashcards": [...]}
+        let parsedResponse = JSON.parse(rawResponse);
+        if (Array.isArray(parsedResponse)) {
+          generatedFlashcards = parsedResponse;
+        } else if (typeof parsedResponse === 'object' && parsedResponse !== null) {
+          // Attempt to find an array if the AI wrapped it, e.g., { "flashcards": [] }
+          const keyWithArray = Object.keys(parsedResponse).find(k => Array.isArray(parsedResponse[k]));
+          if (keyWithArray) {
+            generatedFlashcards = parsedResponse[keyWithArray];
+          } else {
+            throw new Error('JSON response from AI was an object but did not contain a flashcard array.');
+          }
+        } else {
+          throw new Error('JSON response from AI was not an array or a recognized object wrapper.');
+        }
+
+      } catch (parseError: any) {
+        console.error('[AI] Failed to parse JSON response for flashcards from OpenAI:', rawResponse, parseError.message);
+        throw new Error('AI returned flashcards in an unexpected or malformed JSON format. Please try generating again.');
+      }
+
+    } catch (err: any) {
+      console.error('[AI] OpenAI flashcard generation call failed:', err.message);
+      if (err.response && err.response.status === 401) {
+        throw new ErrorResponse('AI service authentication failed. Please check API key configuration.', 500);
+      }
+      if (err.response && err.response.status === 429) {
+        throw new ErrorResponse('AI service rate limit hit or quota exceeded on their end. Please try again later.', 503);
+      }
+      throw new ErrorResponse(`AI flashcard generation service failed: ${err.message || 'Unknown error'}`, 500);
+    }
+
+    if (!generatedFlashcards || generatedFlashcards.length === 0) {
+      throw new ErrorResponse('AI did not generate any flashcards for this content. The note might be too short or lack distinct concepts.', 400);
+    }
+
+    // Validate and filter flashcards
+    const validFlashcards = generatedFlashcards.filter(fc => 
+      fc && 
+      typeof fc.question === 'string' && fc.question.trim() !== '' &&
+      typeof fc.answer === 'string' && fc.answer.trim() !== '' &&
+      (fc.difficulty === undefined || (FLASHCARD_DIFFICULTY_LEVELS as ReadonlyArray<string>).includes(fc.difficulty))
+    ).map(fc => ({
+      question: fc.question.trim(),
+      answer: fc.answer.trim(),
+      difficulty: fc.difficulty || FLASHCARD_DIFFICULTY_LEVELS[1] // Default to medium
+    }));
+
+    if (validFlashcards.length === 0) {
+      throw new ErrorResponse('AI generated flashcards, but none met the required format (question, answer). Please try generating again.', 400);
+    }
+    
+    // For now, we just return the generated flashcards as per existing structure.
+    // The actual saving is handled by `saveGeneratedFlashcardsToNote`
+    
+    // 2. Increment AI usage (also increments lifetime totals in UserService)
+    await userService.incrementAIUsage(userId, 'flashcard');
+
+    // 3. Log activity
+    // Assuming 'note' variable is available and contains title
+    const noteForTitle = await Note.findById(noteId).select('title').lean(); // Fetch note title if not already available
+    user.addActivity('ai_flashcards_generated', `Generated AI flashcards for note: ${noteForTitle?.title || noteId}`, 0);
+
+    // 4. Update user's AI streak (this will also save the user initially)
+    const updatedUser = await userService.updateUserAIStreak(userId);
+
+    // 5. Check for badges related to flashcard generation and streak
+    const badgeService = new BadgeService(); // Instantiate BadgeService
+    const newlyAwardedFlashcardBadges = await badgeService.checkAndAwardBadges(userId, 'ai_flashcards_generated', { noteId, title: noteForTitle?.title });
+    const newlyAwardedStreakBadges = await badgeService.checkAndAwardBadges(userId, 'ai_streak', { currentStreak: updatedUser.streak.current });
+
+    const allNewlyAwardedBadges = [...newlyAwardedFlashcardBadges, ...newlyAwardedStreakBadges].filter((v,i,a)=>a.findIndex(t=>(t.badge.toString() === v.badge.toString()))===i); // Deduplicate
+
+    // Similar save considerations as above.
+
+    return { 
+      data: { flashcards: validFlashcards as any }, 
+      newlyAwardedBadges: allNewlyAwardedBadges.map(b => {
+        const populatedBadge = b.badge as unknown as IBadge; // b.badge is now populated IBadge
+        return {
+          badgeId: populatedBadge._id.toString(),
+          name: populatedBadge.name,
+          icon: populatedBadge.icon,
+          level: populatedBadge.level,
+          xpReward: populatedBadge.xpReward
+        };
+      })
+    };
+  }
+
+  public async saveGeneratedFlashcardsToNote(noteId: string, userId: string, flashcardsToSave: Array<{ question: string; answer: string; difficulty?: string }>): Promise<INote | null> {
+    const note = await Note.findById(noteId);
+    if (!note) {
+      throw new ErrorResponse('Note not found', 404);
+    }
+    if (note.user.toString() !== userId) {
+      throw new ErrorResponse('User not authorized to save flashcards to this note', 403);
+    }
+
+    // Validate flashcards basic structure before saving
+    const validatedFlashcards = flashcardsToSave.filter(
+      fc => 
+        typeof fc.question === 'string' && fc.question.trim() !== '' &&
+        typeof fc.answer === 'string' && fc.answer.trim() !== '' &&
+        (fc.difficulty === undefined || (FLASHCARD_DIFFICULTY_LEVELS as ReadonlyArray<string>).includes(fc.difficulty))
+    ).map(fc => ({
+        question: fc.question.trim(),
+        answer: fc.answer.trim(),
+        difficulty: fc.difficulty || FLASHCARD_DIFFICULTY_LEVELS[1], // Default to medium
+        // No need for createdBy, createdAt here as they are part of the Note subdocument schema if defined, or handled by Mongoose
+    }));
+
+    if (validatedFlashcards.length === 0) {
+        throw new ErrorResponse('No valid flashcards provided to save.', 400);
+    }
+
+    note.flashcards = validatedFlashcards as any; // Cast needed as INoteFlashcard is a sub-document type
+    // Consider adding a timestamp for when AI flashcards were last saved/confirmed by user
+    // note.aiFlashcardsSavedAt = new Date(); 
+    await note.save();
+
+    // No need to increment quota here, as this is saving *already generated* cards.
+    // Quota was incremented during generation.
+
+    return note.populate({ path: 'user', select: 'name username profileImage' });
+  }
+
+  // ... other note service methods (create, update, delete, etc.)
+}
+
+export default new NoteService(); 

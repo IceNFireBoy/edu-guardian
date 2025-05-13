@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- CSP meta tag removed, will be handled by _headers -->
+    <title>EduGuardian | Academic Dashboard</title>
+    <style>
+      :root {
+        --color-text: #1f2937; /* gray-800 */
+      }
+      
+      .dark {
+        --color-text: #f3f4f6; /* gray-100 */
+      }
+
+      #error-display {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 20px;
+        background-color: #fee2e2;
+        color: #b91c1c;
+        z-index: 9999;
+        white-space: pre-wrap;
+        font-family: monospace;
+        max-height: 50vh;
+        overflow: auto;
+        display: none;
+      }
+    </style>
+    <script>
+      // Error logging to catch issues during initial rendering
+      window.addEventListener('error', function(event) {
+        const errorDiv = document.getElementById('error-display');
+        if (errorDiv) {
+          errorDiv.style.display = 'block';
+          errorDiv.innerHTML += `<p><strong>ERROR:</strong> ${event.message}<br/><strong>File:</strong> ${event.filename}:${event.lineno}:${event.colno}<br/></p>`;
+        }
+        console.error(event);
+      });
+
+      window.addEventListener('unhandledrejection', function(event) {
+        const errorDiv = document.getElementById('error-display');
+        if (errorDiv) {
+          errorDiv.style.display = 'block';
+          errorDiv.innerHTML += `<p><strong>UNHANDLED PROMISE REJECTION:</strong> ${event.reason}<br/></p>`;
+        }
+        console.error(event);
+      });
+    </script>
+  </head>
+  <body>
+    <div id="error-display"></div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

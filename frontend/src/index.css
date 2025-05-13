@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: #4f46e5;
+    --color-primary-dark: #4338ca;
+    --color-primary-light: #6366f1;
+    
+    /* Color variables for subjects */
+    --red-500: #ef4444;
+    --blue-500: #3b82f6;
+    --indigo-500: #6366f1;
+    --green-500: #22c55e;
+    --cyan-500: #06b6d4;
+    --pink-500: #ec4899;
+    --orange-500: #f97316;
+    --slate-500: #64748b;
+    --yellow-500: #eab308;
+    --emerald-500: #10b981;
+    --violet-500: #8b5cf6;
+    --amber-500: #f59e0b;
+    --sky-500: #0ea5e9;
+    --purple-500: #a855f7;
+    --teal-500: #14b8a6;
+    --lime-500: #84cc16;
+    --fuchsia-500: #d946ef;
+    --gray-500: #6b7280;
+    --rose-500: #f43f5e;
+    --neutral-500: #737373;
+    --stone-500: #78716c;
+    --zinc-500: #71717a;
+  }
+
+  /* Dark theme overrides */
+  .dark {
+    --color-primary: #818cf8;
+    --color-primary-dark: #6366f1;
+    --color-primary-light: #a5b4fc;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-dark;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary text-white hover:bg-secondary-dark;
+  }
+  
+  .input {
+    @apply w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-primary;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-md p-4;
+  }
+} 
+
+/* Fade in animation for dropdown menus */
+.fade-in {
+  animation: fadeIn 0.2s ease-in-out;
+  transform-origin: top center;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+} 

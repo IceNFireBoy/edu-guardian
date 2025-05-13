@@ -1,0 +1,3 @@
+config.env
+node_modules/
+# Add other files and directories to ignore here 

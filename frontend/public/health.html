@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduGuardian Health Check</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: #f9fafb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      max-width: 600px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      color: #3b82f6;
+      margin-top: 0;
+    }
+    p {
+      color: #4b5563;
+      line-height: 1.5;
+    }
+    .status {
+      font-weight: bold;
+      color: #10b981;
+      font-size: 18px;
+      margin: 20px 0;
+    }
+    .details {
+      background-color: #f3f4f6;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 20px;
+      text-align: left;
+      font-size: 14px;
+    }
+    .details p {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>EduGuardian Health Check</h1>
+    <div class="status">Status: Online</div>
+    <p>This page confirms that the EduGuardian application static assets are being served correctly.</p>
+    <a href="/" style="color: #3b82f6; text-decoration: none; display: inline-block; margin-top: 20px;">Go to Application</a>
+    
+    <div class="details">
+      <p><strong>Environment:</strong> <span id="environment">Production</span></p>
+      <p><strong>Build Date:</strong> <span id="build-date"></span></p>
+      <p><strong>Browser:</strong> <span id="browser"></span></p>
+    </div>
+  </div>
+
+  <script>
+    // Set build date
+    document.getElementById('build-date').textContent = new Date().toISOString();
+    
+    // Detect environment
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      document.getElementById('environment').textContent = 'Development';
+    }
+    
+    // Detect browser
+    document.getElementById('browser').textContent = navigator.userAgent;
+    
+    // Report successful health check to console
+    console.log('Health check page loaded successfully');
+  </script>
+</body>
+</html> 
