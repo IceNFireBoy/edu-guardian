@@ -109,8 +109,8 @@ class UserActivityFeedService {
 
       if (daysSinceLastActive === 1) {
         user.streak.current += 1;
-        if (user.streak.current > user.streak.longest) {
-          user.streak.longest = user.streak.current;
+        if (user.streak.current > user.streak.max) {
+          user.streak.max = user.streak.current;
         }
       } else if (daysSinceLastActive > 1) {
         user.streak.current = 1;

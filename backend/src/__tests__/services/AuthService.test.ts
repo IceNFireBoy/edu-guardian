@@ -8,13 +8,13 @@ import { Request } from 'express'; // For mocking req/res
 import { mockUser } from '../factories/user.factory';
 
 // Mock the entire sendEmailUtil module
-jest.mock('../../utils/sendEmail');
+vi.mock('../../utils/sendEmail');
 
 describe('AuthService', () => {
   let authService: AuthService;
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
-  let mockSendTokenResponse: jest.SpyInstance;
+  let mockSendTokenResponse: ReturnType<typeof vi.spyOn>;
   let testUser: IUser & { _id: mongoose.Types.ObjectId };
 
   beforeAll(() => {
@@ -23,22 +23,22 @@ describe('AuthService', () => {
 
   beforeEach(async () => {
     await User.deleteMany({});
-    (sendEmailUtil as jest.Mock).mockClear(); // Clear mock usage for each test
+    (sendEmailUtil as any).mockClear && (sendEmailUtil as any).mockClear(); // Clear mock usage for each test
 
     mockRequest = {
       protocol: 'http',
-      get: jest.fn().mockReturnValue('localhost:5000') as jest.Mock,
+      get: vi.fn().mockReturnValue('localhost:5000') as any,
     };
 
     mockResponse = {
-      status: jest.fn().mockReturnThis(),
-      cookie: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      cookie: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
     };
     
     // Spy on sendTokenResponse as it's called by login and other methods
     // and we want to verify its call without re-testing its internal logic here.
-    mockSendTokenResponse = jest.spyOn(authService, 'sendTokenResponse').mockImplementation(() => {});
+    mockSendTokenResponse = vi.spyOn(authService, 'sendTokenResponse').mockImplementation(() => {});
 
     // Create a test user
     testUser = await User.create({
@@ -98,7 +98,7 @@ describe('AuthService', () => {
     });
 
     it('should throw ErrorResponse and cleanup token if email sending fails', async () => {
-      (sendEmailUtil as jest.Mock).mockRejectedValueOnce(new Error('SMTP Error'));
+      (sendEmailUtil as any).mockRejectedValueOnce(new Error('SMTP Error'));
       
       await expect(authService.registerUser(userData, mockRequest as Request))
         .rejects.toThrow(new ErrorResponse('Email could not be sent. Please try registering again or contact support if the issue persists.', 500));

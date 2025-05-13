@@ -1,24 +1,6 @@
 import Badge, { IBadge } from '../models/Badge';
 import User, { IUser } from '../models/User';
 import ErrorResponse from '../utils/errorResponse';
-import mongoose from 'mongoose';
-import { NotFoundError } from '../utils/errorResponse';
-import { QueryOptions } from '../types/common';
-
-interface QueryOptions {
-    page?: number;
-    limit?: number;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
-    // Add other common query params as needed
-}
-
-interface AwardResult {
-    success: boolean;
-    message: string;
-    badge?: IBadge;
-    alreadyAwarded?: boolean;
-}
 
 interface BadgeCriteriaFunction {
     (user: IUser, eventData?: any): Promise<boolean> | boolean;

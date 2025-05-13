@@ -12,7 +12,7 @@ import { mockNote } from '../factories/note.factory';
 import { mockBadge } from '../factories/badge.factory';
 
 // Mock external dependencies
-jest.mock('../../utils/sendEmail');
+vi.mock('../../utils/sendEmail');
 
 let app: Express;
 let regularUser: IUser;

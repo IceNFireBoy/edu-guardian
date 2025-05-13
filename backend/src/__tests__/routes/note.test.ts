@@ -1,8 +1,8 @@
 import request from 'supertest';
 import mongoose from 'mongoose';
-import { app } from '../../app';
-import { User } from '../../models/User';
-import { Note } from '../../models/Note';
+import User from '../../models/User';
+import Note from '../../models/Note';
+import app from '../../server';
 
 describe('Note Routes', () => {
   let token: string;

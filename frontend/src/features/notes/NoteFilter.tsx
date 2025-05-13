@@ -11,7 +11,7 @@ import { Note } from '../../features/notes/noteTypes'; // Import Note type
 import { useToast } from '../../hooks/useToast'; // Use our TSX hook
 import { debug } from '../../components/DebugPanel'; // Keep as is for now
 import { callAuthenticatedApi, ApiResponse } from '../../api/notes'; // Import TSX version and type
-import { useNote } from '../../hooks/useNote'; // Import useNote
+import { useNote } from './useNote'; // Corrected import path
 
 // Development mode for debugging
 const DEV_MODE = import.meta.env.DEV;

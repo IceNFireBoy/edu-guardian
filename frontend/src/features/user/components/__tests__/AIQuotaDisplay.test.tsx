@@ -4,7 +4,7 @@ import { AIUsage } from '../../userTypes';
 import { AI_USAGE_LIMITS_FRONTEND } from '../../../../config/aiConfig';
 
 // Mock the config to control limits during tests
-jest.mock('../../../../config/aiConfig', () => ({
+vi.mock('../../../../config/aiConfig', () => ({
   AI_USAGE_LIMITS_FRONTEND: {
     SUMMARY_PER_DAY: 5,
     FLASHCARDS_PER_DAY: 10,

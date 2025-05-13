@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
-import { ToastProvider } from './components/ui/Toast';
 import toast from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import Fallback from './components/Fallback';
@@ -135,68 +134,64 @@ function App() {
   try {
     return (
       <AuthProvider>
-        <ToastProvider>
-          <div className={`min-h-screen ${darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-900'}`}>
-            <Toaster position="top-right" toastOptions={{
-              // Define default options
-              className: '',
-              duration: 5000,
-              style: {
-                background: darkMode ? '#1e293b' : '#fff',
-                color: darkMode ? '#fff' : '#334155',
+        <div className={`min-h-screen ${darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-900'}`}>
+          <Toaster position="top-right" toastOptions={{
+            className: '',
+            duration: 5000,
+            style: {
+              background: darkMode ? '#1e293b' : '#fff',
+              color: darkMode ? '#fff' : '#334155',
+            },
+            success: {
+              duration: 3000,
+              iconTheme: {
+                primary: '#10b981',
+                secondary: 'white',
               },
-              // Default options for specific types
-              success: {
-                duration: 3000,
-                iconTheme: {
-                  primary: '#10b981',
-                  secondary: 'white',
-                },
+            },
+            error: {
+              duration: 4000,
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: 'white',
               },
-              error: {
-                duration: 4000,
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: 'white',
-                },
-              },
-            }} />
-            <OfflineDetector />
-            <Sidebar />
-            <div className="flex flex-col min-h-screen md:ml-64">
-              <Header toggleDarkMode={toggleDarkMode} />
-              <main className="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full">
-                <ErrorBoundary>
-                  <Routes>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    
-                    {/* Protected routes */}
-                    <Route element={<PrivateRoute />}>
-                      <Route path="/my-notes" element={<MyNotes />} />
-                      <Route path="/donate" element={<Donate />} />
-                      <Route path="/progress" element={<Progress />} />
-                      <Route path="/profile" element={<ProfilePage />} />
-                      <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
-                      <Route path="/badges" element={<Badges />} />
-                      <Route path="/view-note" element={<NoteViewer />} />
-                      <Route path="/view-note/:noteId" element={<NoteViewer />} />
-                      <Route path="/notes" element={<NoteFilterPage />} />
-                      <Route path="/notes/upload" element={<NoteUploader />} />
-                      <Route path="/study/:noteId" element={<StudyPage />} />
-                    </Route>
-                    
-                    {/* Debug routes */}
-                    <Route path="/debug/test-pdf/*" element={<TestPDFDebug />} />
-                  </Routes>
-                </ErrorBoundary>
-              </main>
-            </div>
-            <CookieConsent />
-            <DebugPanel />
+            },
+          }} />
+          <OfflineDetector />
+          <Sidebar />
+          <div className="flex flex-col min-h-screen md:ml-64">
+            <Header toggleDarkMode={toggleDarkMode} />
+            <main className="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full">
+              <ErrorBoundary>
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  
+                  {/* Protected routes */}
+                  <Route element={<PrivateRoute />}>
+                    <Route path="/my-notes" element={<MyNotes />} />
+                    <Route path="/donate" element={<Donate />} />
+                    <Route path="/progress" element={<Progress />} />
+                    <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
+                    <Route path="/badges" element={<Badges />} />
+                    <Route path="/view-note" element={<NoteViewer />} />
+                    <Route path="/view-note/:noteId" element={<NoteViewer />} />
+                    <Route path="/notes" element={<NoteFilterPage />} />
+                    <Route path="/notes/upload" element={<NoteUploader />} />
+                    <Route path="/study/:noteId" element={<StudyPage />} />
+                  </Route>
+                  
+                  {/* Debug routes */}
+                  <Route path="/debug/test-pdf/*" element={<TestPDFDebug />} />
+                </Routes>
+              </ErrorBoundary>
+            </main>
           </div>
-        </ToastProvider>
+          <CookieConsent />
+          <DebugPanel />
+        </div>
       </AuthProvider>
     );
   } catch (error) {

@@ -4,7 +4,7 @@ export interface IBadge extends Document {
   name: string;
   description: string;
   imageUrl: string;
-  category: 'xp' | 'notes';
+  category: 'xp' | 'notes' | 'streak' | 'upload' | 'engagement' | 'achievement' | 'special' | 'ai';
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   criteria: {
     description: string;
@@ -35,7 +35,7 @@ const badgeSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['xp', 'notes'],
+    enum: ['xp', 'notes', 'streak', 'upload', 'engagement', 'achievement', 'special', 'ai'],
     required: [true, 'Please specify a category']
   },
   rarity: {
