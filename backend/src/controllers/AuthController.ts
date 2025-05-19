@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { validationResult } from 'express-validator';
+import { validationResult, ValidationError } from 'express-validator';
 import asyncHandler from '../middleware/async'; // Will need async.ts
 import AuthService from '../services/AuthService';
 import ErrorResponse from '../utils/errorResponse'; // Already *.ts
@@ -23,7 +23,10 @@ class AuthController {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       // To make errors more specific to the frontend (e.g. field-specific errors)
-      const errorMessages = errors.array().map(err => ({ field: (err as any).param, message: err.msg }));
+      const errorMessages = errors.array().map((err: ValidationError) => ({ 
+        field: typeof err === 'object' && 'path' in err ? err.path : 'unknown', 
+        message: err.msg 
+      }));
       return next(new ErrorResponse(`Validation failed: ${errorMessages.map(e=>e.message).join(', ')}`, 400));
       // Or simply:
       // return res.status(400).json({ success: false, errors: errors.array() });
@@ -67,7 +70,7 @@ class AuthController {
 // @desc    Log user out / clear cookie
 // @route   GET /api/v1/auth/logout
   // @access  Private (though can be public depending on how client handles token)
-  public logout = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  public logout = asyncHandler(async (_req: Request, res: Response, next: NextFunction) => {
     try {
       await this.authService.logoutUser(res); // Service handles setting the cookie
       res.status(200).json({ success: true, data: 'Successfully logged out' });

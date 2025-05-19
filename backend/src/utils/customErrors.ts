@@ -11,32 +11,47 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Error thrown when a user has exceeded their quota for AI-powered features
+ */
 export class QuotaExceededError extends ApiError {
-  constructor(message: string = 'AI usage quota exceeded for the current period.') {
+  constructor(message = 'AI usage quota exceeded for the current period.') {
     super(message, 429); // 429 Too Many Requests
   }
 }
 
+/**
+ * Error thrown when a requested resource cannot be found
+ */
 export class NotFoundError extends ApiError {
-  constructor(message: string = 'Resource not found.') {
+  constructor(message = 'Resource not found.') {
     super(message, 404);
   }
 }
 
+/**
+ * Error thrown when the request is malformed or contains invalid data
+ */
 export class BadRequestError extends ApiError {
-  constructor(message: string = 'Bad request.') {
+  constructor(message = 'Bad request.') {
     super(message, 400);
   }
 }
 
+/**
+ * Error thrown when the user is not authenticated
+ */
 export class UnauthorizedError extends ApiError {
-  constructor(message: string = 'Unauthorized.') {
+  constructor(message = 'Unauthorized.') {
     super(message, 401);
   }
 }
 
+/**
+ * Error thrown when the user is authenticated but lacks permissions
+ */
 export class ForbiddenError extends ApiError {
-  constructor(message: string = 'Forbidden.') {
+  constructor(message = 'Forbidden.') {
     super(message, 403);
   }
 } 

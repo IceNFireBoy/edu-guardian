@@ -12,12 +12,12 @@ class UserActivityFeedController {
     public getUserFeed = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
         const userId = req.user.id;
         const options = {
-            page: parseInt(req.query.page as string) || 1,
-            limit: parseInt(req.query.limit as string) || 20,
-            filter: (req.query.filter as 'my' | 'class' | 'global' | 'ai') || 'my',
+            page: parseInt(req.query.page as string) ?? 1,
+            limit: parseInt(req.query.limit as string) ?? 20,
+            filter: (req.query.filter as 'my' | 'class' | 'global' | 'ai') ?? 'my',
             type: req.query.type as string,
-            sortBy: req.query.sortBy as string || 'createdAt',
-            sortOrder: (req.query.sortOrder as 'asc' | 'desc') || 'desc'
+            sortBy: req.query.sortBy as string ?? 'createdAt',
+            sortOrder: (req.query.sortOrder as 'asc' | 'desc') ?? 'desc'
         };
 
         const feed = await UserActivityFeedService.getUserActivityFeed(userId, options);

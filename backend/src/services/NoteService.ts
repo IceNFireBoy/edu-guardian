@@ -1,5 +1,4 @@
 import Note, { INote } from '../models/Note';
-import User, { IUser } from '../models/User'; // For user-related operations if needed
 import { NotFoundError, BadRequestError, QuotaExceededError } from '../utils/customErrors'; // Import if needed directly
 import UserService from './UserService'; // Import UserService instance
 import BadgeService from './BadgeService'; // Import BadgeService
@@ -8,7 +7,6 @@ import { FilterQuery, PopulateOptions } from 'mongoose';
 import { extractTextFromFile } from '../utils/extractTextFromFile';
 import OpenAI from 'openai';
 import { OPENAI_CHAT_MODEL, AI_FEATURE_TYPES, FLASHCARD_DIFFICULTY_LEVELS, IUserBadgeEarnedAPIResponse } from '../config/constants'; // Import constants & new type
-import { IBadge } from '../models/Badge'; // Implied import for IBadge type
 
 // Define a type for the response of AI generation methods that includes newly awarded badges
 interface AIGenerationResponse<T> {
@@ -117,7 +115,7 @@ export class NoteService {
     // For simplicity here, we assume viewCount on the initially fetched lean doc is acceptable for response.
     // To return the updated doc, remove .lean() or re-fetch.
     
-    return { ...note, viewCount: (note.viewCount || 0) + 1 }; // Manually increment for lean response
+    return { ...note, viewCount: (note.viewCount ?? 0) + 1 }; // Manually increment for lean response
   }
 
   public async createNote(noteData: Partial<INote>, userId: string): Promise<INote> {
@@ -266,7 +264,7 @@ export class NoteService {
         note.flashcards.push({
             question: fc.question,
             answer: fc.answer,
-            difficulty: fc.difficulty || 'medium', // Default difficulty
+            difficulty: fc.difficulty ?? 'medium', // Default difficulty
         } as any); // Cast to any to satisfy INoteFlashcard structure if subdocument _id is an issue
     });
     
@@ -312,11 +310,9 @@ export class NoteService {
     return note.populate({ path: 'user', select: 'name username profileImage' });
   }
 
-  public async getNotesByFilters(filters: any): Promise<INote[]> {
+  public async getNotesByFilters(filters: string | NoteQueryFilters): Promise<INote[]> {
     // This is a placeholder. Implementation depends on how 'filters' string is structured.
     // Needs parsing and conversion into a Mongoose query object.
-    console.log('getNotesByFilters called with:', filters);
-    // Example: if filters is a JSON string of NoteQueryFilters
     try {
         const parsedFilters: NoteQueryFilters = typeof filters === 'string' ? JSON.parse(filters) : filters;
         parsedFilters.isPublic = true; // Assuming only public notes
@@ -325,7 +321,8 @@ export class NoteService {
                                 .lean();
         return notes;
     } catch (error) {
-        throw new ErrorResponse('Invalid filters format', 400);
+        const errorMessage = error instanceof Error ? error.message : 'Invalid filters format';
+        throw new ErrorResponse(errorMessage, 400);
     }
   }
 
@@ -389,11 +386,73 @@ export class NoteService {
     return note.populate({ path: 'user', select: 'name username profileImage' });
   }
 
-  public async generateAISummaryForNote(noteId: string, userId: string): Promise<AIGenerationResponse<Partial<INote>>> {
+  /**
+   * Common helper to process badge awards after AI processing
+   * @param userId - ID of the user to process badges for
+   * @param aiFeatureType - Type of AI feature used (summary or flashcard)
+   * @param updatedUser - User object after streak update
+   * @returns Array of newly awarded badges
+   */
+  private async processAIFeatureBadges(
+    userId: string, 
+    aiFeatureType: 'ai_summary_generated' | 'ai_flashcards_generated', 
+    updatedUser: IUser
+  ): Promise<IUserBadgeEarnedAPIResponse[]> {
+    // Check for and award badges
+    const newlyAwardedFeatureBadges = await badgeService.checkAndAwardBadges(userId, aiFeatureType);
+    const newlyAwardedStreakBadges = await badgeService.checkAndAwardBadges(
+      userId, 
+      'ai_streak', 
+      { streak: updatedUser.streak.current }
+    );
+
+    // Combine and deduplicate badges
+    const allNewlyAwardedBadges = [...newlyAwardedFeatureBadges, ...newlyAwardedStreakBadges]
+      .filter((v, i, a) => a.findIndex(t => t === v) === i);
+
+    // Format for API response
+    return (await Promise.all(allNewlyAwardedBadges.map(async badgeName => {
+      const badge = await badgeService.getBadgeByName(badgeName);
+      if (!badge) return undefined;
+      return {
+        badgeId: badge._id.toString(),
+        name: badge.name,
+        icon: (badge as any).icon ?? '',
+        level: (badge as any).level ?? '',
+        xpReward: (badge as any).xpReward ?? 0
+      };
+    }))).filter((b): b is IUserBadgeEarnedAPIResponse => !!b);
+  }
+
+  /**
+   * Common validation for AI generation methods
+   * @param noteId - ID of the note to validate
+   * @param userId - ID of the user requesting AI processing
+   * @returns The validated note object
+   */
+  private async validateNoteForAIProcessing(noteId: string, userId: string): Promise<INote> {
+    // Validate note exists
     const note = await Note.findById(noteId);
     if (!note) {
-        throw new NotFoundError('Note not found');
+      throw new NotFoundError('Note not found');
     }
+
+    // Validate note has file URL
+    if (!note.fileUrl) {
+      throw new BadRequestError('Note has no associated file');
+    }
+
+    return note;
+  }
+
+  /**
+   * Generate an AI summary for a note
+   * @param noteId - ID of the note to generate summary for
+   * @param userId - ID of the user requesting summary
+   * @returns Summary data and any newly awarded badges
+   */
+  public async generateAISummaryForNote(noteId: string, userId: string): Promise<AIGenerationResponse<Partial<INote>>> {
+    const note = await this.validateNoteForAIProcessing(noteId, userId);
 
     // Check user's AI quota
     await userService.checkUserQuota(userId, 'summary');
@@ -401,68 +460,69 @@ export class NoteService {
     // Extract text from the note's file
     const text = await extractTextFromFile(note.fileUrl);
     if (!text) {
-        throw new BadRequestError('Could not extract text from file');
+      throw new BadRequestError('Could not extract text from file');
     }
 
-    // Generate summary using OpenAI
-    const completion = await openai.chat.completions.create({
+    try {
+      // Generate summary using OpenAI
+      const completion = await openai.chat.completions.create({
         model: OPENAI_CHAT_MODEL,
         messages: [
-            {
-                role: 'system',
-                content: 'You are a helpful assistant that summarizes educational notes. Provide a concise but comprehensive summary.'
-            },
-            {
-                role: 'user',
-                content: `Please summarize the following educational notes:\n\n${text}`
-            }
+          {
+            role: 'system',
+            content: 'You are a helpful assistant that summarizes educational notes. Provide a concise but comprehensive summary.'
+          },
+          {
+            role: 'user',
+            content: `Please summarize the following educational notes:\n\n${text}`
+          }
         ],
         max_tokens: 500
-    });
+      });
 
-    const summary = completion.choices[0].message.content;
+      const summary = completion.choices[0].message.content;
 
-    // Update note with summary
-    note.aiSummary = summary;
-    await note.save();
+      // Update note with summary
+      note.aiSummary = summary;
+      await note.save();
 
-    // Increment user's AI usage
-    await userService.incrementAIUsage(userId, 'summary');
+      // Increment user's AI usage
+      await userService.incrementAIUsage(userId, 'summary');
 
-    // Update user's AI streak
-    const updatedUser = await userService.updateUserAIStreak(userId);
+      // Update user's AI streak
+      const updatedUser = await userService.updateUserAIStreak(userId);
 
-    // Check for and award badges
-    const newlyAwardedSummaryBadges = await badgeService.checkAndAwardBadges(userId, 'ai_summary_generated');
-    const newlyAwardedStreakBadges = await badgeService.checkAndAwardBadges(userId, 'ai_streak', { streak: updatedUser.streak.current });
+      // Process badges
+      const badges = await this.processAIFeatureBadges(userId, 'ai_summary_generated', updatedUser);
 
-    // Format response
-    const allNewlyAwardedBadges = [...newlyAwardedSummaryBadges, ...newlyAwardedStreakBadges]
-        .filter((v, i, a) => a.findIndex(t => t === v) === i); // Deduplicate
+      // Format string summary
+      let summaryStr = typeof summary === 'string' ? summary : (summary ?? undefined);
 
-    let summaryStr = typeof summary === 'string' ? summary : (summary || undefined);
-
-    return {
+      return {
         data: { aiSummary: summaryStr },
-        newlyAwardedBadges: (await Promise.all(allNewlyAwardedBadges.map(async badgeName => {
-            const badge = await badgeService.getBadgeByName(badgeName);
-            if (!badge) return undefined;
-            return {
-                badgeId: badge._id.toString(),
-                name: badge.name,
-                icon: (badge as any).icon || '',
-                level: (badge as any).level || '',
-                xpReward: (badge as any).xpReward || 0
-            };
-        }))).filter((b): b is IUserBadgeEarnedAPIResponse => !!b)
-    };
+        newlyAwardedBadges: badges
+      };
+    } catch (error) {
+      // Handle OpenAI API errors specifically
+      if (error.response?.status) {
+        const status = error.response.status;
+        const errorMessage = error.response.data?.error?.message || 'Error communicating with AI service';
+        throw new BadRequestError(`AI Service Error (${status}): ${errorMessage}`);
+      }
+      
+      // Re-throw other errors
+      throw error;
+    }
   }
 
+  /**
+   * Generate AI flashcards for a note
+   * @param noteId - ID of the note to generate flashcards for
+   * @param userId - ID of the user requesting flashcards
+   * @returns Flashcard data and any newly awarded badges
+   */
   public async generateAIFlashcardsForNote(noteId: string, userId: string): Promise<AIGenerationResponse<Pick<INote, 'flashcards'>>> {
-    const note = await Note.findById(noteId);
-    if (!note) {
-        throw new NotFoundError('Note not found');
-    }
+    const note = await this.validateNoteForAIProcessing(noteId, userId);
 
     // Check user's AI quota
     await userService.checkUserQuota(userId, 'flashcard');
@@ -470,115 +530,197 @@ export class NoteService {
     // Extract text from the note's file
     const text = await extractTextFromFile(note.fileUrl);
     if (!text) {
-        throw new BadRequestError('Could not extract text from file');
+      throw new BadRequestError('Could not extract text from file');
     }
 
-    // Generate flashcards using OpenAI
-    const completion = await openai.chat.completions.create({
+    try {
+      // Generate flashcards using OpenAI
+      const completion = await openai.chat.completions.create({
         model: OPENAI_CHAT_MODEL,
         messages: [
-            {
-                role: 'system',
-                content: `You are a helpful assistant that creates educational flashcards. Create flashcards in the following JSON format:
-                [
-                    {
-                        "question": "string",
-                        "answer": "string",
-                        "difficulty": "easy|medium|hard"
-                    }
-                ]
-                Each flashcard MUST be a JSON object with "question" (string), "answer" (string), and "difficulty" (enum: '${FLASHCARD_DIFFICULTY_LEVELS.join('|')}') keys.`
-            },
-            {
-                role: 'user',
-                content: `Please create flashcards from the following educational notes:\n\n${text}`
-            }
+          {
+            role: 'system',
+            content: `You are a helpful assistant that creates educational flashcards. Create flashcards in the following JSON format:
+              [
+                {
+                  "question": "string",
+                  "answer": "string",
+                  "difficulty": "easy|medium|hard"
+                }
+              ]
+              Each flashcard MUST be a JSON object with "question" (string), "answer" (string), and "difficulty" (enum: '${FLASHCARD_DIFFICULTY_LEVELS.join('|')}') keys.`
+          },
+          {
+            role: 'user',
+            content: `Please create flashcards from the following educational notes:\n\n${text}`
+          }
         ],
         max_tokens: 1000
-    });
+      });
 
-    const flashcardsText = completion.choices[0].message.content;
-    let flashcards;
-    try {
-        flashcards = JSON.parse(flashcardsText);
+      const flashcardsText = completion.choices[0].message.content;
+      let flashcards = [];
+      
+      try {
+        flashcards = this.parseAndValidateFlashcards(flashcardsText);
+      } catch (parseError) {
+        throw new BadRequestError(`Failed to parse flashcards: ${parseError.message}`);
+      }
+
+      // Store the generated flashcards for later confirmation
+      const result = await this.saveGeneratedFlashcardsToNote(noteId, userId, flashcards);
+      
+      if (!result) {
+        throw new NotFoundError('Note not found after flashcard generation');
+      }
+
+      // Increment user's AI usage
+      await userService.incrementAIUsage(userId, 'flashcard');
+
+      // Update user's AI streak
+      const updatedUser = await userService.updateUserAIStreak(userId);
+
+      // Process badges
+      const badges = await this.processAIFeatureBadges(userId, 'ai_flashcards_generated', updatedUser);
+
+      return {
+        data: { flashcards: result.flashcards },
+        newlyAwardedBadges: badges
+      };
     } catch (error) {
-        throw new BadRequestError('Failed to parse AI-generated flashcards');
+      // Handle OpenAI API errors specifically
+      if (error.response?.status) {
+        const status = error.response.status;
+        const errorMessage = error.response.data?.error?.message || 'Error communicating with AI service';
+        throw new BadRequestError(`AI Service Error (${status}): ${errorMessage}`);
+      }
+      
+      // Re-throw other errors
+      throw error;
+    }
+  }
+  
+  /**
+   * Parse and validate flashcards from JSON string
+   * @param flashcardsText - JSON string containing flashcards
+   * @returns Array of validated flashcards
+   */
+  private parseAndValidateFlashcards(flashcardsText: string): Array<{ question: string; answer: string; difficulty: string }> {
+    // Try to parse JSON, with multiple fallback strategies
+    let parsed;
+    try {
+      parsed = JSON.parse(flashcardsText);
+    } catch (e) {
+      // Try to extract JSON from text (if OpenAI included markdown or explanation)
+      const jsonMatch = flashcardsText.match(/```(?:json)?([\s\S]*?)```/);
+      if (jsonMatch && jsonMatch[1]) {
+        try {
+          parsed = JSON.parse(jsonMatch[1].trim());
+        } catch (e2) {
+          throw new Error('Could not parse JSON from response');
+        }
+      } else {
+        throw new Error('Invalid JSON format');
+      }
     }
 
-    // Validate flashcard format
-    if (!Array.isArray(flashcards)) {
-        throw new BadRequestError('AI did not generate a valid array of flashcards');
+    // Validate array structure
+    if (!Array.isArray(parsed)) {
+      throw new Error('Response is not an array of flashcards');
     }
 
-    // Update note with flashcards
-    note.flashcards = flashcards;
-    await note.save();
-
-    // Increment user's AI usage
-    await userService.incrementAIUsage(userId, 'flashcard');
-
-    // Update user's AI streak
-    const updatedUser = await userService.updateUserAIStreak(userId);
-
-    // Check for and award badges
-    const newlyAwardedFlashcardBadges = await badgeService.checkAndAwardBadges(userId, 'ai_flashcards_generated');
-    const newlyAwardedStreakBadges = await badgeService.checkAndAwardBadges(userId, 'ai_streak', { streak: updatedUser.streak.current });
-
-    // Format response
-    const allNewlyAwardedBadges = [...newlyAwardedFlashcardBadges, ...newlyAwardedStreakBadges]
-        .filter((v, i, a) => a.findIndex(t => t === v) === i); // Deduplicate
-
-    return {
-        data: { flashcards },
-        newlyAwardedBadges: (await Promise.all(allNewlyAwardedBadges.map(async badgeName => {
-            const badge = await badgeService.getBadgeByName(badgeName);
-            if (!badge) return undefined;
-            return {
-                badgeId: badge._id.toString(),
-                name: badge.name,
-                icon: (badge as any).icon || '',
-                level: (badge as any).level || '',
-                xpReward: (badge as any).xpReward || 0
-            };
-        }))).filter((b): b is IUserBadgeEarnedAPIResponse => !!b)
-    };
+    // Validate each flashcard
+    return parsed.map((fc, index) => {
+      if (!fc.question || typeof fc.question !== 'string') {
+        throw new Error(`Flashcard ${index + 1} is missing a valid question`);
+      }
+      if (!fc.answer || typeof fc.answer !== 'string') {
+        throw new Error(`Flashcard ${index + 1} is missing a valid answer`);
+      }
+      
+      // Validate difficulty or use default
+      const validDifficulties = ['easy', 'medium', 'hard'];
+      let difficulty = 'medium';
+      
+      if (fc.difficulty && typeof fc.difficulty === 'string') {
+        const normalizedDifficulty = fc.difficulty.toLowerCase();
+        if (validDifficulties.includes(normalizedDifficulty)) {
+          difficulty = normalizedDifficulty;
+        }
+      }
+      
+      return {
+        question: fc.question,
+        answer: fc.answer,
+        difficulty
+      };
+    });
   }
 
-  public async saveGeneratedFlashcardsToNote(noteId: string, userId: string, flashcardsToSave: Array<{ question: string; answer: string; difficulty?: string }>): Promise<INote | null> {
+  /**
+   * Save generated flashcards to a note
+   * 
+   * @param noteId - ID of the note to save flashcards to
+   * @param userId - ID of the user saving the flashcards
+   * @param flashcardsToSave - Array of flashcards to save
+   * @returns The updated note with flashcards, or null if note not found
+   */
+  public async saveGeneratedFlashcardsToNote(
+    noteId: string, 
+    userId: string, 
+    flashcardsToSave: Array<{ question: string; answer: string; difficulty?: string }>
+  ): Promise<INote | null> {
+    // Validate note exists and user has permission
     const note = await Note.findById(noteId);
     if (!note) {
-      throw new ErrorResponse('Note not found', 404);
+      return null;
     }
+    
+    // Check if user has permission to modify note
     if (note.user.toString() !== userId) {
-      throw new ErrorResponse('User not authorized to save flashcards to this note', 403);
+      throw new ErrorResponse('User not authorized to modify this note', 403);
     }
-
-    // Validate flashcards basic structure before saving
-    const validatedFlashcards = flashcardsToSave.filter(
-      fc => 
-        typeof fc.question === 'string' && fc.question.trim() !== '' &&
-        typeof fc.answer === 'string' && fc.answer.trim() !== '' &&
-        (fc.difficulty === undefined || (FLASHCARD_DIFFICULTY_LEVELS as ReadonlyArray<string>).includes(fc.difficulty))
-    ).map(fc => ({
-        question: fc.question.trim(),
-        answer: fc.answer.trim(),
-        difficulty: fc.difficulty || FLASHCARD_DIFFICULTY_LEVELS[1], // Default to medium
-        // No need for createdBy, createdAt here as they are part of the Note subdocument schema if defined, or handled by Mongoose
-    }));
-
-    if (validatedFlashcards.length === 0) {
-        throw new ErrorResponse('No valid flashcards provided to save.', 400);
+    
+    // Validate flashcards
+    if (!Array.isArray(flashcardsToSave) || flashcardsToSave.length === 0) {
+      throw new BadRequestError('No valid flashcards provided');
     }
-
-    note.flashcards = validatedFlashcards as any; // Cast needed as INoteFlashcard is a sub-document type
-    // Consider adding a timestamp for when AI flashcards were last saved/confirmed by user
-    // note.aiFlashcardsSavedAt = new Date(); 
-    await note.save();
-
-    // No need to increment quota here, as this is saving *already generated* cards.
-    // Quota was incremented during generation.
-
-    return note.populate({ path: 'user', select: 'name username profileImage' });
+    
+    // Clear existing flashcards and add new ones
+    note.flashcards = [];
+    
+    // Add each flashcard with validation
+    flashcardsToSave.forEach(fc => {
+      if (!fc.question || !fc.answer) {
+        return; // Skip invalid flashcards
+      }
+      
+      // Normalize difficulty
+      const validDifficulties = ['easy', 'medium', 'hard'];
+      let difficulty = 'medium'; // Default
+      
+      if (fc.difficulty && typeof fc.difficulty === 'string') {
+        const normalizedDifficulty = fc.difficulty.toLowerCase();
+        if (validDifficulties.includes(normalizedDifficulty)) {
+          difficulty = normalizedDifficulty;
+        }
+      }
+      
+      // Add to note
+      note.flashcards.push({
+        question: fc.question,
+        answer: fc.answer,
+        difficulty: difficulty as 'easy' | 'medium' | 'hard'
+      } as any);
+    });
+    
+    // Save note
+    try {
+      await note.save();
+      return note;
+    } catch (error) {
+      throw new BadRequestError(`Failed to save flashcards: ${error.message}`);
+    }
   }
 
   // ... other note service methods (create, update, delete, etc.)

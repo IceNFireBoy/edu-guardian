@@ -63,8 +63,8 @@ const advancedResults = <T extends Document>(
   }
 
   // Pagination
-  const page = parseInt(req.query.page || '1', 10);
-  const limit = parseInt(req.query.limit || '25', 10);
+  const page = parseInt(req.query.page ?? '1', 10);
+  const limit = parseInt(req.query.limit ?? '25', 10);
   const startIndex = (page - 1) * limit;
   const endIndex = page * limit;
   // Count documents based on the filtered query string, not the full query object that includes sort/select

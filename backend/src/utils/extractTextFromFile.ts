@@ -29,7 +29,7 @@ export async function extractTextFromFile(fileUrl: string): Promise<string> {
       headers: { 'apikey': apiKey },
     });
     if (ocrRes.data && ocrRes.data.ParsedResults && ocrRes.data.ParsedResults[0]) {
-      return ocrRes.data.ParsedResults[0].ParsedText || '';
+      return ocrRes.data.ParsedResults[0].ParsedText ?? '';
     }
     throw new Error('OCR.space failed to extract text');
   }

@@ -217,7 +217,7 @@ UserSchema.methods.getSignedJwtToken = function(this: IUser): string {
   // Type assertion to help TypeScript understand the structure
   const secret = process.env.JWT_SECRET;
   const options = {
-    expiresIn: process.env.JWT_EXPIRE || '30d'
+    expiresIn: process.env.JWT_EXPIRE ?? '30d'
   };
   
   // @ts-ignore - Ignoring TypeScript error because we know this is correct
@@ -261,22 +261,39 @@ UserSchema.methods.calculateLevel = function(this: IUser): number {
 // Update streak count
 UserSchema.methods.updateStreak = async function(this: IUser): Promise<void> {
   const now = new Date();
+  if (!this.streak.lastUsed) {
+    // Initialize streak if lastUsed is not set
+    this.streak.current = 1;
+    this.streak.lastUsed = now;
+    await this.save();
+    return;
+  }
+
   const lastLogin = new Date(this.streak.lastUsed);
   const diffDays = Math.floor((now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24));
 
+  // Same day login, no streak change
+  if (diffDays === 0) {
+    // No change needed
+    return;
+  }
+  
+  // Consecutive day login
   if (diffDays === 1) {
-    // Consecutive day
     this.streak.current += 1;
-    if (this.streak.current > this.streak.max) {
-      this.streak.max = this.streak.current;
-    }
-  } else if (diffDays > 1) {
-    // Streak broken
+    this.streak.max = Math.max(this.streak.current, this.streak.max || 0);
+  } else {
+    // Gap in streak (more than 1 day)
     this.streak.current = 1;
   }
 
   this.streak.lastUsed = now;
-  await this.save();
+  try {
+    await this.save();
+  } catch (err) {
+    console.error('Error saving user streak:', err);
+    throw err; // Re-throw to allow proper error handling upstream
+  }
 };
 
 // Add activity

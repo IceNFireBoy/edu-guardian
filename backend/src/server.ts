@@ -40,17 +40,17 @@ if (process.env.NODE_ENV === 'development') {
 // Set security headers
 app.use(helmet());
 
-// Prevent XSS attacks
-app.use(xss as any);
-
-// Prevent http param pollution
-app.use(hpp as any);
-
 // Enable CORS
 app.use(cors());
 
 // Sanitize data
 app.use(mongoSanitize());
+
+// Fix xss and hpp middleware calls
+// @ts-ignore - xss doesn't have proper TypeScript definitions
+app.use(xss());
+// @ts-ignore - hpp doesn't have proper TypeScript definitions
+app.use(hpp());
 
 // Rate limiting
 const limiter = rateLimit({

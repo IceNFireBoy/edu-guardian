@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
-import { BadgeService } from '../../services/BadgeService';
-import { Badge, IBadge } from '../../models/Badge';
-import { User, IUser } from '../../models/User';
+import BadgeService from '../../services/BadgeService';
+import Badge, { IBadge } from '../../models/Badge';
+import User, { IUser } from '../../models/User';
 
 describe('BadgeService', () => {
   let badgeService: BadgeService;
@@ -9,7 +9,7 @@ describe('BadgeService', () => {
   let testBadge: IBadge & { _id: mongoose.Types.ObjectId };
 
   beforeAll(async () => {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/test');
+    await mongoose.connect(process.env.MONGO_URI ?? 'mongodb://localhost:27017/test');
   });
 
   afterAll(async () => {
@@ -51,7 +51,7 @@ describe('BadgeService', () => {
 
   describe('createBadge', () => {
     it('should create a new badge', async () => {
-      const badgeData = {
+      const badgeData: Partial<IBadge> = {
         name: 'New Badge',
         description: 'New Description',
         category: 'engagement',
@@ -71,7 +71,7 @@ describe('BadgeService', () => {
     });
 
     it('should throw error for duplicate badge name', async () => {
-      const badgeData = {
+      const badgeData: Partial<IBadge> = {
         name: 'Test Badge',
         description: 'Duplicate Description',
         category: 'engagement',
@@ -99,7 +99,7 @@ describe('BadgeService', () => {
           category: 'engagement',
           rarity: 'common',
           xpReward: 50,
-          criteria: { type: 'test', value: 1 },
+          criteria: { type: 'test', threshold: 1 },
           isActive: true
         },
         {
@@ -108,7 +108,7 @@ describe('BadgeService', () => {
           category: 'engagement',
           rarity: 'common',
           xpReward: 50,
-          criteria: { type: 'test', value: 1 },
+          criteria: { type: 'test', threshold: 1 },
           isActive: true
         },
         {
@@ -117,7 +117,7 @@ describe('BadgeService', () => {
           category: 'engagement',
           rarity: 'common',
           xpReward: 50,
-          criteria: { type: 'test', value: 1 },
+          criteria: { type: 'test', threshold: 1 },
           isActive: false
         }
       ];
@@ -144,7 +144,7 @@ describe('BadgeService', () => {
 
   describe('updateBadge', () => {
     it('should update a badge', async () => {
-      const updateData = {
+      const updateData: Partial<IBadge> = {
         name: 'Updated Badge',
         description: 'Updated Description'
       };
@@ -156,7 +156,7 @@ describe('BadgeService', () => {
     });
 
     it('should throw error for non-existent badge', async () => {
-      const updateData = {
+      const updateData: Partial<IBadge> = {
         name: 'Updated Badge',
         description: 'Updated Description'
       };
@@ -190,7 +190,7 @@ describe('BadgeService', () => {
       );
       expect(result).toBe(true);
       const updatedUser = await User.findById(testUser._id);
-      expect(updatedUser?.badges.some(b => b.badge.toString() === testBadge._id.toString())).toBe(true);
+      expect(updatedUser?.badges.some(b => b.badgeId.toString() === testBadge._id.toString())).toBe(true);
     });
 
     it('should throw error for non-existent user', async () => {
@@ -218,7 +218,7 @@ describe('BadgeService', () => {
       const result = await badgeService.checkAndAwardBadges(testUser._id.toString(), 'note_created');
       
       expect(result).toHaveLength(1);
-      expect(result[0].badge.name).toBe('Test Badge');
+      expect(result[0].badgeId.toString()).toBe(testBadge._id.toString());
       
       const updatedUser = await User.findById(testUser._id);
       expect(updatedUser?.badges).toHaveLength(1);

@@ -1,6 +1,6 @@
 import express from 'express';
 import NoteController from '../controllers/NoteController';
-import { protect, authorize } from '../middleware/auth';
+import { protect } from '../middleware/auth';
 import { body, param, query } from 'express-validator';
 import Note from '../models/Note'; // Keep for the test route for now
 
@@ -19,7 +19,7 @@ router.get('/test/all', async (req, res) => {
   } catch (error: any) {
     return res.status(500).json({
       success: false,
-      error: error.message || "Failed to retrieve notes"
+      error: error.message ?? "Failed to retrieve notes"
     });
   }
 });

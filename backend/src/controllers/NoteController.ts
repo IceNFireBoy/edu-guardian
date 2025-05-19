@@ -1,11 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import asyncHandler from '../middleware/async';
-import NoteService, { NoteQueryFilters } from '../services/NoteService';
+import { NoteService, NoteQueryFilters } from '../services/NoteService';
 import ErrorResponse from '../utils/errorResponse';
 import { CustomRequest } from '../middleware/auth'; // For req.user if needed
 import { INote } from '../models/Note'; // For types
 import mongoose from 'mongoose'; 
+
+// Create a singleton instance of the NoteService
+const noteService = new NoteService();
 
 class NoteController {
   // @desc    Get all notes (with filtering and pagination)
@@ -23,7 +26,11 @@ class NoteController {
     if (subject) filters.subject = subject as string;
     if (semester) filters.semester = semester as string;
     if (quarter) filters.quarter = quarter as string;
-    if (topic) filters.topic = { $regex: new RegExp(topic as string, "i") } as any;
+    if (topic) {
+      // Escape special RegExp characters to prevent ReDoS vulnerabilities
+      const escapedTopic = (topic as string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filters.topic = { $regex: new RegExp(escapedTopic, "i") } as any;
+    }
     
     const paginationOptions = {
         page: page ? parseInt(page as string, 10) : undefined,
@@ -33,7 +40,7 @@ class NoteController {
     };
 
     try {
-      const result = await NoteService.getAllNotes(filters, paginationOptions);
+      const result = await noteService.getAllNotes(filters, paginationOptions);
       res.status(200).json({
       success: true,
         count: result.count,
@@ -56,7 +63,7 @@ class NoteController {
     }
     const noteId = req.params.id;
     try {
-      const note = await NoteService.getNoteById(noteId);
+      const note = await noteService.getNoteById(noteId);
   if (!note) {
         return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));
       }
@@ -114,7 +121,7 @@ class NoteController {
     } 
 
     try {
-      const note = await NoteService.createNote(noteData, userId);
+      const note = await noteService.createNote(noteData, userId);
       res.status(201).json({
       success: true,
       data: note
@@ -181,7 +188,7 @@ class NoteController {
     }
 
     try {
-      const updatedNote = await NoteService.updateNoteById(noteId, userId, noteData);
+      const updatedNote = await noteService.updateNoteById(noteId, userId, noteData);
       if (!updatedNote) {
         // This case should ideally be covered by service throwing ErrorResponse for not found
         // but as a fallback or if service returns null for not found instead of throwing for it.
@@ -214,7 +221,7 @@ class NoteController {
     const noteId = req.params.id;
 
     try {
-      const deletedNote = await NoteService.deleteNoteById(noteId, userId);
+      const deletedNote = await noteService.deleteNoteById(noteId, userId);
       if (!deletedNote) {
         return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));
       }
@@ -239,7 +246,7 @@ class NoteController {
     const userId = req.params.userId;
 
     try {
-      const notes = await NoteService.getUserNotes(userId);
+      const notes = await noteService.getUserNotes(userId);
       res.status(200).json({ success: true, data: notes });
     } catch (error) {
       next(error);
@@ -261,7 +268,7 @@ class NoteController {
     const userId = req.user.id;
 
     try {
-      const notes = await NoteService.getMyNotes(userId);
+      const notes = await noteService.getMyNotes(userId);
       res.status(200).json({ success: true, data: notes });
     } catch (error) {
       next(error);
@@ -278,7 +285,7 @@ class NoteController {
     }
 
     try {
-      const notes = await NoteService.getTopRatedNotes();
+      const notes = await noteService.getTopRatedNotes();
       res.status(200).json({ success: true, data: notes });
     } catch (error) {
       next(error);
@@ -297,7 +304,7 @@ class NoteController {
     const subject = req.params.subject;
 
     try {
-      const notes = await NoteService.getNotesBySubject(subject);
+      const notes = await noteService.getNotesBySubject(subject);
       res.status(200).json({ success: true, data: notes });
     } catch (error) {
       next(error);
@@ -324,7 +331,7 @@ class NoteController {
     } = req.body;
 
     try {
-      const updatedNote = await NoteService.addFlashcardsToNote(noteId, userId, flashcards);
+      const updatedNote = await noteService.addFlashcardsToNote(noteId, userId, flashcards);
       if (!updatedNote) {
         return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));
       }
@@ -346,7 +353,7 @@ class NoteController {
     const { query } = req.query;
 
     try {
-      const notes = await NoteService.searchNotes(query as string);
+      const notes = await noteService.searchNotes(query as string);
       res.status(200).json({ success: true, data: notes });
     } catch (error) {
       next(error);
@@ -375,7 +382,7 @@ class NoteController {
     }
 
     try {
-      const updatedNote = await NoteService.uploadNoteFile(noteId, userId, file);
+      const updatedNote = await noteService.uploadNoteFile(noteId, userId, file);
       if (!updatedNote) {
         return next(new ErrorResponse(`Note not found with id of ${noteId} or upload failed`, 404));
       }
@@ -397,7 +404,7 @@ class NoteController {
     const { filters } = req.query;
 
     try {
-      const notes = await NoteService.getNotesByFilters(filters as string);
+      const notes = await noteService.getNotesByFilters(filters as string);
       res.status(200).json({ success: true, data: notes });
   } catch (error) {
       next(error);
@@ -422,7 +429,7 @@ class NoteController {
     const { rating } = req.body;
 
     try {
-      const updatedNote = await NoteService.rateNote(noteId, userId, rating);
+      const updatedNote = await noteService.rateNote(noteId, userId, rating);
       if (!updatedNote) {
         return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));
       }
@@ -448,7 +455,7 @@ class NoteController {
     const noteId = req.params.id;
 
     try {
-      const updatedNote = await NoteService.incrementDownloads(noteId, userId);
+      const updatedNote = await noteService.incrementDownloads(noteId, userId);
       if (!updatedNote) {
         return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));
       }
@@ -479,7 +486,7 @@ class NoteController {
     } = req.body;
 
     try {
-      const flashcard = await NoteService.createFlashcardForNote(noteId, userId, front, back);
+      const flashcard = await noteService.createFlashcardForNote(noteId, userId, front, back);
       if (!flashcard) {
         return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));
       }
@@ -505,7 +512,7 @@ class NoteController {
     const noteId = req.params.id;
 
     try {
-      const summary = await NoteService.generateAISummaryForNote(noteId, userId);
+      const summary = await noteService.generateAISummaryForNote(noteId, userId);
       if (!summary) {
         return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));
       }
@@ -531,7 +538,7 @@ class NoteController {
     const noteId = req.params.id;
 
     try {
-      const flashcards = await NoteService.generateAIFlashcardsForNote(noteId, userId);
+      const flashcards = await noteService.generateAIFlashcardsForNote(noteId, userId);
       if (!flashcards) {
     return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));
   }
@@ -568,7 +575,7 @@ class NoteController {
     }
 
     try {
-      const updatedNote = await NoteService.saveGeneratedFlashcardsToNote(noteId, userId, flashcards);
+      const updatedNote = await noteService.saveGeneratedFlashcardsToNote(noteId, userId, flashcards);
       if (!updatedNote) {
         // This case should ideally be covered by service throwing ErrorResponse for not found
         return next(new ErrorResponse(`Note not found with id of ${noteId} or save operation failed`, 404));

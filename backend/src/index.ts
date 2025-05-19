@@ -20,9 +20,9 @@ connectDB()
   .then(() => {
     console.log(colors.cyan('[Backend] MongoDB Connected successfully.'));
     // Start the server only after successful DB connection
-    const PORT = process.env.PORT || 5001;
+    const PORT = process.env.PORT ?? 5001;
     // The server is already started in server.ts, we just log here or ensure it is.
-    // If app is not already listening, then: app.listen(PORT, () => console.log(colors.yellow.bold(`[Backend] Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`)));
+    // If app is not already listening, then: app.listen(PORT, () => console.log(colors.yellow.bold(`[Backend] Server running in ${process.env.NODE_ENV ?? 'development'} mode on port ${PORT}`)));
     // Since server.ts starts the server, this file (index.ts) primarily handles DB connection and initial setup.
   })
   .catch(err => {

@@ -162,7 +162,6 @@ describe('AuthService', () => {
       await authService.loginUser(loginCredentials, mockResponse as Response);
 
       const userAfterLogin = await User.findById(testUser._id);
-      expect(userAfterLogin).toBeDefined();
       expect(userAfterLogin?.streak.current).toBe(1);
       expect(userAfterLogin?.xp).toBe(initialXp + 1);
       expect(userAfterLogin?.activity.some(act => act.action === 'login')).toBe(true);
@@ -193,7 +192,6 @@ describe('AuthService', () => {
     it('should return user profile data for authenticated user', async () => {
       const profile = await authService.getAuthenticatedUserProfile(testUser._id.toString());
 
-      expect(profile).toBeDefined();
       expect(profile._id?.toString()).toBe(testUser._id.toString());
       expect(profile.email).toBe(testUser.email);
       expect(profile.name).toBe(testUser.name);
@@ -238,7 +236,6 @@ describe('AuthService', () => {
         updateData
       );
 
-      expect(updatedProfile).toBeDefined();
       expect(updatedProfile.name).toBe(updateData.name);
       expect(updatedProfile.biography).toBe(updateData.biography);
 
@@ -295,22 +292,20 @@ describe('AuthService', () => {
 
   describe('updateUserPassword', () => {
     it('should update user password', async () => {
-      const userId = testUser._id.toString();
-      const currentPassword = 'password123';
-      const newPassword = 'newpassword456';
-
-      const user = await authService.updateUserPassword(
-        userId,
-        currentPassword,
-        newPassword
-      );
-
-      // Check that user is returned
-      expect(user).toBeDefined();
+      const userToUpdate = await User.create(mockUser({ email: 'update-password@example.com', password: 'password123' }));
       
-      // Verify password was updated
-      const updatedUser = await User.findById(userId).select('+password');
-      const isMatch = await updatedUser!.matchPassword(newPassword);
+      // Call updateUserPassword with current password and new password
+      await authService.updateUserPassword(
+        userToUpdate._id.toString(),
+        'password123',
+        'newpassword456'
+      );
+      
+      // Fetch updated user
+      const updatedUser = await User.findById(userToUpdate._id);
+      
+      // Verify the new password works
+      const isMatch = await updatedUser?.matchPassword('newpassword456');
       expect(isMatch).toBe(true);
     });
 
@@ -384,8 +379,6 @@ describe('AuthService', () => {
       // Now reset the password using that token
       const result = await authService.resetPassword(resetToken, 'newpassword456');
       
-      // Verify user returned
-      expect(result).toBeDefined();
       expect(result._id?.toString()).toBe(testUser._id.toString());
       
       // Verify password was changed
@@ -429,7 +422,6 @@ describe('AuthService', () => {
       const result = await authService.verifyUserEmail(verificationToken);
       
       // Verify user returned and is now verified
-      expect(result).toBeDefined();
       expect(result.emailVerified).toBe(true);
       
       // Verify token was cleared

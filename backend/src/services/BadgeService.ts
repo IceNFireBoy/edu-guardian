@@ -3,8 +3,17 @@ import User, { IUser, IUserBadge } from '../models/User';
 import ErrorResponse from '../utils/errorResponse';
 import mongoose from 'mongoose';
 
+// Define a more specific interface for event data
+interface BadgeEventData {
+    noteId?: string;
+    duration?: number;
+    flashcardsReviewed?: number;
+    streak?: number;
+    [key: string]: any; // Allow for additional properties while still having type safety for common ones
+}
+
 interface BadgeCriteriaFunction {
-    (user: IUser, eventData?: any): Promise<boolean> | boolean;
+    (user: IUser, eventData?: BadgeEventData): Promise<boolean> | boolean;
 }
 
 const BADGE_CRITERIA: Record<string, BadgeCriteriaFunction> = {
@@ -129,7 +138,17 @@ export class BadgeService {
         return await Badge.find({ rarity: rarityLevel, isActive: true });
     }
 
-    public async checkAndAwardBadges(userId: string, event: string, eventData?: any): Promise<IBadge[]> {
+    /**
+     * Checks if a user meets the criteria for any badges based on a specific event
+     * and awards them if criteria are met.
+     * 
+     * @param userId - The ID of the user to check and award badges to
+     * @param event - The event type that triggered the check (e.g., 'note_created', 'login_streak_3')
+     * @param eventData - Optional data associated with the event (e.g., streak count, note details)
+     * @returns An array of badges that were awarded to the user
+     * @throws ErrorResponse if the user is not found
+     */
+    public async checkAndAwardBadges(userId: string, event: string, eventData?: BadgeEventData): Promise<IBadge[]> {
         const user = await User.findById(userId);
         if (!user) {
             throw new ErrorResponse('User not found', 404);

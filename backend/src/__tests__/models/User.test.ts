@@ -1,10 +1,10 @@
 import mongoose from 'mongoose';
-import User, { IUser, IUserSubject } from '../../models/User';
+import User, { IUser } from '../../models/User';
 import { mockUser, mockUserActivity, mockUserBadge } from '../factories/user.factory';
 
 describe('User Model Test', () => {
   beforeAll(async () => {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/test');
+    await mongoose.connect(process.env.MONGO_URI ?? 'mongodb://localhost:27017/test');
   });
 
   afterAll(async () => {
@@ -84,7 +84,7 @@ describe('User Model Test', () => {
   });
 
   it('should fail to save user with duplicate email', async () => {
-    const user1 = await User.create({
+    await User.create({
       name: 'Test User 1',
       email: 'test@example.com',
       username: 'testuser1',
@@ -110,7 +110,7 @@ describe('User Model Test', () => {
   });
 
   it('should fail to save user with duplicate username', async () => {
-    const user1 = await User.create({
+    await User.create({
       name: 'Test User 1',
       email: 'test1@example.com',
       username: 'testuser',
@@ -233,18 +233,22 @@ describe('User Model Test', () => {
 
     await user.updateStreak();
     expect(user.streak.current).toBe(1);
-    expect(user.streak.longest).toBe(1);
+    expect(user.streak.max).toBe(1);
 
+    // Set lastUsed to yesterday for consecutive day test
+    user.streak.lastUsed = new Date(Date.now() - 24 * 60 * 60 * 1000); // 1 day ago
+    await user.save();
+    
     await user.updateStreak();
     expect(user.streak.current).toBe(2);
-    expect(user.streak.longest).toBe(2);
+    expect(user.streak.max).toBe(2);
 
     // Simulate streak break
-    user.streak.lastLogin = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
+    user.streak.lastUsed = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
     await user.save();
     await user.updateStreak();
     expect(user.streak.current).toBe(1);
-    expect(user.streak.longest).toBe(2);
+    expect(user.streak.max).toBe(2);
   });
 
   it('should add user activity', async () => {
@@ -260,9 +264,9 @@ describe('User Model Test', () => {
     expect(user.activity[0].action).toBe('login');
     expect(user.activity[0].description).toBe('User logged in');
 
-    await user.addActivity('note_created', 'Created a new note', 10);
+    await user.addActivity('upload', 'Created a new note', 10);
     expect(user.activity).toHaveLength(2);
-    expect(user.activity[1].action).toBe('note_created');
+    expect(user.activity[1].action).toBe('upload');
     expect(user.activity[1].description).toBe('Created a new note');
     expect(user.activity[1].xpEarned).toBe(10);
     expect(user.xp).toBe(10);

@@ -9,9 +9,15 @@ export class AuthService {
   public sendTokenResponse(user: IUser, statusCode: number, res: Response) {
     const token = user.getSignedJwtToken();
 
-    const options: any = {
+    interface CookieOptions {
+      expires: Date;
+      httpOnly: boolean;
+      secure?: boolean;
+    }
+    
+    const options: CookieOptions = {
       expires: new Date(
-        Date.now() + (parseInt(process.env.JWT_COOKIE_EXPIRE || '30', 10) * 24 * 60 * 60 * 1000)
+        Date.now() + (parseInt(process.env.JWT_COOKIE_EXPIRE ?? '30', 10) * 24 * 60 * 60 * 1000)
       ),
       httpOnly: true
     };
@@ -86,7 +92,7 @@ export class AuthService {
       });
 
       return 'Registration successful. Please check your email to verify your account.';
-    } catch (err: any) {
+    } catch (err: Error | unknown) {
       console.error('[AuthService Register] Email sending error:', err);
       // Clean up token fields if send fails, so user can try to register again or request new token
       user.emailVerificationToken = undefined;
@@ -308,7 +314,7 @@ export class AuthService {
     await user.save({ validateBeforeSave: false }); // Saving token fields
 
     // Create reset url (ensure base URL is correct for your frontend)
-    const resetUrl = `${process.env.CLIENT_URL || req.protocol + '://' + req.get('host')}/reset-password/${resetToken}`;
+    const resetUrl = `${process.env.CLIENT_URL ?? req.protocol + '://' + req.get('host')}/reset-password/${resetToken}`;
 
     const message = `You are receiving this email because you (or someone else) has requested the reset of a password for your account.\n\nPlease click on the following link, or paste this into your browser to complete the process within ten minutes of receiving it:\n\n${resetUrl}\n\nIf you did not request this, please ignore this email and your password will remain unchanged.\n`;
 
@@ -319,7 +325,7 @@ export class AuthService {
         message
       });
       return 'If an account with that email exists, a password reset link has been sent.';
-    } catch (err: any) {
+    } catch (err: Error | unknown) {
       console.error('[AuthService ForgotPassword] Email sending error:', err);
       // Clear tokens if email sending failed to allow user to try again
       user.resetPasswordToken = undefined;
@@ -429,7 +435,7 @@ export class AuthService {
         message
       });
       return 'If your email is registered and not yet verified, a new verification link has been sent.';
-    } catch (err: any) {
+    } catch (err: Error | unknown) {
       console.error('[AuthService ResendVerification] Email sending error:', err);
       // Optionally clear tokens if sending failed, to allow user to try again cleanly
       user.emailVerificationToken = undefined;
