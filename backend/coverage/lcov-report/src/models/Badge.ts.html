@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/6</span>
+                <span class='fraction'>5/5</span>
             </div>
         
             
@@ -37,16 +37,16 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/6</span>
+                <span class='fraction'>5/5</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -128,22 +128,7 @@
 <a name='L63'></a><a href='#L63'>63</a>
 <a name='L64'></a><a href='#L64'>64</a>
 <a name='L65'></a><a href='#L65'>65</a>
-<a name='L66'></a><a href='#L66'>66</a>
-<a name='L67'></a><a href='#L67'>67</a>
-<a name='L68'></a><a href='#L68'>68</a>
-<a name='L69'></a><a href='#L69'>69</a>
-<a name='L70'></a><a href='#L70'>70</a>
-<a name='L71'></a><a href='#L71'>71</a>
-<a name='L72'></a><a href='#L72'>72</a>
-<a name='L73'></a><a href='#L73'>73</a>
-<a name='L74'></a><a href='#L74'>74</a>
-<a name='L75'></a><a href='#L75'>75</a>
-<a name='L76'></a><a href='#L76'>76</a>
-<a name='L77'></a><a href='#L77'>77</a>
-<a name='L78'></a><a href='#L78'>78</a>
-<a name='L79'></a><a href='#L79'>79</a>
-<a name='L80'></a><a href='#L80'>80</a>
-<a name='L81'></a><a href='#L81'>81</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L66'></a><a href='#L66'>66</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -160,8 +145,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -206,42 +191,26 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import mongoose, { Document } from 'mongoose';</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span></td><td class="text"><pre class="prettyprint lang-js">import mongoose, { Document } from 'mongoose';
 &nbsp;
 export interface IBadge extends Document {
   name: string;
   description: string;
-  imageUrl: string;
-  category: 'xp' | 'notes';
+  category: 'engagement' | 'ai' | 'streak' | 'achievement';
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   criteria: {
-    description: string;
-    requirements: Record&lt;string, any&gt;;
+    type: string;
+    threshold: number;
   };
-  xpAward?: number;
+  xpReward: number;
   isActive: boolean;
-  slug: string;
   createdAt: Date;
+  updatedAt: Date;
 }
 &nbsp;
-const badgeSchema = <span class="cstat-no" title="statement not covered" >new mongoose.Schema({</span>
+const badgeSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Please add a badge name'],
@@ -254,13 +223,9 @@ const badgeSchema = <span class="cstat-no" title="statement not covered" >new mo
     required: [true, 'Please add a description'],
     maxlength: [500, 'Description cannot be more than 500 characters']
   },
-  imageUrl: {
-    type: String,
-    required: [true, 'Please add an image URL']
-  },
   category: {
     type: String,
-    enum: ['xp', 'notes'],
+    enum: ['engagement', 'ai', 'streak', 'achievement'],
     required: [true, 'Please specify a category']
   },
   rarity: {
@@ -269,48 +234,38 @@ const badgeSchema = <span class="cstat-no" title="statement not covered" >new mo
     required: [true, 'Please specify a rarity level']
   },
   criteria: {
-    description: {
+    type: {
       type: String,
-      required: [true, 'Please add criteria description']
+      required: [true, 'Please specify criteria type']
     },
-    requirements: {
-      type: mongoose.Schema.Types.Mixed,
-      required: [true, 'Please specify badge requirements']
+    threshold: {
+      type: Number,
+      required: [true, 'Please specify criteria threshold']
     }
   },
-  xpAward: {
+  xpReward: {
     type: Number,
-    default: 0
+    required: [true, 'Please specify XP reward'],
+    min: [0, 'XP reward cannot be negative']
   },
   isActive: {
     type: Boolean,
     default: true
-  },
-  slug: {
-    type: String,
-    unique: true
   }
 }, {
   timestamps: true
 });
 &nbsp;
-// Create slug from name
-<span class="cstat-no" title="statement not covered" >badgeSchema.pre('save', <span class="fstat-no" title="function not covered" >function(n</span>ext) {</span>
-<span class="cstat-no" title="statement not covered" >  this.slug = this.name</span>
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-<span class="cstat-no" title="statement not covered" >  next();</span>
-});
-&nbsp;
-<span class="cstat-no" title="statement not covered" >export default mongoose.model&lt;IBadge&gt;('Badge', badgeSchema); </span></pre></td></tr></table></pre>
+const Badge = mongoose.model&lt;IBadge&gt;('Badge', badgeSchema);
+export default Badge;
+export { Badge }; </pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-05-13T16:11:50.492Z
+                at 2025-05-19T17:29:29.451Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

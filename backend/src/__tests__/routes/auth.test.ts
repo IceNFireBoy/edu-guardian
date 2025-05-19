@@ -5,10 +5,10 @@ import app from '../../server';
 
 describe('Auth Routes', () => {
   beforeAll(async () => {
-    await mongoose.connect(process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/eduguardian_test');
-  });
+    await mongoose.connect(process.env.MONGODB_URI_TEST ?? 'mongodb://localhost:27017/eduguardian_test');
+});
 
-  afterAll(async () => {
+afterAll(async () => {
     await mongoose.connection.dropDatabase();
     await mongoose.connection.close();
   });
@@ -22,9 +22,9 @@ describe('Auth Routes', () => {
       const res = await request(app)
         .post('/api/auth/register')
         .send({
-          name: 'Test User',
+      name: 'Test User',
           email: 'test@example.com',
-          password: 'password123',
+      password: 'password123',
           role: 'user'
         });
 
@@ -71,7 +71,7 @@ describe('Auth Routes', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
-    });
+      });
   });
 
   describe('POST /api/auth/login', () => {
@@ -178,6 +178,6 @@ describe('Auth Routes', () => {
 
       expect(res.status).toBe(401);
       expect(res.body.success).toBe(false);
-    });
+      });
   });
 }); 

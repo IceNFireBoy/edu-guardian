@@ -6,15 +6,16 @@ import { useUser } from '../../../user/useUser';
 import { toast } from 'react-hot-toast';
 
 // Mock the hooks and dependencies
-vi.mock('../../useNote');
-vi.mock('../../../user/useUser');
-vi.mock('react-hot-toast');
-vi.mock('../../../api/apiClient', () => ({
-  callAuthenticatedApi: vi.fn()
+jest.mock('../../useNote');
+jest.mock('../../../user/useUser');
+jest.mock('react-hot-toast');
+jest.mock('../../../api/apiClient', () => ({
+  callAuthenticatedApi: jest.fn()
 }));
 
 describe('NoteDetailModal', () => {
-  const mockNote = {
+  const mockFullNote = {
+    _id: 'test-note-id',
     id: 'test-note-id',
     title: 'Test Note',
     description: 'Test Description',
@@ -26,14 +27,24 @@ describe('NoteDetailModal', () => {
     isPublic: true,
     fileUrl: 'https://example.com/test.pdf',
     fileType: 'pdf',
+    fileSize: 1024 * 1024,
+    user: { _id: 'user-id-123', name: 'Test User' },
+    tags: ['algebra', 'test'],
     viewCount: 100,
-    ratingCount: 10,
+    downloadCount: 50,
+    ratings: [],
     averageRating: 4.5,
-    createdAt: '2024-01-01T00:00:00.000Z'
+    aiSummary: null,
+    aiSummaryGeneratedAt: null,
+    aiSummaryKeyPoints: [],
+    flashcards: [],
+    slug: 'test-note',
+    createdAt: new Date('2024-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2024-01-01T00:00:00.000Z'),
   };
 
-  const mockUpdateNote = vi.fn();
-  const mockDeleteNote = vi.fn();
+  const mockUpdateNote = jest.fn();
+  const mockDeleteNote = jest.fn();
   const mockNoteHookLoading = false;
   const mockNoteHookError = null;
 
@@ -43,7 +54,7 @@ describe('NoteDetailModal', () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     (useNote as any).mockReturnValue({
       updateNote: mockUpdateNote,
       deleteNote: mockDeleteNote,
@@ -60,13 +71,13 @@ describe('NoteDetailModal', () => {
       <NoteDetailModal
         isOpen={true}
         onClose={() => {}}
-        note={mockNote}
+        note={mockFullNote}
       />
     );
     
     expect(screen.getByText('Note Details')).toBeInTheDocument();
-    expect(screen.getByText(mockNote.title)).toBeInTheDocument();
-    expect(screen.getByText(mockNote.description)).toBeInTheDocument();
+    expect(screen.getByText(mockFullNote.title)).toBeInTheDocument();
+    expect(screen.getByText(mockFullNote.description)).toBeInTheDocument();
   });
 
   it('does not render when isOpen is false', () => {
@@ -74,7 +85,7 @@ describe('NoteDetailModal', () => {
       <NoteDetailModal
         isOpen={false}
         onClose={() => {}}
-        note={mockNote}
+        note={mockFullNote}
       />
     );
     
@@ -87,7 +98,7 @@ describe('NoteDetailModal', () => {
       <NoteDetailModal
         isOpen={true}
         onClose={mockOnClose}
-        note={mockNote}
+        note={mockFullNote}
       />
     );
     
@@ -100,17 +111,18 @@ describe('NoteDetailModal', () => {
       <NoteDetailModal
         isOpen={true}
         onClose={() => {}}
-        note={mockNote}
+        note={mockFullNote}
       />
     );
     
-    expect(screen.getByText(mockNote.title)).toBeInTheDocument();
-    expect(screen.getByText(mockNote.description)).toBeInTheDocument();
-    expect(screen.getByText(mockNote.subject)).toBeInTheDocument();
-    expect(screen.getByText(`Grade ${mockNote.grade}`)).toBeInTheDocument();
-    expect(screen.getByText(`Semester ${mockNote.semester}`)).toBeInTheDocument();
-    expect(screen.getByText(`Quarter ${mockNote.quarter}`)).toBeInTheDocument();
-    expect(screen.getByText(mockNote.topic)).toBeInTheDocument();
+    expect(screen.getByText(mockFullNote.title)).toBeInTheDocument();
+    expect(screen.getByText(mockFullNote.description)).toBeInTheDocument();
+    expect(screen.getByText(mockFullNote.subject)).toBeInTheDocument();
+    expect(screen.getByText(`Grade ${mockFullNote.grade}`)).toBeInTheDocument();
+    expect(screen.getByText(`Semester ${mockFullNote.semester}`)).toBeInTheDocument();
+    expect(screen.getByText(`Quarter ${mockFullNote.quarter}`)).toBeInTheDocument();
+    expect(screen.getByText(mockFullNote.topic)).toBeInTheDocument();
+    expect(screen.getByText('1.00 MB')).toBeInTheDocument();
   });
 
   it('displays file preview for PDF files', () => {
@@ -118,7 +130,7 @@ describe('NoteDetailModal', () => {
       <NoteDetailModal
         isOpen={true}
         onClose={() => {}}
-        note={mockNote}
+        note={mockFullNote}
       />
     );
     
@@ -128,7 +140,7 @@ describe('NoteDetailModal', () => {
 
   it('displays file preview for image files', () => {
     const imageNote = {
-      ...mockNote,
+      ...mockFullNote,
       fileType: 'image/jpeg',
       fileUrl: 'https://example.com/test.jpg'
     };
@@ -148,7 +160,7 @@ describe('NoteDetailModal', () => {
 
   it('displays fallback for unknown file types', () => {
     const unknownNote = {
-      ...mockNote,
+      ...mockFullNote,
       fileType: 'unknown',
       fileUrl: 'https://example.com/test.xyz'
     };
@@ -170,7 +182,7 @@ describe('NoteDetailModal', () => {
       <NoteDetailModal
         isOpen={true}
         onClose={mockOnClose}
-        note={mockNote}
+        note={mockFullNote}
         isOwner={true}
       />
     );
@@ -189,7 +201,7 @@ describe('NoteDetailModal', () => {
     fireEvent.click(screen.getByText('Save Changes'));
     
     await waitFor(() => {
-      expect(mockUpdateNote).toHaveBeenCalledWith(mockNote.id, {
+      expect(mockUpdateNote).toHaveBeenCalledWith(mockFullNote._id, {
         title: 'Updated Title',
         description: 'Updated Description'
       });
@@ -202,7 +214,7 @@ describe('NoteDetailModal', () => {
       <NoteDetailModal
         isOpen={true}
         onClose={() => {}}
-        note={mockNote}
+        note={mockFullNote}
         isOwner={true}
       />
     );
@@ -219,7 +231,7 @@ describe('NoteDetailModal', () => {
       <NoteDetailModal
         isOpen={true}
         onClose={mockOnClose}
-        note={mockNote}
+        note={mockFullNote}
         isOwner={true}
       />
     );
@@ -228,7 +240,7 @@ describe('NoteDetailModal', () => {
     fireEvent.click(screen.getByText('Confirm Delete'));
     
     await waitFor(() => {
-      expect(mockDeleteNote).toHaveBeenCalledWith(mockNote.id);
+      expect(mockDeleteNote).toHaveBeenCalledWith(mockFullNote._id);
       expect(toast.success).toHaveBeenCalledWith('Note deleted successfully');
       expect(mockOnClose).toHaveBeenCalled();
     });
@@ -242,7 +254,7 @@ describe('NoteDetailModal', () => {
       <NoteDetailModal
         isOpen={true}
         onClose={() => {}}
-        note={mockNote}
+        note={mockFullNote}
         isOwner={true}
       />
     );
@@ -263,7 +275,7 @@ describe('NoteDetailModal', () => {
       <NoteDetailModal
         isOpen={true}
         onClose={() => {}}
-        note={mockNote}
+        note={mockFullNote}
         isOwner={true}
       />
     );
@@ -281,7 +293,7 @@ describe('NoteDetailModal', () => {
       <NoteDetailModal
         isOpen={true}
         onClose={() => {}}
-        note={mockNote}
+        note={mockFullNote}
         isOwner={false}
       />
     );

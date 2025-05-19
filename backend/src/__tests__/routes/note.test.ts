@@ -8,18 +8,18 @@ describe('Note Routes', () => {
   let token: string;
   let testUser: any;
 
-  beforeAll(async () => {
-    await mongoose.connect(process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/eduguardian_test');
-  });
+beforeAll(async () => {
+    await mongoose.connect(process.env.MONGODB_URI_TEST ?? 'mongodb://localhost:27017/eduguardian_test');
+});
 
-  afterAll(async () => {
+afterAll(async () => {
     await mongoose.connection.dropDatabase();
     await mongoose.connection.close();
   });
 
   beforeEach(async () => {
-    await User.deleteMany({});
-    await Note.deleteMany({});
+  await User.deleteMany({});
+  await Note.deleteMany({});
 
     testUser = await User.create({
       name: 'Test User',

@@ -120,9 +120,9 @@ router.post('/:id/generate-flashcards', protect, [
 router.post('/:id/save-ai-flashcards', protect, [
     param('id').isMongoId().withMessage('Invalid note ID'),
     body('flashcards').isArray({ min: 1 }).withMessage('Flashcards must be a non-empty array'),
-    body('flashcards.*'.question').notEmpty().isString().withMessage('Each flashcard must have a question'),
-    body('flashcards.*'.answer').notEmpty().isString().withMessage('Each flashcard must have an answer'),
-    body('flashcards.*'.difficulty').optional().isIn(['easy', 'medium', 'hard']).withMessage('Invalid difficulty level')
+    body('flashcards.*.question').notEmpty().isString().withMessage('Each flashcard must have a question'),
+    body('flashcards.*.answer').notEmpty().isString().withMessage('Each flashcard must have an answer'),
+    body('flashcards.*.difficulty').optional().isIn(['easy', 'medium', 'hard']).withMessage('Invalid difficulty level')
 ], noteController.saveAIGeneratedFlashcards);
 
 export default router; 

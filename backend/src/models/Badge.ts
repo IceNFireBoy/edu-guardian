@@ -3,17 +3,16 @@ import mongoose, { Document } from 'mongoose';
 export interface IBadge extends Document {
   name: string;
   description: string;
-  imageUrl: string;
-  category: 'xp' | 'notes' | 'streak' | 'upload' | 'engagement' | 'achievement' | 'special' | 'ai';
+  category: 'engagement' | 'ai' | 'streak' | 'achievement';
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   criteria: {
-    description: string;
-    requirements: Record<string, any>;
+    type: string;
+    threshold: number;
   };
-  xpAward?: number;
+  xpReward: number;
   isActive: boolean;
-  slug: string;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const badgeSchema = new mongoose.Schema({
@@ -29,13 +28,9 @@ const badgeSchema = new mongoose.Schema({
     required: [true, 'Please add a description'],
     maxlength: [500, 'Description cannot be more than 500 characters']
   },
-  imageUrl: {
-    type: String,
-    required: [true, 'Please add an image URL']
-  },
   category: {
     type: String,
-    enum: ['xp', 'notes', 'streak', 'upload', 'engagement', 'achievement', 'special', 'ai'],
+    enum: ['engagement', 'ai', 'streak', 'achievement'],
     required: [true, 'Please specify a category']
   },
   rarity: {
@@ -44,38 +39,28 @@ const badgeSchema = new mongoose.Schema({
     required: [true, 'Please specify a rarity level']
   },
   criteria: {
-    description: {
+    type: {
       type: String,
-      required: [true, 'Please add criteria description']
+      required: [true, 'Please specify criteria type']
     },
-    requirements: {
-      type: mongoose.Schema.Types.Mixed,
-      required: [true, 'Please specify badge requirements']
+    threshold: {
+      type: Number,
+      required: [true, 'Please specify criteria threshold']
     }
   },
-  xpAward: {
+  xpReward: {
     type: Number,
-    default: 0
+    required: [true, 'Please specify XP reward'],
+    min: [0, 'XP reward cannot be negative']
   },
   isActive: {
     type: Boolean,
     default: true
-  },
-  slug: {
-    type: String,
-    unique: true
   }
 }, {
   timestamps: true
 });
 
-// Create slug from name
-badgeSchema.pre('save', function(next) {
-  this.slug = this.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-  next();
-});
-
-export default mongoose.model<IBadge>('Badge', badgeSchema); 
+const Badge = mongoose.model<IBadge>('Badge', badgeSchema);
+export default Badge;
+export { Badge }; 

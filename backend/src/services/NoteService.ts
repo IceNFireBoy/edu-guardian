@@ -1,7 +1,7 @@
 import Note, { INote } from '../models/Note';
 import User, { IUser } from '../models/User'; // For user-related operations if needed
 import { NotFoundError, BadRequestError, QuotaExceededError } from '../utils/customErrors'; // Import if needed directly
-import userService from './UserService'; // Import UserService instance
+import UserService from './UserService'; // Import UserService instance
 import BadgeService from './BadgeService'; // Import BadgeService
 import ErrorResponse from '../utils/errorResponse';
 import { FilterQuery, PopulateOptions } from 'mongoose';
@@ -51,7 +51,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-class NoteService {
+const badgeService = new BadgeService();
+const userService = new UserService();
+
+export class NoteService {
   public async getAllNotes(
     filters: NoteQueryFilters,
     pagination: PaginationOptions
@@ -387,305 +390,157 @@ class NoteService {
   }
 
   public async generateAISummaryForNote(noteId: string, userId: string): Promise<AIGenerationResponse<Partial<INote>>> {
-    console.log(`[NoteService] Attempting to generate AI summary for note ${noteId} by user ${userId}`);
-
-    // 0. Fetch user for activity logging
-    const user = await User.findById(userId);
-    if (!user) {
-        // This should ideally not happen if userId is validated upstream or by checkUserQuota
-        throw new NotFoundError('User not found for AI summary generation');
-    }
-
-    // 1. Check user's AI quota using UserService
-    try {
-      await userService.checkUserQuota(userId, 'summary');
-    } catch (error) {
-      if (error instanceof QuotaExceededError) {
-        console.warn(`[NoteService] Quota exceeded for user ${userId} for summary generation.`);
-        // Let the error propagate to be handled by the controller/error middleware
-      }
-      // Rethrow to ensure it's caught by the global error handler or controller
-      throw error;
-    }
-
-    const note = await Note.findById(noteId).populate('user');
+    const note = await Note.findById(noteId);
     if (!note) {
-      console.error(`[NoteService] Note with ID ${noteId} not found for AI summary generation.`);
-      throw new NotFoundError('Note not found');
+        throw new NotFoundError('Note not found');
     }
 
-    // Check ownership or if user is admin (optional, depending on rules for AI generation)
-    // if (note.user._id.toString() !== userId && (note.user as IUser).role !== 'admin') {
-    //   throw new ForbiddenError('User not authorized to generate summary for this note');
-    // }
-    
-    console.log(`[NoteService] Note found: ${note.title}. Extracting text content.`);
+    // Check user's AI quota
+    await userService.checkUserQuota(userId, 'summary');
 
-    let content = '';
-    try {
-      content = await extractTextFromFile(note.fileUrl);
-      if (!content || content.trim().length === 0) {
-        throw new ErrorResponse('No content found in the note file to summarize.', 400);
-      }
-    } catch (err: any) {
-      console.error('[AI] Text extraction failed:', err.message);
-      if (err instanceof ErrorResponse) throw err;
-      throw new ErrorResponse('Failed to extract text from note file. The file might be corrupted or in an unsupported format.', 500);
+    // Extract text from the note's file
+    const text = await extractTextFromFile(note.fileUrl);
+    if (!text) {
+        throw new BadRequestError('Could not extract text from file');
     }
 
-    let summary = '';
-    let keyPoints: string[] = [];
-
-    try {
-      const prompt = `Generate a concise summary (around 150-200 words) and 3-5 key bullet points for the provided academic note content. 
-      Return a valid JSON object with "summary" (string) and "keyPoints" (array of strings) keys. 
-      Example: {"summary":"The note discusses cell division...","keyPoints":["Mitosis results in two identical daughter cells. Sourced from page 1.","Meiosis leads to genetic variation. Sourced from page 3."]}
-      Content:\n\n${content.slice(0, 12000)}`; // Max length based on typical context limits
-      
-      const response = await openai.chat.completions.create({
-        model: OPENAI_CHAT_MODEL, // Use constant
+    // Generate summary using OpenAI
+    const completion = await openai.chat.completions.create({
+        model: OPENAI_CHAT_MODEL,
         messages: [
-          { role: 'system', content: 'You are an expert academic summarizer. Respond ONLY with a valid JSON object as specified.' },
-          { role: 'user', content: prompt }
+            {
+                role: 'system',
+                content: 'You are a helpful assistant that summarizes educational notes. Provide a concise but comprehensive summary.'
+            },
+            {
+                role: 'user',
+                content: `Please summarize the following educational notes:\n\n${text}`
+            }
         ],
-        max_tokens: 500, // Adjusted based on expected output length
-        temperature: 0.5
-      });
+        max_tokens: 500
+    });
 
-      const rawResponse = response.choices[0].message.content?.trim();
-      if (!rawResponse) {
-        throw new Error('OpenAI returned an empty response.');
-      }
+    const summary = completion.choices[0].message.content;
 
-      try {
-        const parsedResponse = JSON.parse(rawResponse);
-        summary = parsedResponse.summary || '';
-        keyPoints = Array.isArray(parsedResponse.keyPoints) ? parsedResponse.keyPoints : [];
-        if (!summary && keyPoints.length === 0) {
-            throw new Error('AI generated an empty summary and no key points.');
-        }
-      } catch (parseError: any) {
-        console.error('[AI] Failed to parse JSON response from OpenAI:', rawResponse, parseError.message);
-        // Fallback: try to extract summary if JSON parsing fails and response is just a string
-        if (typeof rawResponse === 'string' && !rawResponse.startsWith('{')) {
-            summary = rawResponse; // Assume the entire response is the summary
-            keyPoints = []; // No key points if parsing failed
-        } else {
-            throw new Error('AI returned a response in an unexpected format.');
-        }
-      }
-
-    } catch (err: any) {
-      console.error('[AI] OpenAI summarization failed:', err.message);
-      // More specific error messages based on error type could be added here
-      if (err.response && err.response.status === 401) {
-        throw new ErrorResponse('AI service authentication failed. Please check API key configuration.', 500);
-      }
-      if (err.response && err.response.status === 429) {
-        throw new ErrorResponse('AI service rate limit hit or quota exceeded on their end. Please try again later.', 503);
-      }
-      throw new ErrorResponse(`AI summarization service failed: ${err.message || 'Unknown error'}`, 500);
-    }
-
-    note.aiSummary = {
-      content: summary,
-      generatedAt: new Date(),
-      modelUsed: OPENAI_CHAT_MODEL, // Store the model used
-    };
+    // Update note with summary
+    note.aiSummary = summary;
     await note.save();
-    console.log(`[NoteService] AI summary generated and saved successfully for note ${noteId}.`);
 
-    // 2. Increment AI usage (also increments lifetime totals in UserService)
+    // Increment user's AI usage
     await userService.incrementAIUsage(userId, 'summary');
-    
-    // 3. Log activity
-    user.addActivity('ai_summary_generated', `Generated AI summary for note: ${note.title || noteId}`, 0); // XP for badge, not for action itself
 
-    // 4. Update user's AI streak (this will also save the user initially)
-    const updatedUser = await userService.updateUserAIStreak(userId); // userService saves the user
+    // Update user's AI streak
+    const updatedUser = await userService.updateUserAIStreak(userId);
 
-    // 5. Check for badges related to summary generation and streak
-    const badgeService = new BadgeService(); // Instantiate BadgeService
-    const newlyAwardedSummaryBadges = await badgeService.checkAndAwardBadges(userId, 'ai_summary_generated', { noteId, title: note.title });
-    const newlyAwardedStreakBadges = await badgeService.checkAndAwardBadges(userId, 'ai_streak', { currentStreak: updatedUser.streak.current });
-    
-    const allNewlyAwardedBadges = [...newlyAwardedSummaryBadges, ...newlyAwardedStreakBadges].filter((v,i,a)=>a.findIndex(t=>(t.badge.toString() === v.badge.toString()))===i); // Deduplicate
+    // Check for and award badges
+    const newlyAwardedSummaryBadges = await badgeService.checkAndAwardBadges(userId, 'ai_summary_generated');
+    const newlyAwardedStreakBadges = await badgeService.checkAndAwardBadges(userId, 'ai_streak', { streak: updatedUser.streak.current });
 
-    // User object might have been modified by badge service (XP, new badges), so save if not done by badgeService or streak.
-    // BadgeService saves the user if badges are awarded. updateUserAIStreak also saves.
-    // If BadgeService didn't save and streak didn't change, an explicit save might be needed if addActivity doesn't save.
-    // User.addActivity pushes to an array; save is needed to persist.
-    // Since updateUserAIStreak saves, and badgeService.checkAndAwardBadges saves, this should be covered.
-    // Let's ensure addActivity changes are saved. The save in updateUserAIStreak should cover it.
+    // Format response
+    const allNewlyAwardedBadges = [...newlyAwardedSummaryBadges, ...newlyAwardedStreakBadges]
+        .filter((v, i, a) => a.findIndex(t => t === v) === i); // Deduplicate
 
-    return { 
-      data: { _id: note._id, aiSummary: note.aiSummary }, 
-      newlyAwardedBadges: allNewlyAwardedBadges.map(b => {
-        const populatedBadge = b.badge as unknown as IBadge; // b.badge is now populated IBadge
-        return {
-          badgeId: populatedBadge._id.toString(),
-          name: populatedBadge.name,
-          icon: populatedBadge.icon,
-          level: populatedBadge.level,
-          xpReward: populatedBadge.xpReward
-        };
-      })
+    let summaryStr = typeof summary === 'string' ? summary : (summary || undefined);
+
+    return {
+        data: { aiSummary: summaryStr },
+        newlyAwardedBadges: (await Promise.all(allNewlyAwardedBadges.map(async badgeName => {
+            const badge = await badgeService.getBadgeByName(badgeName);
+            if (!badge) return undefined;
+            return {
+                badgeId: badge._id.toString(),
+                name: badge.name,
+                icon: (badge as any).icon || '',
+                level: (badge as any).level || '',
+                xpReward: (badge as any).xpReward || 0
+            };
+        }))).filter((b): b is IUserBadgeEarnedAPIResponse => !!b)
     };
   }
 
   public async generateAIFlashcardsForNote(noteId: string, userId: string): Promise<AIGenerationResponse<Pick<INote, 'flashcards'>>> {
-    console.log(`[NoteService] Attempting to generate AI flashcards for note ${noteId} by user ${userId}`);
-
-    // 0. Fetch user for activity logging
-    const user = await User.findById(userId);
-    if (!user) {
-        throw new NotFoundError('User not found for AI flashcards generation');
-    }
-
-    // 1. Check user's AI quota using UserService
-    try {
-      await userService.checkUserQuota(userId, 'flashcard');
-    } catch (error) {
-      if (error instanceof QuotaExceededError) {
-        console.warn(`[NoteService] Quota exceeded for user ${userId} for flashcard generation.`);
-      }
-      throw error;
-    }
-
     const note = await Note.findById(noteId);
     if (!note) {
-      console.error(`[NoteService] Note ${noteId} not found for flashcard generation.`);
-      throw new NotFoundError('Note not found');
-    }
-    
-    console.log(`[NoteService] Note found: ${note.title}. Extracting text for flashcards.`);
-
-    let content = '';
-    try {
-      content = await extractTextFromFile(note.fileUrl);
-      if (!content || content.trim().length === 0) {
-        throw new ErrorResponse('No content found in the note file to generate flashcards.', 400);
-      }
-    } catch (err: any) {
-      console.error('[AI] Flashcard text extraction failed:', err.message);
-      if (err instanceof ErrorResponse) throw err;
-      throw new ErrorResponse('Failed to extract text from note file for flashcards. File might be corrupted or unsupported.', 500);
+        throw new NotFoundError('Note not found');
     }
 
-    let generatedFlashcards: Array<{ question: string; answer: string; difficulty?: 'easy' | 'medium' | 'hard' }> = [];
+    // Check user's AI quota
+    await userService.checkUserQuota(userId, 'flashcard');
 
-    try {
-      const prompt = `Generate 3-5 high-quality flashcards for studying the provided academic note content. 
-      Each flashcard MUST be a JSON object with "question" (string), "answer" (string), and "difficulty" (enum: '${FLASHCARD_DIFFICULTY_LEVELS.join('', '')}') keys. 
-      Return a valid JSON array of these objects. 
-      Example: [{"question":"What is mitosis?","answer":"A type of cell division...","difficulty":"${FLASHCARD_DIFFICULTY_LEVELS[1]}"}]
-      Content:\n\n${content.slice(0, 8000)}`;
+    // Extract text from the note's file
+    const text = await extractTextFromFile(note.fileUrl);
+    if (!text) {
+        throw new BadRequestError('Could not extract text from file');
+    }
 
-      const response = await openai.chat.completions.create({
-        model: OPENAI_CHAT_MODEL, // Use constant
+    // Generate flashcards using OpenAI
+    const completion = await openai.chat.completions.create({
+        model: OPENAI_CHAT_MODEL,
         messages: [
-          { role: 'system', content: 'You are an expert academic flashcard generator. Respond ONLY with a valid JSON array of flashcard objects as specified.' },
-          { role: 'user', content: prompt }
+            {
+                role: 'system',
+                content: `You are a helpful assistant that creates educational flashcards. Create flashcards in the following JSON format:
+                [
+                    {
+                        "question": "string",
+                        "answer": "string",
+                        "difficulty": "easy|medium|hard"
+                    }
+                ]
+                Each flashcard MUST be a JSON object with "question" (string), "answer" (string), and "difficulty" (enum: '${FLASHCARD_DIFFICULTY_LEVELS.join('|')}') keys.`
+            },
+            {
+                role: 'user',
+                content: `Please create flashcards from the following educational notes:\n\n${text}`
+            }
         ],
-        response_format: { type: "json_object" }, // Enable JSON mode
-        max_tokens: 700, // Adjusted for potentially 5 flashcards
-        temperature: 0.6 // Slightly lower for more factual flashcards
-      });
+        max_tokens: 1000
+    });
 
-      const rawResponse = response.choices[0].message.content?.trim();
-      if (!rawResponse) {
-        throw new Error('OpenAI returned an empty response for flashcards.');
-      }
-
-      try {
-        // The response_format: { type: "json_object" } should ensure the response is a JSON object.
-        // The prompt asks for an array, so the AI might wrap it in a key e.g. {"flashcards": [...]}
-        let parsedResponse = JSON.parse(rawResponse);
-        if (Array.isArray(parsedResponse)) {
-          generatedFlashcards = parsedResponse;
-        } else if (typeof parsedResponse === 'object' && parsedResponse !== null) {
-          // Attempt to find an array if the AI wrapped it, e.g., { "flashcards": [] }
-          const keyWithArray = Object.keys(parsedResponse).find(k => Array.isArray(parsedResponse[k]));
-          if (keyWithArray) {
-            generatedFlashcards = parsedResponse[keyWithArray];
-          } else {
-            throw new Error('JSON response from AI was an object but did not contain a flashcard array.');
-          }
-        } else {
-          throw new Error('JSON response from AI was not an array or a recognized object wrapper.');
-        }
-
-      } catch (parseError: any) {
-        console.error('[AI] Failed to parse JSON response for flashcards from OpenAI:', rawResponse, parseError.message);
-        throw new Error('AI returned flashcards in an unexpected or malformed JSON format. Please try generating again.');
-      }
-
-    } catch (err: any) {
-      console.error('[AI] OpenAI flashcard generation call failed:', err.message);
-      if (err.response && err.response.status === 401) {
-        throw new ErrorResponse('AI service authentication failed. Please check API key configuration.', 500);
-      }
-      if (err.response && err.response.status === 429) {
-        throw new ErrorResponse('AI service rate limit hit or quota exceeded on their end. Please try again later.', 503);
-      }
-      throw new ErrorResponse(`AI flashcard generation service failed: ${err.message || 'Unknown error'}`, 500);
+    const flashcardsText = completion.choices[0].message.content;
+    let flashcards;
+    try {
+        flashcards = JSON.parse(flashcardsText);
+    } catch (error) {
+        throw new BadRequestError('Failed to parse AI-generated flashcards');
     }
 
-    if (!generatedFlashcards || generatedFlashcards.length === 0) {
-      throw new ErrorResponse('AI did not generate any flashcards for this content. The note might be too short or lack distinct concepts.', 400);
+    // Validate flashcard format
+    if (!Array.isArray(flashcards)) {
+        throw new BadRequestError('AI did not generate a valid array of flashcards');
     }
 
-    // Validate and filter flashcards
-    const validFlashcards = generatedFlashcards.filter(fc => 
-      fc && 
-      typeof fc.question === 'string' && fc.question.trim() !== '' &&
-      typeof fc.answer === 'string' && fc.answer.trim() !== '' &&
-      (fc.difficulty === undefined || (FLASHCARD_DIFFICULTY_LEVELS as ReadonlyArray<string>).includes(fc.difficulty))
-    ).map(fc => ({
-      question: fc.question.trim(),
-      answer: fc.answer.trim(),
-      difficulty: fc.difficulty || FLASHCARD_DIFFICULTY_LEVELS[1] // Default to medium
-    }));
+    // Update note with flashcards
+    note.flashcards = flashcards;
+    await note.save();
 
-    if (validFlashcards.length === 0) {
-      throw new ErrorResponse('AI generated flashcards, but none met the required format (question, answer). Please try generating again.', 400);
-    }
-    
-    // For now, we just return the generated flashcards as per existing structure.
-    // The actual saving is handled by `saveGeneratedFlashcardsToNote`
-    
-    // 2. Increment AI usage (also increments lifetime totals in UserService)
+    // Increment user's AI usage
     await userService.incrementAIUsage(userId, 'flashcard');
 
-    // 3. Log activity
-    // Assuming 'note' variable is available and contains title
-    const noteForTitle = await Note.findById(noteId).select('title').lean(); // Fetch note title if not already available
-    user.addActivity('ai_flashcards_generated', `Generated AI flashcards for note: ${noteForTitle?.title || noteId}`, 0);
-
-    // 4. Update user's AI streak (this will also save the user initially)
+    // Update user's AI streak
     const updatedUser = await userService.updateUserAIStreak(userId);
 
-    // 5. Check for badges related to flashcard generation and streak
-    const badgeService = new BadgeService(); // Instantiate BadgeService
-    const newlyAwardedFlashcardBadges = await badgeService.checkAndAwardBadges(userId, 'ai_flashcards_generated', { noteId, title: noteForTitle?.title });
-    const newlyAwardedStreakBadges = await badgeService.checkAndAwardBadges(userId, 'ai_streak', { currentStreak: updatedUser.streak.current });
+    // Check for and award badges
+    const newlyAwardedFlashcardBadges = await badgeService.checkAndAwardBadges(userId, 'ai_flashcards_generated');
+    const newlyAwardedStreakBadges = await badgeService.checkAndAwardBadges(userId, 'ai_streak', { streak: updatedUser.streak.current });
 
-    const allNewlyAwardedBadges = [...newlyAwardedFlashcardBadges, ...newlyAwardedStreakBadges].filter((v,i,a)=>a.findIndex(t=>(t.badge.toString() === v.badge.toString()))===i); // Deduplicate
+    // Format response
+    const allNewlyAwardedBadges = [...newlyAwardedFlashcardBadges, ...newlyAwardedStreakBadges]
+        .filter((v, i, a) => a.findIndex(t => t === v) === i); // Deduplicate
 
-    // Similar save considerations as above.
-
-    return { 
-      data: { flashcards: validFlashcards as any }, 
-      newlyAwardedBadges: allNewlyAwardedBadges.map(b => {
-        const populatedBadge = b.badge as unknown as IBadge; // b.badge is now populated IBadge
-        return {
-          badgeId: populatedBadge._id.toString(),
-          name: populatedBadge.name,
-          icon: populatedBadge.icon,
-          level: populatedBadge.level,
-          xpReward: populatedBadge.xpReward
-        };
-      })
+    return {
+        data: { flashcards },
+        newlyAwardedBadges: (await Promise.all(allNewlyAwardedBadges.map(async badgeName => {
+            const badge = await badgeService.getBadgeByName(badgeName);
+            if (!badge) return undefined;
+            return {
+                badgeId: badge._id.toString(),
+                name: badge.name,
+                icon: (badge as any).icon || '',
+                level: (badge as any).level || '',
+                xpReward: (badge as any).xpReward || 0
+            };
+        }))).filter((b): b is IUserBadgeEarnedAPIResponse => !!b)
     };
   }
 
@@ -729,4 +584,4 @@ class NoteService {
   // ... other note service methods (create, update, delete, etc.)
 }
 
-export default new NoteService(); 
+export default NoteService; 

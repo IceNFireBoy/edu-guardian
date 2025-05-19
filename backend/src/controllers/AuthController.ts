@@ -50,7 +50,7 @@ class AuthController {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
       // Consider a helper for formatting validation errors
-      return next(new ErrorResponse('Validation failed', 400, errors.array()));
+      return next(new ErrorResponse('Validation failed', 400));
   }
 
   const { email, password } = req.body;

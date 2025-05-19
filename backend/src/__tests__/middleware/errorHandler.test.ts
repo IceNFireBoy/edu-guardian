@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import errorHandler from '../../middleware/errorHandler';
-import { ErrorResponse } from '../../utils/errorResponse';
-import mongoose from 'mongoose';
+import errorHandler from '../../middleware/error';
+import ErrorResponse from '../../utils/errorResponse';
 
 describe('Error Handler Middleware', () => {
   let mockRequest: Partial<Request>;

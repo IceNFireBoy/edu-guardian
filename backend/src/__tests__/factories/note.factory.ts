@@ -1,87 +1,53 @@
+import { INote, INoteRating, INoteFlashcard } from '../../models/Note';
+import Note from '../../models/Note';
 import mongoose from 'mongoose';
-import { INote, INoteRating, INoteFlashcard } from '../../models/Note'; // Adjust path as necessary
-import { IUser } from '../../models/User'; // Adjust path as necessary
-import { mockUser } from './user.factory'; // Assuming user factory exists
 
-const createObjectId = () => new mongoose.Types.ObjectId().toString();
+export const mockNote = (overrides: Partial<INote> = {}): Partial<INote> => ({
+  _id: new mongoose.Types.ObjectId(),
+  title: 'Test Note',
+  slug: 'test-note',
+  description: 'Test note description',
+  fileUrl: 'test-file.pdf',
+  fileType: 'pdf',
+  fileSize: 1024,
+  subject: 'Biology',
+  grade: '11',
+  semester: '1',
+  quarter: '1',
+  topic: 'Test Topic',
+  tags: ['test', 'biology'],
+  viewCount: 0,
+  downloadCount: 0,
+  ratings: [],
+  averageRating: 0,
+  aiSummary: '',
+  aiSummaryGeneratedAt: new Date(),
+  aiSummaryKeyPoints: [],
+  flashcards: [],
+  user: new mongoose.Types.ObjectId(),
+  isPublic: true,
+  publicId: '',
+  assetId: '',
+  ...overrides
+});
 
-export const mockNoteRating = (overrides?: Partial<INoteRating>): INoteRating => {
-  const defaultRating: INoteRating = {
-    _id: createObjectId(),
-    value: 5,
-    user: createObjectId() as any, // or mockUser()._id
-    // Document properties
-    save: jest.fn().mockResolvedValue(this),
-    toObject: jest.fn().mockReturnValue(this),
-    toJSON: jest.fn().mockReturnValue(this),
-  } as any;
-  return { ...defaultRating, ...overrides } as INoteRating;
-};
+export const mockNoteRating = (overrides: Partial<INoteRating> = {}): Partial<INoteRating> => ({
+  _id: new mongoose.Types.ObjectId(),
+  value: 5,
+  user: new mongoose.Types.ObjectId(),
+  ...overrides
+});
 
-export const mockNoteFlashcard = (overrides?: Partial<INoteFlashcard>): INoteFlashcard => {
-  const defaultFlashcard: INoteFlashcard = {
-    _id: createObjectId(),
-    question: 'What is the capital of France?',
-    answer: 'Paris',
-    difficulty: 'easy',
-    // Document properties
-    save: jest.fn().mockResolvedValue(this),
-    toObject: jest.fn().mockReturnValue(this),
-    toJSON: jest.fn().mockReturnValue(this),
-  } as any;
-  return { ...defaultFlashcard, ...overrides } as INoteFlashcard;
-};
+export const mockNoteFlashcard = (overrides: Partial<INoteFlashcard> = {}): Partial<INoteFlashcard> => ({
+  _id: new mongoose.Types.ObjectId(),
+  question: 'Test question?',
+  answer: 'Test answer',
+  difficulty: 'medium',
+  ...overrides
+});
 
-export const mockNote = (overrides?: Partial<INote>): INote => {
-  const defaultNote: INote = {
-    _id: createObjectId(),
-    title: 'Test Note Title',
-    slug: 'test-note-title',
-    description: 'A comprehensive test note.',
-    fileUrl: 'https://example.com/test-note.pdf',
-    fileType: 'pdf',
-    fileSize: 1024 * 1024, // 1MB
-    subject: 'Computer Science',
-    grade: '12',
-    semester: '1',
-    quarter: '1',
-    topic: 'Testing',
-    publicId: 'cloudinary_public_id',
-    assetId: 'cloudinary_asset_id',
-    tags: ['test', 'jest'],
-    viewCount: 100,
-    downloadCount: 50,
-    ratings: [mockNoteRating()] as INoteRating[],
-    averageRating: 5,
-    aiSummary: 'This is an AI generated summary of the test note.',
-    aiSummaryGeneratedAt: new Date(),
-    aiSummaryKeyPoints: ['Key point 1', 'Key point 2'],
-    flashcards: [mockNoteFlashcard()] as INoteFlashcard[],
-    user: mockUser()._id as any, // Store user ID, can be populated object too
-    isPublic: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    // IUser Method Stubs
-    getAverageRating: jest.fn(function(this: INote) {
-      if (!this.ratings || this.ratings.length === 0) return 0;
-      const sum = this.ratings.reduce((acc, rating) => acc + rating.value, 0);
-      return sum / this.ratings.length;
-    }),
-    // Document properties
-    id: '', // will be set below
-    save: jest.fn().mockResolvedValue(this),
-    toObject: jest.fn().mockReturnValue(this),
-    toJSON: jest.fn().mockReturnValue(this),
-    isModified: jest.fn().mockReturnValue(false),
-  } as any;
-
-  const mergedNote = { ...defaultNote, ...overrides } as INote;
-  mergedNote.id = mergedNote._id.toString();
-
-  // If user is provided as a full object, use its _id
-  if (overrides?.user && typeof overrides.user === 'object' && '_id' in overrides.user) {
-    mergedNote.user = (overrides.user as IUser)._id as any;
-  }
-
-  return mergedNote as INote;
+export const mockTestNote = async (overrides: Partial<INote> = {}): Promise<INote> => {
+  const noteData = mockNote(overrides);
+  const note = new Note(noteData);
+  return note.save();
 }; 

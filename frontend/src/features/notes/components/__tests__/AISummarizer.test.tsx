@@ -21,7 +21,7 @@ describe('AISummarizer', () => {
     keyPoints: ['Point 1', 'Point 2']
   };
 
-  const mockGenerateAISummary = vi.fn();
+  const mockGetAISummary = vi.fn();
   const mockNoteHookLoading = false;
   const mockNoteHookError = null;
 
@@ -36,7 +36,7 @@ describe('AISummarizer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (useNote as any).mockReturnValue({
-      generateAISummary: mockGenerateAISummary,
+      getAISummary: mockGetAISummary,
       loading: mockNoteHookLoading,
       error: mockNoteHookError
     });
@@ -95,7 +95,7 @@ describe('AISummarizer', () => {
       userXPUpdate: { currentLevel: 2 }
     };
     
-    mockGenerateAISummary.mockResolvedValueOnce(mockSummaryResult);
+    mockGetAISummary.mockResolvedValueOnce(mockSummaryResult);
     
     render(
       <AISummarizer
@@ -109,7 +109,7 @@ describe('AISummarizer', () => {
     fireEvent.click(screen.getByText('Generate Summary'));
     
     await waitFor(() => {
-      expect(mockGenerateAISummary).toHaveBeenCalledWith(mockNoteId);
+      expect(mockGetAISummary).toHaveBeenCalledWith(mockNoteId);
       expect(screen.getByText(mockSummaryResult.summary)).toBeInTheDocument();
       mockSummaryResult.keyPoints.forEach(point => {
         expect(screen.getByText(point)).toBeInTheDocument();
@@ -118,7 +118,7 @@ describe('AISummarizer', () => {
   });
 
   it('displays loading state while generating summary', async () => {
-    mockGenerateAISummary.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+    mockGetAISummary.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
     
     render(
       <AISummarizer
@@ -137,7 +137,7 @@ describe('AISummarizer', () => {
 
   it('displays error message when summary generation fails', async () => {
     const errorMessage = 'Failed to generate summary';
-    mockGenerateAISummary.mockRejectedValueOnce(new Error(errorMessage));
+    mockGetAISummary.mockRejectedValueOnce(new Error(errorMessage));
     
     render(
       <AISummarizer
@@ -218,11 +218,13 @@ describe('AISummarizer', () => {
       { id: 'badge1', name: 'First Summary', description: 'Generated your first summary' }
     ];
     
-    mockGenerateAISummary.mockResolvedValueOnce({
-      summary: 'Generated summary',
-      keyPoints: ['Point 1'],
-      newlyAwardedBadges: mockBadges,
-      userXPUpdate: { currentLevel: 2 }
+    mockGetAISummary.mockResolvedValueOnce({
+      data: {
+        summary: 'Generated summary',
+        keyPoints: ['Point 1'],
+        newlyAwardedBadges: mockBadges,
+        userXPUpdate: { currentLevel: 2 }
+      }
     });
     
     render(

@@ -1,8 +1,16 @@
-import User, { IUser, IUserActivity } from '../models/User';
+import User, { IUser, IUserActivity, IUserBadge } from '../models/User';
 import Note, { INote } from '../models/Note';
 import { QuotaExceededError, NotFoundError, BadRequestError } from '../utils/customErrors';
 import { AI_USAGE_LIMITS, QUOTA_RESET_HOURS, AI_USER_TIERS } from '../config/aiConfig';
 import mongoose from 'mongoose';
+import { IBadge } from '../models/Badge';
+import ErrorResponse from '../utils/errorResponse';
+
+interface IBadgeEarned {
+    badge: IBadge;
+    earnedAt: Date;
+    criteriaMet: string;
+}
 
 interface UserProfileData extends Partial<IUser> {
     stats?: {
@@ -34,7 +42,7 @@ interface UserNotesQueryOptions {
     // Add other note filters if necessary e.g. by subject, grade for user's notes
 }
 
-class UserService {
+export class UserService {
     public async getUsers(): Promise<IUser[]> {
         // TODO: Implement pagination and filtering if necessary for admin views
         return User.find().select('-password').lean();
@@ -110,10 +118,16 @@ class UserService {
             .select('badges')
             .populate({
                 path: 'badges.badge',
-                select: 'name description icon rarity' // Ensure Badge model fields
+                select: 'name description icon rarity level xpReward' // Ensure Badge model fields
             })
             .lean();
-        return user ? user.badges : [];
+        if (!user || !user.badges) return [];
+        // Map badges to IBadgeEarned
+        return user.badges.map((b: any) => ({
+            badge: b.badge,
+            earnedAt: b.earnedAt,
+            criteriaMet: b.criteriaMet
+        }));
     }
     
     public async getUserActivityLog(userId: string, queryOptions: UserActivityQueryOptions): Promise<IUserActivity[]> {
@@ -304,4 +318,4 @@ class UserService {
     }
 }
 
-export default new UserService(); 
+export default UserService; 

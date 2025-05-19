@@ -1,9 +1,13 @@
 import mongoose from 'mongoose';
 import UserService from '../../services/UserService';
 import User, { IUser } from '../../models/User';
-import { mockUser } from '../factories/user.factory';
+import { mockUser } from '../../../factories/user.factory';
 import { AI_USAGE_LIMITS, QUOTA_RESET_HOURS, AI_USER_TIERS } from '../../config/aiConfig';
 import { QuotaExceededError, NotFoundError } from '../../utils/customErrors';
+import { UserService as UserServiceImport } from '../../../services/UserService';
+import Note from '../../../models/Note';
+import { mockUserActivity } from '../../factories/user.factory';
+import { mockNote } from '../../factories/note.factory';
 
 // Mock the Date object to control time-based tests
 const RealDate = Date;
@@ -36,6 +40,7 @@ describe('UserService', () => {
   beforeEach(async () => {
     // Clear users collection before each test
     await User.deleteMany({});
+    await Note.deleteMany({});
 
     // Create a fresh user for each test, ensuring it's a Mongoose document
     const userDoc = new User(mockUser({
@@ -296,6 +301,162 @@ describe('UserService', () => {
       const finalUser = await User.findById(testUser._id);
       expect(finalUser?.xp).toBe(initialXP + xpToGrant + moreXp); // 75 + 50 = 125
       expect(finalUser?.level).toBe(2); // Level = 1 + floor(125/100) = 2
+    });
+  });
+
+  describe('getUsers', () => {
+    it('should return users with pagination', async () => {
+      // Create multiple users
+      const users = [
+        mockUser({ email: 'user1@example.com', username: 'user1' }),
+        mockUser({ email: 'user2@example.com', username: 'user2' }),
+        mockUser({ email: 'user3@example.com', username: 'user3' })
+      ];
+      await User.insertMany(users);
+
+      const result = await userService.getUsers({ page: 1, limit: 2 });
+      expect(result.users).toHaveLength(2);
+      expect(result.total).toBe(4); // Including testUser
+    });
+
+    it('should filter users by role', async () => {
+      const users = [
+        mockUser({ email: 'admin@example.com', username: 'admin', role: 'admin' }),
+        mockUser({ email: 'user@example.com', username: 'user', role: 'user' })
+      ];
+      await User.insertMany(users);
+
+      const result = await userService.getUsers({ page: 1, limit: 10, role: 'admin' });
+      expect(result.users).toHaveLength(1);
+      expect(result.users[0].role).toBe('admin');
+    });
+  });
+
+  describe('getUserActivityLog', () => {
+    it('should return user activity log with pagination', async () => {
+      const activities = [
+        mockUserActivity({ action: 'login', timestamp: new Date(Date.now() - 1000) }),
+        mockUserActivity({ action: 'note_created', timestamp: new Date(Date.now() - 2000) }),
+        mockUserActivity({ action: 'badge_earned', timestamp: new Date(Date.now() - 3000) })
+      ];
+      
+      testUser.activity = activities;
+      await testUser.save();
+
+      const result = await userService.getUserActivityLog(testUser._id.toString(), {
+        page: 1,
+        limit: 2
+      });
+
+      expect(result.activities).toHaveLength(2);
+      expect(result.total).toBe(3);
+      expect(result.activities[0].action).toBe('login');
+    });
+
+    it('should filter activities by type', async () => {
+      const activities = [
+        mockUserActivity({ action: 'login', timestamp: new Date(Date.now() - 1000) }),
+        mockUserActivity({ action: 'note_created', timestamp: new Date(Date.now() - 2000) })
+      ];
+      
+      testUser.activity = activities;
+      await testUser.save();
+
+      const result = await userService.getUserActivityLog(testUser._id.toString(), {
+        page: 1,
+        limit: 10,
+        type: 'note_created'
+      });
+
+      expect(result.activities).toHaveLength(1);
+      expect(result.activities[0].action).toBe('note_created');
+    });
+  });
+
+  describe('getUserUploadedNotes', () => {
+    it('should return user uploaded notes with pagination', async () => {
+      const notes = [
+        mockNote({ user: testUser._id, title: 'Note 1' }),
+        mockNote({ user: testUser._id, title: 'Note 2' }),
+        mockNote({ user: testUser._id, title: 'Note 3' })
+      ];
+      await Note.insertMany(notes);
+
+      const result = await userService.getUserUploadedNotes(testUser._id.toString(), {
+        page: 1,
+        limit: 2
+      });
+
+      expect(result.notes).toHaveLength(2);
+      expect(result.total).toBe(3);
+    });
+
+    it('should filter notes by subject', async () => {
+      const notes = [
+        mockNote({ user: testUser._id, title: 'Math Note', subject: 'Math' }),
+        mockNote({ user: testUser._id, title: 'Science Note', subject: 'Science' })
+      ];
+      await Note.insertMany(notes);
+
+      const result = await userService.getUserUploadedNotes(testUser._id.toString(), {
+        page: 1,
+        limit: 10,
+        subject: 'Math'
+      });
+
+      expect(result.notes).toHaveLength(1);
+      expect(result.notes[0].subject).toBe('Math');
+    });
+  });
+
+  describe('getUserFavoriteNotes', () => {
+    it('should return user favorite notes with pagination', async () => {
+      const notes = [
+        mockNote({ user: testUser._id, title: 'Note 1' }),
+        mockNote({ user: testUser._id, title: 'Note 2' })
+      ];
+      const savedNotes = await Note.insertMany(notes);
+      
+      testUser.favoriteNotes = savedNotes.map(note => note._id);
+      await testUser.save();
+
+      const result = await userService.getUserFavoriteNotes(testUser._id.toString(), {
+        page: 1,
+        limit: 1
+      });
+
+      expect(result.notes).toHaveLength(1);
+      expect(result.total).toBe(2);
+    });
+  });
+
+  describe('addNoteToFavorites', () => {
+    it('should add note to user favorites', async () => {
+      const note = await Note.create(mockNote({ user: testUser._id }));
+      
+      await userService.addNoteToFavorites(testUser._id.toString(), note._id.toString());
+      
+      const updatedUser = await User.findById(testUser._id);
+      expect(updatedUser?.favoriteNotes).toHaveLength(1);
+      expect(updatedUser?.favoriteNotes[0].toString()).toBe(note._id.toString());
+    });
+
+    it('should not add duplicate note to favorites', async () => {
+      const note = await Note.create(mockNote({ user: testUser._id }));
+      
+      // Add note to favorites twice
+      await userService.addNoteToFavorites(testUser._id.toString(), note._id.toString());
+      await userService.addNoteToFavorites(testUser._id.toString(), note._id.toString());
+      
+      const updatedUser = await User.findById(testUser._id);
+      expect(updatedUser?.favoriteNotes).toHaveLength(1);
+    });
+
+    it('should throw error for non-existent note', async () => {
+      const nonExistentId = new mongoose.Types.ObjectId().toString();
+      await expect(
+        userService.addNoteToFavorites(testUser._id.toString(), nonExistentId)
+      ).rejects.toThrow('Note not found');
     });
   });
 

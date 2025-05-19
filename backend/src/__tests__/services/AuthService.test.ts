@@ -2,51 +2,71 @@ import mongoose from 'mongoose';
 import { Response } from 'express';
 import AuthService from '../../services/AuthService';
 import User, { IUser } from '../../models/User';
+import Badge from '../../models/Badge';
 import ErrorResponse from '../../utils/errorResponse';
 import sendEmailUtil from '../../utils/sendEmail'; // Auto-mocked by Jest
 import { Request } from 'express'; // For mocking req/res
-import { mockUser } from '../factories/user.factory';
+import { mockUser } from '../../../factories/user.factory';
 
 // Mock the entire sendEmailUtil module
-vi.mock('../../utils/sendEmail');
+jest.mock('../../utils/sendEmail', () => ({
+  __esModule: true,
+  default: jest.fn().mockResolvedValue(true)
+}));
 
 describe('AuthService', () => {
   let authService: AuthService;
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
-  let mockSendTokenResponse: ReturnType<typeof vi.spyOn>;
+  let mockSendTokenResponse: ReturnType<typeof jest.spyOn>;
   let testUser: IUser & { _id: mongoose.Types.ObjectId };
 
-  beforeAll(() => {
+  beforeAll(async () => {
     authService = new AuthService();
+    // Register Badge model if not already registered
+    if (!mongoose.models.Badge) {
+      mongoose.model('Badge', Badge.schema);
+    }
   });
 
   beforeEach(async () => {
     await User.deleteMany({});
-    (sendEmailUtil as any).mockClear && (sendEmailUtil as any).mockClear(); // Clear mock usage for each test
+    await Badge.deleteMany({});
+    (sendEmailUtil as any)?.mockClear?.(); // Clear mock usage for each test
 
     mockRequest = {
       protocol: 'http',
-      get: vi.fn().mockReturnValue('localhost:5000') as any,
+      get: jest.fn().mockReturnValue('localhost:5000') as any,
+      cookies: {}, // Added to satisfy Request type
     };
 
     mockResponse = {
-      status: vi.fn().mockReturnThis(),
-      cookie: vi.fn().mockReturnThis(),
-      json: vi.fn().mockReturnThis(),
+      status: jest.fn().mockReturnThis(),
+      cookie: jest.fn().mockReturnThis(),
+      json: jest.fn().mockReturnThis(),
     };
     
     // Spy on sendTokenResponse as it's called by login and other methods
     // and we want to verify its call without re-testing its internal logic here.
-    mockSendTokenResponse = vi.spyOn(authService, 'sendTokenResponse').mockImplementation(() => {});
+    mockSendTokenResponse = jest.spyOn(authService, 'sendTokenResponse').mockImplementation(() => {});
 
-    // Create a test user
+    // Create a test user with all required fields
     testUser = await User.create({
       name: 'Test User',
       email: 'test@example.com',
       password: 'password123',
       username: 'testuser',
-      emailVerified: true
+      emailVerified: true,
+      streak: {
+        current: 0,
+        max: 0,
+        lastUsed: new Date()
+      },
+      subjects: [{
+        name: 'Math',
+        level: 'Beginner',
+        topics: ['Algebra']
+      }]
     }) as IUser & { _id: mongoose.Types.ObjectId };
   });
 
@@ -56,6 +76,7 @@ describe('AuthService', () => {
 
   afterAll(async () => {
     await User.deleteMany({});
+    await Badge.deleteMany({});
   });
 
   describe('registerUser', () => {
@@ -86,13 +107,13 @@ describe('AuthService', () => {
     });
 
     it('should throw ErrorResponse if email already exists', async () => {
-      await User.create(mockUser({ email: userData.email }));
+      await User.create({ ...mockUser, name: "Other User", username: "otheruser", email: userData.email });
       await expect(authService.registerUser(userData, mockRequest as Request))
         .rejects.toThrow(new ErrorResponse('User with this email already exists', 400));
     });
 
     it('should throw ErrorResponse if username already exists', async () => {
-      await User.create(mockUser({ username: userData.username, email: 'another@example.com' }));
+      await User.create({ ...mockUser, name: "Other User", username: userData.username, email: 'another@example.com' });
       await expect(authService.registerUser(userData, mockRequest as Request))
         .rejects.toThrow(new ErrorResponse('Username is already taken', 400));
     });
@@ -114,14 +135,26 @@ describe('AuthService', () => {
     let testUser: IUser;
 
     beforeEach(async () => {
-      // Create a verified user for login tests
-      testUser = await User.create(mockUser({
-        ...loginCredentials,
+      // Create a verified user for login tests with all required fields
+      testUser = await User.create({
+        name: 'Test Login User',
+        email: loginCredentials.email,
+        password: loginCredentials.password,
+        username: 'testloginuser',
         emailVerified: true,
-        streak: { current: 0, max: 0, lastUsed: new Date(0) }, // Initial streak
-        xp: 0, // Initial XP
-        level: 1 // Initial level
-      }));
+        streak: {
+          current: 0,
+          longest: 0,
+          lastLogin: new Date()
+        },
+        xp: 0,
+        level: 1,
+        subjects: [{
+          name: 'Math',
+          level: 'Beginner',
+          topics: ['Algebra']
+        }]
+      }) as IUser & { _id: mongoose.Types.ObjectId };
     });
 
     it('should login a verified user, update streak/xp, and call sendTokenResponse', async () => {
@@ -130,8 +163,8 @@ describe('AuthService', () => {
 
       const userAfterLogin = await User.findById(testUser._id);
       expect(userAfterLogin).toBeDefined();
-      expect(userAfterLogin?.streak.current).toBe(1); // Assuming updateStreak increments by 1
-      expect(userAfterLogin?.xp).toBe(initialXp + 1); // Assuming 1 XP for login
+      expect(userAfterLogin?.streak.current).toBe(1);
+      expect(userAfterLogin?.xp).toBe(initialXp + 1);
       expect(userAfterLogin?.activity.some(act => act.action === 'login')).toBe(true);
 
       expect(mockSendTokenResponse).toHaveBeenCalledTimes(1);
@@ -304,7 +337,7 @@ describe('AuthService', () => {
     it('should generate reset token and send email', async () => {
       const email = testUser.email;
       
-      const result = await authService.forgotPassword(email, mockRequest);
+      const result = await authService.forgotPassword(email, mockRequest as Request);
       
       // Check response
       expect(result).toContain('If an account with that email exists');
@@ -319,7 +352,7 @@ describe('AuthService', () => {
       const nonExistentEmail = 'nonexistent@example.com';
       
       // This should not throw an error for security reasons
-      const result = await authService.forgotPassword(nonExistentEmail, mockRequest);
+      const result = await authService.forgotPassword(nonExistentEmail, mockRequest as Request);
       expect(result).toContain('If an account with that email exists');
     });
 
@@ -331,7 +364,7 @@ describe('AuthService', () => {
       });
 
       await expect(
-        authService.forgotPassword(testUser.email, mockRequest)
+        authService.forgotPassword(testUser.email, mockRequest as Request)
       ).rejects.toThrow('Email could not be sent');
       
       // Verify reset token was cleared
@@ -437,7 +470,7 @@ describe('AuthService', () => {
       
       const result = await authService.resendVerificationEmail(
         unverifiedUser.email,
-        mockRequest
+        mockRequest as Request
       );
       
       // Check response
@@ -451,13 +484,13 @@ describe('AuthService', () => {
 
     it('should throw error if user is already verified', async () => {
       await expect(
-        authService.resendVerificationEmail(testUser.email, mockRequest)
+        authService.resendVerificationEmail(testUser.email, mockRequest as Request)
       ).rejects.toThrow('This email is already verified');
     });
 
     it('should not throw error if user not found', async () => {
       // For security reasons, this should not reveal if user exists
-      const result = await authService.resendVerificationEmail('nonexistent@example.com', mockRequest);
+      const result = await authService.resendVerificationEmail('nonexistent@example.com', mockRequest as Request);
       expect(result).toContain('If your email is registered and not yet verified');
     });
 
@@ -478,7 +511,7 @@ describe('AuthService', () => {
       });
 
       await expect(
-        authService.resendVerificationEmail(unverifiedUser.email, mockRequest)
+        authService.resendVerificationEmail(unverifiedUser.email, mockRequest as Request)
       ).rejects.toThrow('Email could not be sent');
     });
   });

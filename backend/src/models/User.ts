@@ -21,7 +21,8 @@ export interface IUserActivity extends Document { // Sub-document or object type
 // Interface for individual subject entry
 export interface IUserSubject extends Document { // Sub-document or object type
   name: string;
-  progress: number;
+  level: 'Beginner' | 'Intermediate' | 'Advanced';
+  topics: string[];
 }
 
 // Main User Interface
@@ -70,7 +71,7 @@ export interface IUser extends Document {
   getResetPasswordToken(): string;
   getEmailVerificationToken(): string;
   calculateLevel(): number;
-  updateStreak(): number;
+  updateStreak(): Promise<void>;
   addActivity(action: IUserActivity['action'], description: string, xpEarned?: number): void;
 }
 
@@ -97,7 +98,7 @@ const UserSchema = new Schema<IUser>(
       required: [true, 'Please add a username'],
       unique: true,
       trim: true,
-      maxlength: [20, 'Username cannot be more than 20 characters']
+      maxlength: [30, 'Username cannot be more than 30 characters']
     },
     role: {
       type: String,
@@ -154,8 +155,19 @@ const UserSchema = new Schema<IUser>(
     ],
     subjects: [
       {
-        name: String,
-        progress: { type: Number, default: 0, min: 0, max: 100 }
+        name: {
+          type: String,
+          required: [true, 'Please add a subject name']
+        },
+        level: {
+          type: String,
+          enum: ['Beginner', 'Intermediate', 'Advanced'],
+          required: [true, 'Please specify a level']
+        },
+        topics: [{
+          type: String,
+          required: [true, 'Please add at least one topic']
+        }]
       }
     ],
     resetPasswordToken: String,
@@ -247,28 +259,24 @@ UserSchema.methods.calculateLevel = function(this: IUser): number {
 };
 
 // Update streak count
-UserSchema.methods.updateStreak = function(this: IUser): number {
+UserSchema.methods.updateStreak = async function(this: IUser): Promise<void> {
   const now = new Date();
-  const lastUsed = this.streak.lastUsed || now; // Handle if lastUsed is not set
-  const diffTime = Math.abs(now.getTime() - lastUsed.getTime());
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); // Use Math.floor for full days
+  const lastLogin = new Date(this.streak.lastUsed);
+  const diffDays = Math.floor((now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diffDays === 1) {
-    this.streak.current = (this.streak.current || 0) + 1;
+    // Consecutive day
+    this.streak.current += 1;
+    if (this.streak.current > this.streak.max) {
+      this.streak.max = this.streak.current;
+    }
   } else if (diffDays > 1) {
-    this.streak.current = 1; // Reset streak if more than one day passed
-  } else if (diffDays === 0 && now.getDate() !== lastUsed.getDate()){
-    // Active on consecutive days but within the same 24h window across midnight
-    this.streak.current = (this.streak.current || 0) + 1;
+    // Streak broken
+    this.streak.current = 1;
   }
-  // If diffDays is 0 and same date, streak count doesn't change for multiple actions on the same day
 
-  if (this.streak.current > (this.streak.max || 0)) {
-    this.streak.max = this.streak.current;
-  }
-  this.streak.current = this.streak.current; // Align streak.current with currentStreak
   this.streak.lastUsed = now;
-  return this.streak.current;
+  await this.save();
 };
 
 // Add activity
@@ -305,4 +313,5 @@ export interface IUserModel extends Model<IUser> {
 
 // Export the model
 const User = mongoose.model<IUser, IUserModel>('User', UserSchema);
-export default User; 
+export default User;
+export { User }; 

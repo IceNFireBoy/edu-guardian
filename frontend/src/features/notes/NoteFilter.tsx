@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaFilter, FaSearch, FaBookOpen, FaDownload, FaShare, FaExclamationTriangle, FaRobot, FaStar, FaLightbulb, FaTimes } from 'react-icons/fa';
+import { FaFilter, FaSearch, FaBookOpen, FaDownload, FaShare, FaExclamationTriangle, FaRobot, FaStar, FaLightbulb, FaTimes, FaSpinner } from 'react-icons/fa';
 import { useStreak } from '../../hooks/useStreak';
 import AISummarizer from '../../features/notes/components/AISummarizer'; // Updated path
 import FlashcardGenerator from '../../features/notes/components/FlashcardGenerator'; // Updated path

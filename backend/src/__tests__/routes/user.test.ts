@@ -6,18 +6,18 @@ import Note, { INote } from '../../models/Note'; // For favorite notes tests
 import Badge from '../../models/Badge'; // For badge tests
 import authRoutes from '../../routes/authRoutes';
 import userRoutes from '../../routes/userRoutes'; // Import user routes
-import errorHandler from '../../middleware/errorHandler';
-import { mockUser, mockUserActivity } from '../factories/user.factory';
-import { mockNote } from '../factories/note.factory';
-import { mockBadge } from '../factories/badge.factory';
+import errorHandler from '../../middleware/error';
+import { mockUser, mockUserActivity, mockUserBadge } from '../../../factories/user.factory';
+import { mockNote } from '../../../factories/note.factory';
+import { mockBadge } from '../../../factories/badge.factory';
 
 // Mock external dependencies
-vi.mock('../../utils/sendEmail');
+jest.mock('../../utils/sendEmail');
 
 let app: Express;
-let regularUser: IUser;
+let regularUser: IUser & { _id: mongoose.Types.ObjectId };
 let regularUserToken: string;
-let adminUser: IUser;
+let adminUser: IUser & { _id: mongoose.Types.ObjectId };
 let adminToken: string;
 
 const setupApp = () => {
@@ -32,7 +32,7 @@ const setupApp = () => {
 async function createUserAndLogin(userData: Partial<IUser>, makeAdmin = false): Promise<{ user: IUser, token: string }> {
     // Ensure unique email/username for each created user
     const uniqueSuffix = Date.now() + Math.random();
-    const email = userData.email?.replace('@', `${uniqueSuffix}@`) || `test${uniqueSuffix}@example.com`;
+    const email = userData.email?.replace('@', `${uniqueSuffix}@`) ?? `test${uniqueSuffix}@example.com`;
     const username = userData.username ? `${userData.username}${uniqueSuffix}` : `testuser${uniqueSuffix}`;
 
     await request(app).post('/api/v1/auth/register').send({ ...userData, email, username });
@@ -67,12 +67,13 @@ afterAll(async () => {
 
 describe('User Routes', () => {
   describe('Public User Routes', () => {
-    let publicUser: IUser;
+    let publicUser: IUser & { _id: mongoose.Types.ObjectId };
     beforeAll(async () => {
-        publicUser = await User.create(mockUser({ username: 'publicprofile', name: 'Public User'}));
+        publicUser = await User.create({ ...mockUser, username: 'publicprofile', name: 'Public User', email: 'public@example.com', emailVerified: true});
         // Add some badges to this user
-        const badge1 = await Badge.create(mockBadge({ name: 'Public Badge 1', slug: 'public-badge-1'}));
-        publicUser.badges = [{ badge: badge1._id, earnedAt: new Date(), criteriaMet: 'test'}];
+        const badge1Data = mockBadge({ name: 'Public Badge 1', slug: 'public-badge-1'});
+        const badge1 = await Badge.create(badge1Data);
+        publicUser.badges = [mockUserBadge({ badge: badge1._id }) as any];
         await publicUser.save();
     });
 
@@ -104,11 +105,12 @@ describe('User Routes', () => {
     beforeAll(async () => {
         // Add some activity and badges to regularUser for these tests
         regularUser.activity = [
-            mockUserActivity({ action: 'login', description: 'Logged in'}),
-            mockUserActivity({ action: 'ai_summary', description: 'Summarized a note'})
+            mockUserActivity({ action: 'login', description: 'Logged in' }) as any,
+            mockUserActivity({ action: 'ai_summary_generated', description: 'Summarized a note' }) as any
         ];
-        const myBadge = await Badge.create(mockBadge({ name: 'My Test Badge', slug: 'my-test-badge'}));
-        regularUser.badges = [{badge: myBadge._id, earnedAt: new Date(), criteriaMet: 'test'}];
+        const myBadgeData = mockBadge({ name: 'My Test Badge', slug: 'my-test-badge'});
+        const myBadge = await Badge.create(myBadgeData);
+        regularUser.badges = [mockUserBadge({ badge: myBadge._id }) as any];
         await regularUser.save();
     });
 
@@ -135,9 +137,10 @@ describe('User Routes', () => {
       });
 
     // Favorite Notes tests
-    let noteForFavorite: INote;
+    let noteForFavorite: INote & { _id: mongoose.Types.ObjectId };
     beforeAll(async () => {
-        noteForFavorite = await Note.create(mockNote({ user: regularUser._id, title: 'Note to Favorite', isPublic: true }));
+        const noteData = mockNote({ user: regularUser._id, title: 'Note to Favorite', isPublic: true, subject: 'test', fileUrl:'test.pdf',fileType:'pdf', fileSize:100 });
+        noteForFavorite = await Note.create(noteData) as INote & { _id: mongoose.Types.ObjectId };
     });
 
     it('POST /api/v1/users/me/favorites/:noteId - should add a note to favorites', async () => {

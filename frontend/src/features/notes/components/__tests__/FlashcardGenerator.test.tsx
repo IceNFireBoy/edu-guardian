@@ -1,27 +1,33 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, jest, beforeEach } from 'vitest';
 import FlashcardGenerator from '../FlashcardGenerator';
 import { useNote } from '../../useNote';
 import { useUser } from '../../../user/useUser';
 import { toast } from 'react-hot-toast';
 
 // Mock the hooks and dependencies
-vi.mock('../../useNote');
-vi.mock('../../../user/useUser');
-vi.mock('react-hot-toast');
-vi.mock('../../../api/apiClient', () => ({
-  callAuthenticatedApi: vi.fn()
+jest.mock('../../useNote');
+jest.mock('../../../user/useUser');
+jest.mock('react-hot-toast');
+jest.mock('../../../api/apiClient', () => ({
+  callAuthenticatedApi: jest.fn()
 }));
 
 describe('FlashcardGenerator', () => {
   const mockNoteId = 'test-note-id';
   const mockNoteTitle = 'Test Note';
   const mockInitialFlashcards = [
-    { id: '1', question: 'Q1', answer: 'A1' },
-    { id: '2', question: 'Q2', answer: 'A2' }
+    { _id: '1', question: 'Q1', answer: 'A1', difficulty: 'easy', lastReviewed: null, nextReviewDate: null, efactor: 2.5, interval: 1, repetitions: 0, user: 'user1' },
+    { _id: '2', question: 'Q2', answer: 'A2', difficulty: 'medium', lastReviewed: null, nextReviewDate: null, efactor: 2.5, interval: 1, repetitions: 0, user: 'user1' }
   ];
 
-  const mockGenerateAIFlashcards = vi.fn();
+  const mockGeneratedFlashcardsArray = [
+    { _id: 'gen1', question: 'Generated Q1', answer: 'Generated A1', difficulty: 'easy', lastReviewed: null, nextReviewDate: null, efactor: 2.5, interval: 1, repetitions: 0, user: 'user1' },
+    { _id: 'gen2', question: 'Generated Q2', answer: 'Generated A2', difficulty: 'medium', lastReviewed: null, nextReviewDate: null, efactor: 2.5, interval: 1, repetitions: 0, user: 'user1' }
+  ];
+
+  const mockGenerateFlashcards = jest.fn();
+  const mockSaveFlashcards = jest.fn();
   const mockNoteHookLoading = false;
   const mockNoteHookError = null;
 
@@ -34,9 +40,10 @@ describe('FlashcardGenerator', () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     (useNote as any).mockReturnValue({
-      generateAIFlashcards: mockGenerateAIFlashcards,
+      generateFlashcards: mockGenerateFlashcards, 
+      saveFlashcards: mockSaveFlashcards, 
       loading: mockNoteHookLoading,
       error: mockNoteHookError
     });
@@ -73,7 +80,7 @@ describe('FlashcardGenerator', () => {
   });
 
   it('calls onClose when close button is clicked', () => {
-    const mockOnClose = vi.fn();
+    const mockOnClose = jest.fn();
     render(
       <FlashcardGenerator
         isOpen={true}
@@ -89,15 +96,12 @@ describe('FlashcardGenerator', () => {
 
   it('generates flashcards when generate button is clicked', async () => {
     const mockFlashcardsResult = {
-      flashcards: [
-        { id: '1', question: 'Generated Q1', answer: 'Generated A1' },
-        { id: '2', question: 'Generated Q2', answer: 'Generated A2' }
-      ],
+      data: mockGeneratedFlashcardsArray, 
       newlyAwardedBadges: [],
       userXPUpdate: { currentLevel: 2 }
     };
     
-    mockGenerateAIFlashcards.mockResolvedValueOnce(mockFlashcardsResult);
+    mockGenerateFlashcards.mockResolvedValueOnce(mockFlashcardsResult);
     
     render(
       <FlashcardGenerator
@@ -111,8 +115,8 @@ describe('FlashcardGenerator', () => {
     fireEvent.click(screen.getByText('Generate Flashcards'));
     
     await waitFor(() => {
-      expect(mockGenerateAIFlashcards).toHaveBeenCalledWith(mockNoteId);
-      mockFlashcardsResult.flashcards.forEach(card => {
+      expect(mockGenerateFlashcards).toHaveBeenCalledWith(mockNoteId);
+      mockGeneratedFlashcardsArray.forEach(card => { 
         expect(screen.getByText(card.question)).toBeInTheDocument();
         expect(screen.getByText(card.answer)).toBeInTheDocument();
       });
@@ -120,7 +124,7 @@ describe('FlashcardGenerator', () => {
   });
 
   it('displays loading state while generating flashcards', async () => {
-    mockGenerateAIFlashcards.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+    mockGenerateFlashcards.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
     
     render(
       <FlashcardGenerator
@@ -139,7 +143,7 @@ describe('FlashcardGenerator', () => {
 
   it('displays error message when flashcard generation fails', async () => {
     const errorMessage = 'Failed to generate flashcards';
-    mockGenerateAIFlashcards.mockRejectedValueOnce(new Error(errorMessage));
+    mockGenerateFlashcards.mockRejectedValueOnce(new Error(errorMessage));
     
     render(
       <FlashcardGenerator
@@ -193,7 +197,7 @@ describe('FlashcardGenerator', () => {
       ...mockUser,
       aiUsage: {
         ...mockUser.aiUsage,
-        flashcardUsed: 5 // Assuming 5 is the daily limit
+        flashcardUsed: 5 
       }
     };
     
@@ -217,11 +221,11 @@ describe('FlashcardGenerator', () => {
 
   it('displays newly awarded badges after successful generation', async () => {
     const mockBadges = [
-      { id: 'badge1', name: 'Flashcard Master', description: 'Generated your first set of flashcards' }
+      { id: 'badge1', name: 'Flashcard Master', description: 'Generated your first set of flashcards', level: 'gold', xpReward: 50 }
     ];
     
-    mockGenerateAIFlashcards.mockResolvedValueOnce({
-      flashcards: [{ id: '1', question: 'Q1', answer: 'A1' }],
+    mockGenerateFlashcards.mockResolvedValueOnce({
+      data: [{ _id: '1', question: 'Q1', answer: 'A1', difficulty: 'easy', lastReviewed: null, nextReviewDate: null, efactor: 2.5, interval: 1, repetitions: 0, user: 'user1' }], 
       newlyAwardedBadges: mockBadges,
       userXPUpdate: { currentLevel: 2 }
     });
@@ -245,15 +249,15 @@ describe('FlashcardGenerator', () => {
 
   it('allows editing generated flashcards before saving', async () => {
     const mockFlashcardsResult = {
-      flashcards: [
-        { id: '1', question: 'Generated Q1', answer: 'Generated A1' }
-      ],
+      data: [
+        { _id: 'edit1', question: 'Editable Q1', answer: 'Editable A1', difficulty: 'easy', lastReviewed: null, nextReviewDate: null, efactor: 2.5, interval: 1, repetitions: 0, user: 'user1' }
+      ], 
       newlyAwardedBadges: [],
       userXPUpdate: { currentLevel: 2 }
     };
-    
-    mockGenerateAIFlashcards.mockResolvedValueOnce(mockFlashcardsResult);
-    
+    mockGenerateFlashcards.mockResolvedValueOnce(mockFlashcardsResult);
+    mockSaveFlashcards.mockResolvedValueOnce(true); 
+
     render(
       <FlashcardGenerator
         isOpen={true}
@@ -266,14 +270,17 @@ describe('FlashcardGenerator', () => {
     fireEvent.click(screen.getByText('Generate Flashcards'));
     
     await waitFor(() => {
-      const questionInput = screen.getByDisplayValue('Generated Q1');
-      const answerInput = screen.getByDisplayValue('Generated A1');
-      
-      fireEvent.change(questionInput, { target: { value: 'Edited Q1' } });
-      fireEvent.change(answerInput, { target: { value: 'Edited A1' } });
-      
-      expect(questionInput).toHaveValue('Edited Q1');
-      expect(answerInput).toHaveValue('Edited A1');
+      expect(screen.getByDisplayValue('Editable Q1')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByDisplayValue('Editable Q1'), { target: { value: 'Updated Q1' } });
+    fireEvent.click(screen.getByText('Save Flashcards'));
+
+    await waitFor(() => {
+      expect(mockSaveFlashcards).toHaveBeenCalledWith(mockNoteId, [
+        expect.objectContaining({ question: 'Updated Q1' })
+      ]);
+      expect(toast.success).toHaveBeenCalledWith('Flashcards saved successfully!');
     });
   });
 }); 

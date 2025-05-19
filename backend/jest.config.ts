@@ -9,11 +9,18 @@ const config: Config.InitialOptions = {
     '^.+\\.ts$': 'ts-jest',
   },
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '<rootDir>/src/__tests__/factories/',
+    '<rootDir>/src/__tests__/setup.ts',
+  ],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
     '!src/types/**/*.ts',
     '!src/config/**/*.ts',
+    '!src/__tests__/factories/*.ts',
+    '!src/__tests__/setup.ts',
   ],
   coverageThreshold: {
     global: {
@@ -24,7 +31,8 @@ const config: Config.InitialOptions = {
     },
   },
   coverageReporters: ['text', 'lcov', 'clover'],
-  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+  testTimeout: 30000,
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },

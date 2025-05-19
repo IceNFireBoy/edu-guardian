@@ -1,12 +1,10 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ActivityLog from '../ActivityLog';
 import { useUser } from '../../useUser';
-import { toast } from 'react-hot-toast';
 
 // Mock the hooks and dependencies
 vi.mock('../../useUser');
-vi.mock('react-hot-toast');
 vi.mock('../../../api/apiClient', () => ({
   callAuthenticatedApi: vi.fn()
 }));
@@ -70,7 +68,7 @@ describe('ActivityLog', () => {
     
     const activityElements = screen.getAllByTestId('activity-item');
     const timestamps = activityElements.map(element => 
-      new Date(element.getAttribute('data-timestamp') || '').getTime()
+      new Date(element.getAttribute('data-timestamp') ?? '').getTime()
     );
     
     expect(timestamps).toEqual([...timestamps].sort((a, b) => b - a));
@@ -144,7 +142,7 @@ describe('ActivityLog', () => {
     
     const activityElements = screen.getAllByTestId('activity-item');
     const timestamps = activityElements.map(element => 
-      new Date(element.getAttribute('data-timestamp') || '').getTime()
+      new Date(element.getAttribute('data-timestamp') ?? '').getTime()
     );
     
     expect(timestamps).toEqual([...timestamps].sort((a, b) => a - b));

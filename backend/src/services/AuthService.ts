@@ -5,7 +5,7 @@ import sendEmailUtil from '../utils/sendEmail'; // Will need sendEmail.ts
 import { Request, Response } from 'express'; // For req.protocol and req.get('host'), and res for sendTokenResponse
 import { NotFoundError } from '../utils/customErrors'; // For consistency, use customErrors if user not found
 
-class AuthService {
+export class AuthService {
   public sendTokenResponse(user: IUser, statusCode: number, res: Response) {
     const token = user.getSignedJwtToken();
 
@@ -29,7 +29,7 @@ class AuthService {
       role: user.role,
       xp: user.xp,
       level: user.level,
-      currentStreak: user.currentStreak,
+      currentStreak: user.streak.current,
       profileImage: user.profileImage
       // Add other non-sensitive fields as needed
     };

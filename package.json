@@ -11,6 +11,8 @@
     "xss-clean": "^0.1.4"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.27.2",
+    "@babel/preset-typescript": "^7.27.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
@@ -23,7 +25,10 @@
   },
   "scripts": {
     "test": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "npm run test:coverage:backend && npm run test:coverage:frontend",
+    "test:coverage:backend": "cd backend && npm run test:coverage",
+    "test:coverage:frontend": "cd frontend && npm run test:coverage",
+    "check:coverage": "node scripts/check-coverage.js",
     "test:ui": "vitest --ui",
     "test:run": "vitest run"
   }

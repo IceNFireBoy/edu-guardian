@@ -7,9 +7,28 @@ It is intended to be dynamically updated.
 - [ ] Frontend TypeScript migration for remaining features
 - [ ] Frontend component refactoring
 - [ ] API integration with backend
+- [ ] **Resolve Test Failures and SonarQube Issues**
+  - [x] Standardize backend test mocking (Jest vs. Vitest) in `AuthService.test.ts`, `user.test.ts`, `BadgeService.test.ts`, `note.factory.ts`.
+  - [x] Correct factory usage (`mockUser`, `mockUserActivity`, etc.) in backend tests.
+  - [x] Correct `IUserActivity` factory to use `timestamp` instead of `createdAt`.
+  - [x] Correct `User` model default import in `User.test.ts`.
+  - [x] Correct `ErrorResponse` default import in `errorHandler.test.ts`.
+  - [x] Add null check for `note` in `Note.test.ts`.
+  - [x] Refine `note.factory.ts` for `user` field and `id`/`_id` consistency.
+  - [x] Clean up unused imports in `server.ts` and add `mongoSanitize` middleware.
+  - [x] Correct `errorHandler` import paths in tests to point to `middleware/error.ts`.
+  - [x] Add `IBadge` import to `BadgeService.test.ts`.
+  - [x] Correct `useNote` mock in `AISummarizer.test.tsx` (provide `getAISummary`, adjust data structure).
+  - [x] Correct `useNote` mock in `FlashcardGenerator.test.tsx` (provide `generateFlashcards`/`saveFlashcards`, adjust data structure, use Jest).
+  - [x] Add `fileSize` to mock note in `NoteDetailModal.test.tsx`, flesh out mock, use Jest.
+  - [x] Add `FaSpinner` import to `NoteFilter.tsx`.
+  - [x] Create `backend/src/routes/adminRoutes.ts` with placeholder routes.
+  - [ ] **USER ACTION:** Resolve MongoDB connection issues (`ECONNREFUSED`).
+  - [ ] **USER ACTION:** Review and adjust Jest configuration to correctly include/exclude test files (e.g., not run factories as tests).
+  - [ ] Address remaining SonarQube issues (Cognitive Complexity, Duplication, etc.) - *Ongoing*
 
 ## Upcoming
-- [ ] Testing and documentation
+- [ ] Testing and documentation (after current test failures resolved)
 - [ ] Performance optimization
 - [ ] Security enhancements
 

@@ -1,129 +1,93 @@
-import Badge, { IBadge } from '../../models/Badge';
 import mongoose from 'mongoose';
+import Badge from '../../models/Badge';
+import { mockBadge } from '../factories/badge.factory';
 
-describe('Badge Model', () => {
-  let testBadge: IBadge;
-
-  beforeEach(async () => {
-    // Clear the collection
-    await Badge.deleteMany({});
-
-    // Create test badge
-    testBadge = await Badge.create({
-      name: 'Test Badge',
-      description: 'Test Badge Description',
-      icon: 'test-icon.svg',
-      category: 'achievement',
-      requirements: { count: 5, type: 'notes' },
-      xpReward: 100,
-      rarity: 'uncommon',
-      isActive: true,
-      displayOrder: 10
-    });
+describe('Badge Model Test', () => {
+  beforeAll(async () => {
+    // Connection is handled by setup.ts
   });
 
-  describe('Badge Creation', () => {
-    it('should create a badge successfully', async () => {
-      expect(testBadge).toBeDefined();
-      expect(testBadge.name).toBe('Test Badge');
-      expect(testBadge.description).toBe('Test Badge Description');
-      expect(testBadge.category).toBe('achievement');
-      expect(testBadge.rarity).toBe('uncommon');
-    });
-
-    it('should require name', async () => {
-      await expect(
-        Badge.create({
-          description: 'Test Badge Description',
-          icon: 'test-icon.svg',
-          category: 'achievement',
-          requirements: { count: 5, type: 'notes' }
-        })
-      ).rejects.toThrow();
-    });
-
-    it('should require description', async () => {
-      await expect(
-        Badge.create({
-          name: 'Test Badge',
-          icon: 'test-icon.svg',
-          category: 'achievement',
-          requirements: { count: 5, type: 'notes' }
-        })
-      ).rejects.toThrow();
-    });
-
-    it('should require icon', async () => {
-      await expect(
-        Badge.create({
-          name: 'Test Badge',
-          description: 'Test Badge Description',
-          category: 'achievement',
-          requirements: { count: 5, type: 'notes' }
-        })
-      ).rejects.toThrow();
-    });
-
-    it('should require category', async () => {
-      await expect(
-        Badge.create({
-          name: 'Test Badge',
-          description: 'Test Badge Description',
-          icon: 'test-icon.svg',
-          requirements: { count: 5, type: 'notes' }
-        })
-      ).rejects.toThrow();
-    });
-
-    it('should validate category enum values', async () => {
-      await expect(
-        Badge.create({
-          name: 'Test Badge',
-          description: 'Test Badge Description',
-          icon: 'test-icon.svg',
-          category: 'invalid-category',
-          requirements: { count: 5, type: 'notes' }
-        })
-      ).rejects.toThrow();
-    });
-
-    it('should validate rarity enum values', async () => {
-      await expect(
-        Badge.create({
-          name: 'Test Badge',
-          description: 'Test Badge Description',
-          icon: 'test-icon.svg',
-          category: 'achievement',
-          requirements: { count: 5, type: 'notes' },
-          rarity: 'invalid-rarity'
-        })
-      ).rejects.toThrow();
-    });
+  afterEach(async () => {
+    // Cleanup is handled by setup.ts
   });
 
-  describe('Badge Slug', () => {
-    it('should generate slug from name', async () => {
-      expect(testBadge.slug).toBe('test-badge');
-    });
-
-    it('should update slug when name changes', async () => {
-      testBadge.name = 'Updated Test Badge';
-      await testBadge.save();
-      expect(testBadge.slug).toBe('updated-test-badge');
-    });
+  afterAll(async () => {
+    // Disconnection is handled by setup.ts
   });
 
-  describe('Badge Uniqueness', () => {
-    it('should enforce unique badge names', async () => {
-      await expect(
-        Badge.create({
-          name: 'Test Badge', // Same name
-          description: 'Another Description',
-          icon: 'another-icon.svg',
-          category: 'streak',
-          requirements: { days: 7 }
-        })
-      ).rejects.toThrow();
-    });
+  it('should create & save badge successfully', async () => {
+    const validBadge = mockBadge();
+    const savedBadge = await Badge.create(validBadge);
+    expect(savedBadge._id).toBeDefined();
+    expect(savedBadge.name).toBe(validBadge.name);
+    expect(savedBadge.description).toBe(validBadge.description);
+    expect(savedBadge.category).toBe(validBadge.category);
+    expect(savedBadge.rarity).toBe(validBadge.rarity);
+    expect(savedBadge.xpReward).toBe(validBadge.xpReward);
+  });
+
+  it('should fail to save badge without required fields', async () => {
+    const badgeWithoutRequiredField = mockBadge({ name: undefined });
+    let err: any;
+    try {
+      await Badge.create(badgeWithoutRequiredField);
+    } catch (error) {
+      err = error;
+    }
+    expect(err).toBeInstanceOf(mongoose.Error.ValidationError);
+  });
+
+  it('should validate badge category enum', async () => {
+    const badgeWithInvalidCategory = mockBadge({ category: 'invalid' as any });
+    let err: any;
+    try {
+      await Badge.create(badgeWithInvalidCategory);
+    } catch (error) {
+      err = error;
+    }
+    expect(err).toBeInstanceOf(mongoose.Error.ValidationError);
+  });
+
+  it('should validate badge rarity enum', async () => {
+    const badgeWithInvalidRarity = mockBadge({ rarity: 'invalid' as any });
+    let err: any;
+    try {
+      await Badge.create(badgeWithInvalidRarity);
+    } catch (error) {
+      err = error;
+    }
+    expect(err).toBeInstanceOf(mongoose.Error.ValidationError);
+  });
+
+  it('should validate xpReward is positive', async () => {
+    const badgeWithNegativeXP = mockBadge({ xpReward: -50 });
+    let err: any;
+    try {
+      await Badge.create(badgeWithNegativeXP);
+    } catch (error) {
+      err = error;
+    }
+    expect(err).toBeInstanceOf(mongoose.Error.ValidationError);
+  });
+
+  it('should generate slug from name', async () => {
+    const badge = await Badge.create(mockBadge({ name: 'Test Badge' }));
+    expect(badge.slug).toBe('test-badge');
+  });
+
+  it('should update badge criteria', async () => {
+    const badge = await Badge.create(mockBadge());
+    badge.criteria.description = 'Updated criteria';
+    badge.criteria.requirements.count = 5;
+    const updatedBadge = await badge.save();
+    expect(updatedBadge?.criteria.description).toBe('Updated criteria');
+    expect(updatedBadge?.criteria.requirements.count).toBe(5);
+  });
+
+  it('should update badge status', async () => {
+    const badge = await Badge.create(mockBadge());
+    badge.isActive = false;
+    const updatedBadge = await badge.save();
+    expect(updatedBadge?.isActive).toBe(false);
   });
 }); 

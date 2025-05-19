@@ -1,12 +1,16 @@
 import Badge, { IBadge } from '../models/Badge';
-import User, { IUser } from '../models/User';
+import User, { IUser, IUserBadge } from '../models/User';
 import ErrorResponse from '../utils/errorResponse';
+import mongoose from 'mongoose';
 
 interface BadgeCriteriaFunction {
     (user: IUser, eventData?: any): Promise<boolean> | boolean;
 }
 
 const BADGE_CRITERIA: Record<string, BadgeCriteriaFunction> = {
+    note_created: async (user: IUser) => {
+        return user.totalNotes >= 5;
+    },
     login_streak_3: async (user: IUser) => {
         return user.streak.current >= 3;
     },
@@ -38,9 +42,13 @@ const BADGE_CRITERIA: Record<string, BadgeCriteriaFunction> = {
     }
 };
 
-class BadgeService {
+export class BadgeService {
     public async getAllActiveBadges(): Promise<IBadge[]> {
         return await Badge.find({ isActive: true });
+    }
+
+    public async getBadgeByName(name: string): Promise<IBadge | null> {
+        return await Badge.findOne({ name });
     }
 
     public async getBadgeById(id: string): Promise<IBadge> {
@@ -52,6 +60,10 @@ class BadgeService {
     }
 
     public async createBadge(badgeData: Partial<IBadge>): Promise<IBadge> {
+        const existingBadge = await Badge.findOne({ name: badgeData.name });
+        if (existingBadge) {
+            throw new ErrorResponse('Badge with this name already exists', 400);
+        }
         return await Badge.create(badgeData);
     }
 
@@ -74,7 +86,7 @@ class BadgeService {
         return true;
     }
 
-    public async awardBadgeToUser(userId: string, badgeId: string, criteria?: Record<string, any>): Promise<boolean> {
+    public async awardBadgeToUser(userId: string, badgeId: string): Promise<boolean> {
         const user = await User.findById(userId);
         if (!user) {
             throw new ErrorResponse('User not found', 404);
@@ -91,16 +103,18 @@ class BadgeService {
         }
 
         // Add badge to user
-        user.badges.push({
-            badge: badge._id,
+        const newBadge: IUserBadge = {
+            badge: new mongoose.Types.ObjectId(badgeId),
             earnedAt: new Date(),
-            criteriaMet: criteria?.description || 'Awarded by system'
-        });
+            criteriaMet: 'Awarded by system'
+        } as IUserBadge;
+
+        user.badges.push(newBadge);
 
         // Award XP if badge has XP reward
-        if (badge.xpAward && badge.xpAward > 0) {
-            user.xp += badge.xpAward;
-            user.addActivity('earn_xp', `Earned badge: ${badge.name}`, badge.xpAward);
+        if (badge.xpReward && badge.xpReward > 0) {
+            user.xp += badge.xpReward;
+            user.addActivity('earn_xp', `Earned badge: ${badge.name}`, badge.xpReward);
         }
 
         await user.save();
@@ -115,13 +129,13 @@ class BadgeService {
         return await Badge.find({ rarity: rarityLevel, isActive: true });
     }
 
-    public async checkAndAwardBadges(userId: string, event: string, eventData?: any): Promise<string[]> {
+    public async checkAndAwardBadges(userId: string, event: string, eventData?: any): Promise<IBadge[]> {
         const user = await User.findById(userId);
         if (!user) {
             throw new ErrorResponse('User not found', 404);
         }
 
-        const awardedBadges: string[] = [];
+        const awardedBadges: IBadge[] = [];
 
         // Get all active badges
         const badges = await Badge.find({ isActive: true });
@@ -138,7 +152,7 @@ class BadgeService {
                 const criteriaMet = await criteriaFunction(user, eventData);
                 if (criteriaMet) {
                     await this.awardBadgeToUser(userId, badge._id.toString());
-                    awardedBadges.push(badge.name);
+                    awardedBadges.push(badge);
                 }
             }
         }
@@ -147,4 +161,4 @@ class BadgeService {
     }
 }
 
-export default new BadgeService(); 
+export default BadgeService; 

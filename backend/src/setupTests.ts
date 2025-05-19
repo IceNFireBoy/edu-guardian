@@ -1,31 +1,27 @@
 import mongoose from 'mongoose';
-import { config } from 'dotenv';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 
-// Load environment variables from .env.test
-config({ path: '.env.test' });
-
-// Set test environment variables
-process.env.NODE_ENV = 'test';
-process.env.JWT_SECRET = 'test-secret';
-process.env.JWT_EXPIRE = '1d';
-process.env.MONGODB_URI_TEST = process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/eduguardian_test';
+let mongoServer: MongoMemoryServer;
 
 // Global setup
 beforeAll(async () => {
-  // Connect to the test database
-  await mongoose.connect(process.env.MONGODB_URI_TEST);
+  // Create an in-memory MongoDB instance
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  
+  // Connect to the in-memory database
+  await mongoose.connect(mongoUri);
 });
 
 // Global teardown
 afterAll(async () => {
-  // Drop the test database and close the connection
   await mongoose.connection.dropDatabase();
   await mongoose.connection.close();
+  await mongoServer.stop();
 });
 
-// Clean up between tests
+// Clean up database between tests
 afterEach(async () => {
-  // Clear all collections
   const collections = mongoose.connection.collections;
   for (const key in collections) {
     await collections[key].deleteMany({});

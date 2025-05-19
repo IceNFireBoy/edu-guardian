@@ -11,45 +11,64 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        project: [backend, frontend]
+        node-version: [18.x]
 
     steps:
     - uses: actions/checkout@v3
-
-    - name: Setup Node.js
+    
+    - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
-        node-version: '18'
+        node-version: ${{ matrix.node-version }}
         cache: 'npm'
-        cache-dependency-path: ${{ matrix.project }}/package-lock.json
-
-    - name: Install dependencies
+    
+    - name: Install Backend Dependencies
       run: |
-        cd ${{ matrix.project }}
+        cd backend
         npm ci
-
-    - name: Run tests with coverage
+    
+    - name: Run Backend Tests
       run: |
-        cd ${{ matrix.project }}
-        if [ "${{ matrix.project }}" = "backend" ]; then
-          npm run test:coverage
-        else
-          npm run test:coverage
-        fi
-
-    - name: Upload coverage to Codecov
+        cd backend
+        npm run test:coverage
+      env:
+        NODE_ENV: test
+        MONGODB_URI: mongodb://localhost:27017/eduguardian_test
+        JWT_SECRET: test_secret
+        JWT_EXPIRE: 30d
+        JWT_COOKIE_EXPIRE: 30
+        SMTP_HOST: smtp.ethereal.email
+        SMTP_PORT: 587
+        SMTP_EMAIL: test@test.com
+        SMTP_PASSWORD: test_password
+        FROM_EMAIL: noreply@eduguardian.com
+        FROM_NAME: EduGuardian
+    
+    - name: Install Frontend Dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Run Frontend Tests
+      run: |
+        cd frontend
+        npm run test:coverage
+    
+    - name: Upload Coverage Reports
       uses: codecov/codecov-action@v3
       with:
-        directory: ${{ matrix.project }}/coverage
+        directory: ./coverage/
+        flags: unittests
+        name: codecov-umbrella
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
-
-    - name: Upload test results
-      uses: actions/upload-artifact@v3
-      with:
-        name: ${{ matrix.project }}-coverage
-        path: ${{ matrix.project }}/coverage
-        retention-days: 7
+    
+    - name: Check Coverage Thresholds
+      run: |
+        cd backend
+        npm run test:coverage -- --coverageThreshold='{"global":{"statements":95,"branches":95,"functions":95,"lines":95}}'
+        cd ../frontend
+        npm run test:coverage -- --coverageThreshold='{"global":{"statements":95,"branches":95,"functions":95,"lines":95}}'
 
   sonarcloud:
     needs: test

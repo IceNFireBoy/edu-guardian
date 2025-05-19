@@ -1,64 +1,50 @@
 import mongoose from 'mongoose';
-import { config } from 'dotenv';
-import path from 'path';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import { mockUser } from './factories/user.factory';
+import { mockNote } from './factories/note.factory';
+import { mockBadge } from './factories/badge.factory';
 
-// Load test environment variables
-config({ path: path.join(__dirname, '../../.env.test') });
+let mongoServer: MongoMemoryServer;
 
-const MONGODB_URI_TEST = process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/edu_guardian_test';
-
+// Connect to the in-memory database before running tests
 beforeAll(async () => {
-  try {
-    await mongoose.connect(MONGODB_URI_TEST);
-  } catch (error) {
-    console.error('Error connecting to test database:', error);
-    throw error;
-  }
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
 });
 
-afterAll(async () => {
-  if (mongoose.connection.db) {
-    await mongoose.connection.db.dropDatabase();
-  }
-  await mongoose.connection.close();
-});
-
+// Clear all test data after each test
 afterEach(async () => {
-  if (mongoose.connection.db) {
-    const collections = await mongoose.connection.db.collections();
-    for (const collection of collections) {
-      await collection.deleteMany({});
-    }
+  const collections = mongoose.connection.collections;
+  for (const key in collections) {
+    await collections[key].deleteMany({});
   }
 });
 
-// Mock OpenAI for Vitest
-globalThis.vi?.mock?.('openai', () => ({
-  OpenAI: globalThis.vi.fn().mockImplementation(() => ({
-    chat: {
-      completions: {
-        create: globalThis.vi.fn().mockResolvedValue({
-          choices: [{ message: { content: 'Mocked AI response' } }]
-        })
-      }
-    }
-  }))
-}));
+// Disconnect and stop server after all tests
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
 
-// Mock Cloudinary for Vitest
-globalThis.vi?.mock?.('cloudinary', () => ({
-  v2: {
-    config: globalThis.vi.fn(),
-    uploader: {
-      upload: globalThis.vi.fn().mockResolvedValue({
-        secure_url: 'https://mocked.cloudinary.com/image.png',
-        public_id: 'mocked_public_id',
-        asset_id: 'mocked_asset_id',
-        bytes: 12345,
-        format: 'png',
-        resource_type: 'image',
-        created_at: new Date().toISOString()
-      })
-    }
-  }
-})); 
+// Test utilities
+export const createTestUser = async (overrides = {}) => {
+  const User = mongoose.model('User');
+  const userData = mockUser(overrides);
+  const user = new User(userData);
+  return await user.save();
+};
+
+export const createTestNote = async (overrides = {}) => {
+  const Note = mongoose.model('Note');
+  const noteData = mockNote(overrides);
+  const note = new Note(noteData);
+  return await note.save();
+};
+
+export const createTestBadge = async (overrides = {}) => {
+  const Badge = mongoose.model('Badge');
+  const badgeData = mockBadge(overrides);
+  const badge = new Badge(badgeData);
+  return await badge.save();
+}; 
