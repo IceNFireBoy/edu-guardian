@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import React, { ReactNode, useState } from 'react';
 
 /**
  * Custom hook for anti-cheating functionality
@@ -11,7 +11,7 @@ export const useAntiCheating = () => {
   const deactivate = () => setIsActive(false);
 
   // Placeholder component that would normally overlay during resting periods
-  const RestingModeOverlay = () => {
+  const RestingModeOverlay: React.FC = () => {
     if (!isActive) return null;
     return (
       <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">

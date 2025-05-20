@@ -59,6 +59,11 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Add a test endpoint
+app.get('/api/test', (req, res) => {
+  res.json({ success: true, message: 'API is running' });
+});
+
 // Mount routers
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
@@ -68,6 +73,14 @@ app.use('/api/v1/admin', adminRoutes);
 
 // Error handler
 app.use(errorHandler);
+
+// Start the server if this file is run directly
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  });
+}
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err: Error) => {

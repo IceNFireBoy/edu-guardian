@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
     buildCommand: npm i && npm run build
-    startCommand: node dist/server.js
+    startCommand: node dist/index.js
     healthCheckPath: /api/test
     repo: https://github.com/YourGitHubUsername/edu-guardian.git
     branch: main

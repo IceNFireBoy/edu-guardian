@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { CustomRequest } from '../middleware/auth';
 import asyncHandler from '../middleware/async';
 import UserActivityFeedService from '../services/UserActivityFeedService';
 import BadgeService from '../services/BadgeService';
