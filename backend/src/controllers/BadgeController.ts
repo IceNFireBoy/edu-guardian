@@ -4,7 +4,7 @@ import ErrorResponse from '../utils/errorResponse';
 import BadgeService from '../services/BadgeService';
 import { CustomRequest } from '../middleware/auth'; // For req.user
 
-class BadgeController {
+export default class BadgeController {
   // @desc    Get all active badges
   // @route   GET /api/v1/badges
   // @access  Public
@@ -161,6 +161,4 @@ class BadgeController {
       next(error);
     }
   });
-}
-
-export default new BadgeController(); 
+} 

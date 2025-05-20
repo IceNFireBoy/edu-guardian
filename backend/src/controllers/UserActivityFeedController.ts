@@ -1,15 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
-import { catchAsync } from '../middleware/asyncHandler';
+import asyncHandler from '../middleware/async';
 import UserActivityFeedService from '../services/UserActivityFeedService';
 import BadgeService from '../services/BadgeService';
 
-class UserActivityFeedController {
+export default class UserActivityFeedController {
     /**
      * @desc    Get user activity feed items
      * @route   GET /api/v1/user/feed
      * @access  Private
      */
-    public getUserFeed = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    public getUserFeed = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const userId = req.user.id;
         const options = {
             page: parseInt(req.query.page as string) ?? 1,
@@ -39,7 +39,7 @@ class UserActivityFeedController {
      * @route   POST /api/v1/user/check-badges
      * @access  Private
      */
-    public checkAndAwardBadges = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    public checkAndAwardBadges = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const userId = req.user.id;
         const { event, eventData } = req.body;
 
@@ -66,7 +66,7 @@ class UserActivityFeedController {
      * @route   POST /api/v1/user/study-complete
      * @access  Private
      */
-    public logStudyCompletion = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    public logStudyCompletion = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const userId = req.user.id;
         const { noteId, duration, flashcardsReviewed } = req.body;
 
@@ -126,6 +126,4 @@ class UserActivityFeedController {
             }
         });
     });
-}
-
-export default new UserActivityFeedController(); 
+} 

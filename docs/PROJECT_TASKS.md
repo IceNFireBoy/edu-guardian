@@ -30,6 +30,11 @@ It is intended to be dynamically updated.
   - [x] Added project-level npm scripts for building and running
   - [x] Fixed frontend build issues
   - [x] Updated deployment documentation with troubleshooting tips
+  - [x] Fixed controller class exports and instantiations in route files
+  - [x] Fixed import paths for asyncHandler middleware
+  - [x] Downgraded problematic frontend dependencies in package.json
+  - [x] Added custom netlify.toml with environment variables
+  - [x] Resolved all backend TypeScript errors
 - [ ] Frontend UI refinement
 
 ## Upcoming

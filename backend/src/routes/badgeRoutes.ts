@@ -4,14 +4,15 @@ import { protect, authorize } from '../middleware/auth';
 import { body, param } from 'express-validator';
 
 const router = express.Router();
+const badgeController = new BadgeController();
 
 // Public routes for badges
-router.get('/', BadgeController.getAllBadges);
+router.get('/', badgeController.getBadges);
 router.get('/:id', [
     param('id').isMongoId().withMessage('Invalid Badge ID')
-], BadgeController.getBadgeById);
-router.get('/category/:categoryName', BadgeController.getBadgesByCategory);
-router.get('/rarity/:rarityLevel', BadgeController.getBadgesByRarity);
+], badgeController.getBadgeById);
+router.get('/category/:categoryName', badgeController.getBadgesByCategory);
+router.get('/rarity/:rarityLevel', badgeController.getBadgesByRarity);
 
 // Admin routes for managing badges
 router.post('/', protect, authorize('admin'), [
@@ -20,23 +21,23 @@ router.post('/', protect, authorize('admin'), [
     body('icon').notEmpty().withMessage('Icon is required'),
     body('criteria.description').notEmpty().withMessage('Criteria description is required'),
     // Add more validation for badge fields (category, rarity, xpAward, etc.)
-], BadgeController.createBadge);
+], badgeController.createBadge);
 
 router.put('/:id', protect, authorize('admin'), [
     param('id').isMongoId().withMessage('Invalid Badge ID'),
     // Add more validation for update fields
-], BadgeController.updateBadge);
+], badgeController.updateBadge);
 
 router.delete('/:id', protect, authorize('admin'), [
     param('id').isMongoId().withMessage('Invalid Badge ID')
-], BadgeController.deleteBadge);
+], badgeController.deleteBadge);
 
 router.post('/:badgeId/award/:userId', protect, authorize('admin'), [
     param('badgeId').isMongoId().withMessage('Invalid Badge ID'),
     param('userId').isMongoId().withMessage('Invalid User ID')
-], BadgeController.awardBadgeToUser);
+], badgeController.awardBadgeToUser);
 
 // Route for system/user to check and award badges based on events
-router.post('/check-eligibility', protect, BadgeController.checkAndAwardBadges);
+router.post('/check-eligibility', protect, badgeController.checkAndAwardBadges);
 
 export default router; 

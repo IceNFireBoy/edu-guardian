@@ -118,6 +118,23 @@ export const API_URL = import.meta.env.VITE_API_URL || 'https://edu-guardian-bac
   export default new NoteController();
   ```
 - **Missing Middleware**: If you encounter errors about missing middleware like `asyncHandler`, ensure the file exists and is correctly exported.
+- **Controller Instantiation**: Make sure to instantiate controllers in route files:
+  ```typescript
+  // In routes file
+  import UserController from '../controllers/UserController';
+  const userController = new UserController();
+  
+  // Then use the instance
+  router.get('/', userController.getUsers);
+  ```
+- **Wrong Import Paths**: If you encounter errors about import paths:
+  ```typescript
+  // Incorrect
+  import { catchAsync } from '../middleware/asyncHandler';
+  
+  // Correct
+  import asyncHandler from '../middleware/async';
+  ```
 
 ### Frontend Issues
 
@@ -126,6 +143,11 @@ export const API_URL = import.meta.env.VITE_API_URL || 'https://edu-guardian-bac
 - **Build Errors**: Look at the Netlify build logs for detailed error information
 - **JSX in .ts Files**: Ensure files containing JSX have the `.tsx` extension, not `.ts`
 - **Missing Hooks**: If you encounter errors about missing hooks like `useAuth` or `usePDFNote`, ensure these files exist and are correctly exported.
+- **Dependency Version Conflicts**: In case of dependency conflicts in Netlify, consider:
+  1. Downgrading packages to more stable versions
+  2. Adding a custom `netlify.toml` in the frontend directory
+  3. Setting `NPM_FLAGS="--no-optional"` in the build environment
+  4. Specifying Node version with `NODE_VERSION="18"` in the build environment
 
 ## CI/CD Integration
 

@@ -5,7 +5,7 @@ import { CustomRequest } from '../middleware/auth';
 import UserService from '../services/UserService';
 import { IUser } from '../models/User'; // Assuming IUser is in User.ts
 
-class UserController {
+export default class UserController {
   // @desc    Get all users
   // @route   GET /api/v1/users
   // @access  Admin
@@ -266,6 +266,4 @@ class UserController {
       next(error);
     }
   });
-}
-
-export default new UserController(); 
+} 
