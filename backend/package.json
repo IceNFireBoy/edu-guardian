@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
+    "build": "node build.js",
+    "postbuild": "cp -R ./src/public ./dist/public && cp -R ./src/views ./dist/views || true",
     "test": "vitest",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

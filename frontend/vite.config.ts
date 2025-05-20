@@ -1,11 +1,11 @@
 /// <reference types="vitest" />
-import { defineConfig as defineViteConfig, mergeConfig } from 'vite';
+import { defineConfig } from 'vite';
 import { defineConfig as defineVitestConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
 // https://vitejs.dev/config/
-const viteConfig = defineViteConfig({
+export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
@@ -13,9 +13,13 @@ const viteConfig = defineViteConfig({
     },
   },
   build: {
-    // Generate source maps for better debugging of production issues
+    outDir: 'dist',
     sourcemap: true,
-    // Improve CSS handling in production
+    commonjsOptions: {
+      include: [/node_modules/],
+      extensions: ['.js', '.jsx', '.ts', '.tsx'],
+    },
+    // Generate source maps for better debugging of production issues
     cssCodeSplit: true,
     // Set a reasonable chunk size
     chunkSizeWarningLimit: 1000,
@@ -33,13 +37,13 @@ const viteConfig = defineViteConfig({
   },
   // More friendly error overlay
   server: {
-    hmr: {
-      overlay: true,
-    },
+    port: 5173,
+    open: true,
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
+        secure: false,
       },
     },
   },
@@ -73,6 +77,4 @@ const vitestConfig = defineVitestConfig({
       }
     },
   },
-});
-
-export default mergeConfig(viteConfig, vitestConfig); 
+}); 
