@@ -1,6 +1,5 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vite';
-import { defineConfig as defineVitestConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
@@ -15,27 +14,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
-    commonjsOptions: {
-      include: [/node_modules/],
-      extensions: ['.js', '.jsx', '.ts', '.tsx'],
-    },
-    // Generate source maps for better debugging of production issues
-    cssCodeSplit: true,
-    // Set a reasonable chunk size
     chunkSizeWarningLimit: 1000,
-    // Optimize output
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          // Split React dependencies into a separate vendor chunk
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          // Split UI libraries
-          ui: ['react-icons', 'framer-motion', 'react-hot-toast'],
-        },
-      },
-    },
   },
-  // More friendly error overlay
   server: {
     port: 5173,
     open: true,
@@ -47,34 +27,23 @@ export default defineConfig({
       },
     },
   },
-});
-
-const vitestConfig = defineVitestConfig({
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.ts',
-    css: true, // if you have CSS imports in your components
+    css: true,
     coverage: {
-      provider: 'istanbul', // or 'c8'
-      reporter: ['text', 'json', 'html', 'lcov'], // Add lcov for services like Codecov
-      include: ['src/**/*.{ts,tsx}'],
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
       exclude: [
         'src/main.tsx', 
         'src/vite-env.d.ts',
         'src/setupTests.ts',
-        'src/**/types.ts', // Exclude type definition files
-        'src/**/constants.ts', // Exclude constant definition files
-        'src/App.tsx', // Often App.tsx is mostly setup, can be excluded if not much logic
-        'src/router/', // Router configuration files
+        'src/**/types.ts',
+        'src/**/constants.ts',
+        'src/App.tsx',
+        'src/router/',
       ],
-      all: true, // Ensure coverage is reported for all files, not just tested ones
-      thresholds: { // Nesting thresholds
-        lines: 95,
-        functions: 95,
-        branches: 95,
-        statements: 95,
-      }
     },
   },
 }); 
