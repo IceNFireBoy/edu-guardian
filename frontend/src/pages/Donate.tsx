@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import NoteUploader from '../features/notes/NoteUploader';
-import { useAntiCheating } from '../hooks/useAntiCheating.ts';
+import { useAntiCheating } from '../hooks/useAntiCheating';
 
 const Donate: React.FC = () => {
   const { RestingModeOverlay } = useAntiCheating();

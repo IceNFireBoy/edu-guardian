@@ -249,7 +249,32 @@ const NoteViewer: FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-slate-900"><Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} /><div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}><header className="bg-white dark:bg-slate-800 shadow-sm p-4 flex justify-between items-center"><h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100 truncate max-w-md">{finalNoteTitle}</h1><button onClick={() => setStudySessionOpen(!studySessionOpen)} className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-primary"><FaCoffee className="text-gray-600 dark:text-gray-300" /> </button></header><main className="flex-1 p-0 overflow-hidden relative"><div className="h-full w-full">{renderMainContent()}</div></main></div>{note && studySessionOpen && (<NoteStudySession note={note} className="w-80 xl:w-96 bg-white dark:bg-slate-800 shadow-lg border-l dark:border-slate-700 fixed top-0 right-0 h-full z-40 transform transition-transform duration-300 ease-in-out ${studySessionOpen ? 'translate-x-0' : 'translate-x-full'} onClose={() => setStudySessionOpen(false)} onBreakStart={(time: number) => setBreakState({ isBreakActive: true, breakTime: time, cancelBreak: () => setBreakState(prev => ({...prev, isBreakActive: false, breakTime: 0}))})} />)}</div>
+    <div className="flex h-screen bg-gray-100 dark:bg-slate-900">
+      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+        <header className="bg-white dark:bg-slate-800 shadow-sm p-4 flex justify-between items-center">
+          <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100 truncate max-w-md">{finalNoteTitle}</h1>
+          <button onClick={() => setStudySessionOpen(!studySessionOpen)} className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-primary">
+            <FaCoffee className="text-gray-600 dark:text-gray-300" />
+          </button>
+        </header>
+        <main className="flex-1 p-0 overflow-hidden relative">
+          <div className="h-full w-full">{renderMainContent()}</div>
+        </main>
+      </div>
+      {note && studySessionOpen && (
+        <NoteStudySession 
+          note={note} 
+          className={`w-80 xl:w-96 bg-white dark:bg-slate-800 shadow-lg border-l dark:border-slate-700 fixed top-0 right-0 h-full z-40 transform transition-transform duration-300 ease-in-out ${studySessionOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          onClose={() => setStudySessionOpen(false)} 
+          onBreakStart={(time: number) => setBreakState({ 
+            isBreakActive: true, 
+            breakTime: time, 
+            cancelBreak: () => setBreakState(prev => ({...prev, isBreakActive: false, breakTime: 0}))
+          })} 
+        />
+      )}
+    </div>
   );
 };
 

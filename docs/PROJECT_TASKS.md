@@ -15,47 +15,22 @@ It is intended to be dynamically updated.
   - [x] Correct `ErrorResponse` default import in `errorHandler.test.ts`.
   - [x] Add null check for `note` in `Note.test.ts`.
   - [x] Refine `note.factory.ts` for `user` field and `id`/`_id` consistency.
-  - [x] Clean up unused imports in `server.ts` and add `mongoSanitize` middleware.
-  - [x] Correct `errorHandler` import paths in tests to point to `middleware/error.ts`.
-  - [x] Add `IBadge` import to `BadgeService.test.ts`.
-  - [x] Correct `useNote` mock in `AISummarizer.test.tsx` (provide `getAISummary`, adjust data structure).
-  - [x] Correct `useNote` mock in `FlashcardGenerator.test.tsx` (provide `generateFlashcards`/`saveFlashcards`, adjust data structure, use Jest).
-  - [x] Add `fileSize` to mock note in `NoteDetailModal.test.tsx`, flesh out mock, use Jest.
-  - [x] Add `FaSpinner` import to `NoteFilter.tsx`.
-  - [x] Create `backend/src/routes/adminRoutes.ts` with placeholder routes.
-  - [x] **Batch 6 Fixes**: Reduced cognitive complexity in UserService, NoteService, and User model methods.
-    - Improved error handling in customErrors.ts with proper JSDoc comments
-    - Refactored UserService.ts to extract common logic into helper methods
-    - Enhanced User.updateStreak with better edge case handling
-    - Refactored NoteService AI methods to improve validation and extract shared logic
-    - Added robust flashcard validation and parsing
-    - Improved OpenAI error handling for more graceful failures
-  - [x] **Batch 7 Fixes**: Fixed test compatibility issues and middleware type errors.
-    - Updated User.test.ts to use newer property names (streak.max, lastUsed)
-    - Fixed UserService.test.ts to match the updated API signatures
-    - Added proper TypeScript handling for middleware in server.ts
-    - Fixed CustomErrors.test.ts to match updated error class implementations
-    - Updated imports to use correct relative paths
-  - [x] **Batch 8 Fixes**: Fixed validation errors and improved error handling.
-    - Fixed ValidationError handling in AuthController to use current API
-    - Updated error handler middleware to detect error types more robustly
-    - Fixed activity enum usage in User and UserService tests
-    - Added proper type casting for arrays in tests
-    - Fixed response structure expectations in tests
-  - [x] **Batch 9 Fixes**: Fixed unused parameter warnings and authentication middleware.
-    - Added underscore prefix to unused parameters in protect/authorize middleware
-    - Fixed unused variable warnings in AuthService.test.ts
-    - Improved type safety in authentication middleware
-    - Enhanced error handling for JWT verification
-  - [x] **Batch 10 Fixes**: Fixed remaining complex test files to reach 100% completion.
-    - Fixed property references in NoteService.test.ts to match actual return structures
-    - Updated function arguments to match current API signatures
-    - Added proper mock implementations for extractTextFromFile and BadgeService
-    - Fixed type definitions and property access in BadgeService.test.ts
-    - Ensured all test objects match their schema definitions
-  - [x] **USER ACTION:** Resolve MongoDB connection issues (`ECONNREFUSED`).
-  - [x] **USER ACTION:** Review and adjust Jest configuration to correctly include/exclude test files (e.g., not run factories as tests).
-  - [x] Address remaining SonarQube issues (Minor bugs, Type safety, etc.) - *100% Complete*
+  - [x] Clean up unused imports in component tests.
+  - [x] Fix PDF rendering tests in `PDFViewer.test.tsx`.
+  - [x] Add appropriate mock data for document and context objects in tests.
+  - [x] Fix React hooks usage in test environment.
+  - [x] Created missing asyncHandler middleware.
+  - [x] Fixed JSX in TypeScript files (useAntiCheating.tsx).
+  - [x] Fixed syntax errors in NoteViewer.tsx.
+  - [x] Created render.yaml for Render deployment.
+  - [x] Added deployment documentation.
+- [x] **Ensure Deployment Readiness**
+  - [x] Fixed NoteController export issue
+  - [x] Created missing hooks (useAuth, usePDFNote)
+  - [x] Added project-level npm scripts for building and running
+  - [x] Fixed frontend build issues
+  - [x] Updated deployment documentation with troubleshooting tips
+- [ ] Frontend UI refinement
 
 ## Upcoming
 - [ ] Testing and documentation (after current test failures resolved)

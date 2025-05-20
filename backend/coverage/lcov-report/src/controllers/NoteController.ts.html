@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/321</span>
+                <span class='fraction'>0/323</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/280</span>
+                <span class='fraction'>0/283</span>
             </div>
         
             
@@ -645,7 +645,14 @@
 <a name='L580'></a><a href='#L580'>580</a>
 <a name='L581'></a><a href='#L581'>581</a>
 <a name='L582'></a><a href='#L582'>582</a>
-<a name='L583'></a><a href='#L583'>583</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L583'></a><a href='#L583'>583</a>
+<a name='L584'></a><a href='#L584'>584</a>
+<a name='L585'></a><a href='#L585'>585</a>
+<a name='L586'></a><a href='#L586'>586</a>
+<a name='L587'></a><a href='#L587'>587</a>
+<a name='L588'></a><a href='#L588'>588</a>
+<a name='L589'></a><a href='#L589'>589</a>
+<a name='L590'></a><a href='#L590'>590</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -655,6 +662,9 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -671,6 +681,10 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1230,11 +1244,14 @@
 <span class="cline-any cline-no">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Request, Response, NextFunction } from 'express';
 <span class="cstat-no" title="statement not covered" >import { validationResult } from 'express-validator';</span>
 <span class="cstat-no" title="statement not covered" >import asyncHandler from '../middleware/async';</span>
-<span class="cstat-no" title="statement not covered" >import NoteService, { NoteQueryFilters } from '../services/NoteService';</span>
+<span class="cstat-no" title="statement not covered" >import { NoteService, NoteQueryFilters } from '../services/NoteService';</span>
 <span class="cstat-no" title="statement not covered" >import ErrorResponse from '../utils/errorResponse';</span>
 import { CustomRequest } from '../middleware/auth'; // For req.user if needed
 import { INote } from '../models/Note'; // For types
 <span class="cstat-no" title="statement not covered" >import mongoose from 'mongoose'; </span>
+&nbsp;
+// Create a singleton instance of the NoteService
+const noteService = <span class="cstat-no" title="statement not covered" >new NoteService();</span>
 &nbsp;
 <span class="fstat-no" title="function not covered" >class N</span>oteController {
   // @desc    Get all notes (with filtering and pagination)
@@ -1252,7 +1269,11 @@ import { INote } from '../models/Note'; // For types
 <span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (subject) <span class="cstat-no" title="statement not covered" >filters.subject = subject as string;</span></span>
 <span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (semester) <span class="cstat-no" title="statement not covered" >filters.semester = semester as string;</span></span>
 <span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (quarter) <span class="cstat-no" title="statement not covered" >filters.quarter = quarter as string;</span></span>
-<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (topic) <span class="cstat-no" title="statement not covered" >filters.topic = { $regex: new RegExp(topic as string, "i") } as any;</span></span>
+<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (topic) {</span>
+      // Escape special RegExp characters to prevent ReDoS vulnerabilities
+      const escapedTopic = (<span class="cstat-no" title="statement not covered" >topic as string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&amp;');</span>
+<span class="cstat-no" title="statement not covered" >      filters.topic = { $regex: new RegExp(escapedTopic, "i") } as any;</span>
+    }
     
     const paginationOptions = <span class="cstat-no" title="statement not covered" >{</span>
         page: page ? parseInt(page as string, 10) : undefined,
@@ -1262,7 +1283,7 @@ import { INote } from '../models/Note'; // For types
     };
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const result = <span class="cstat-no" title="statement not covered" >await NoteService.getAllNotes(filters, paginationOptions);</span>
+      const result = <span class="cstat-no" title="statement not covered" >await noteService.getAllNotes(filters, paginationOptions);</span>
 <span class="cstat-no" title="statement not covered" >      res.status(200).json({</span>
       success: true,
         count: result.count,
@@ -1285,7 +1306,7 @@ import { INote } from '../models/Note'; // For types
     }
     const noteId = <span class="cstat-no" title="statement not covered" >req.params.id;</span>
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const note = <span class="cstat-no" title="statement not covered" >await NoteService.getNoteById(noteId);</span>
+      const note = <span class="cstat-no" title="statement not covered" >await noteService.getNoteById(noteId);</span>
 <span class="cstat-no" title="statement not covered" >  <span class="missing-if-branch" title="if path not taken" >I</span>if (!note) {</span>
 <span class="cstat-no" title="statement not covered" >        return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));</span>
       }
@@ -1343,7 +1364,7 @@ import { INote } from '../models/Note'; // For types
     } 
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const note = <span class="cstat-no" title="statement not covered" >await NoteService.createNote(noteData, userId);</span>
+      const note = <span class="cstat-no" title="statement not covered" >await noteService.createNote(noteData, userId);</span>
 <span class="cstat-no" title="statement not covered" >      res.status(201).json({</span>
       success: true,
       data: note
@@ -1410,7 +1431,7 @@ import { INote } from '../models/Note'; // For types
     }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const updatedNote = <span class="cstat-no" title="statement not covered" >await NoteService.updateNoteById(noteId, userId, noteData);</span>
+      const updatedNote = <span class="cstat-no" title="statement not covered" >await noteService.updateNoteById(noteId, userId, noteData);</span>
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!updatedNote) {</span>
         // This case should ideally be covered by service throwing ErrorResponse for not found
         // but as a fallback or if service returns null for not found instead of throwing for it.
@@ -1443,7 +1464,7 @@ import { INote } from '../models/Note'; // For types
     const noteId = <span class="cstat-no" title="statement not covered" >req.params.id;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const deletedNote = <span class="cstat-no" title="statement not covered" >await NoteService.deleteNoteById(noteId, userId);</span>
+      const deletedNote = <span class="cstat-no" title="statement not covered" >await noteService.deleteNoteById(noteId, userId);</span>
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!deletedNote) {</span>
 <span class="cstat-no" title="statement not covered" >        return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));</span>
       }
@@ -1468,7 +1489,7 @@ import { INote } from '../models/Note'; // For types
     const userId = <span class="cstat-no" title="statement not covered" >req.params.userId;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const notes = <span class="cstat-no" title="statement not covered" >await NoteService.getUserNotes(userId);</span>
+      const notes = <span class="cstat-no" title="statement not covered" >await noteService.getUserNotes(userId);</span>
 <span class="cstat-no" title="statement not covered" >      res.status(200).json({ success: true, data: notes });</span>
     } catch (error) {
 <span class="cstat-no" title="statement not covered" >      next(error);</span>
@@ -1490,7 +1511,7 @@ import { INote } from '../models/Note'; // For types
     const userId = <span class="cstat-no" title="statement not covered" >req.user.id;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const notes = <span class="cstat-no" title="statement not covered" >await NoteService.getMyNotes(userId);</span>
+      const notes = <span class="cstat-no" title="statement not covered" >await noteService.getMyNotes(userId);</span>
 <span class="cstat-no" title="statement not covered" >      res.status(200).json({ success: true, data: notes });</span>
     } catch (error) {
 <span class="cstat-no" title="statement not covered" >      next(error);</span>
@@ -1507,7 +1528,7 @@ import { INote } from '../models/Note'; // For types
     }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const notes = <span class="cstat-no" title="statement not covered" >await NoteService.getTopRatedNotes();</span>
+      const notes = <span class="cstat-no" title="statement not covered" >await noteService.getTopRatedNotes();</span>
 <span class="cstat-no" title="statement not covered" >      res.status(200).json({ success: true, data: notes });</span>
     } catch (error) {
 <span class="cstat-no" title="statement not covered" >      next(error);</span>
@@ -1526,7 +1547,7 @@ import { INote } from '../models/Note'; // For types
     const subject = <span class="cstat-no" title="statement not covered" >req.params.subject;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const notes = <span class="cstat-no" title="statement not covered" >await NoteService.getNotesBySubject(subject);</span>
+      const notes = <span class="cstat-no" title="statement not covered" >await noteService.getNotesBySubject(subject);</span>
 <span class="cstat-no" title="statement not covered" >      res.status(200).json({ success: true, data: notes });</span>
     } catch (error) {
 <span class="cstat-no" title="statement not covered" >      next(error);</span>
@@ -1553,7 +1574,7 @@ import { INote } from '../models/Note'; // For types
     } = <span class="cstat-no" title="statement not covered" >req.body;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const updatedNote = <span class="cstat-no" title="statement not covered" >await NoteService.addFlashcardsToNote(noteId, userId, flashcards);</span>
+      const updatedNote = <span class="cstat-no" title="statement not covered" >await noteService.addFlashcardsToNote(noteId, userId, flashcards);</span>
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!updatedNote) {</span>
 <span class="cstat-no" title="statement not covered" >        return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));</span>
       }
@@ -1575,7 +1596,7 @@ import { INote } from '../models/Note'; // For types
     const { query } = <span class="cstat-no" title="statement not covered" >req.query;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const notes = <span class="cstat-no" title="statement not covered" >await NoteService.searchNotes(query as string);</span>
+      const notes = <span class="cstat-no" title="statement not covered" >await noteService.searchNotes(query as string);</span>
 <span class="cstat-no" title="statement not covered" >      res.status(200).json({ success: true, data: notes });</span>
     } catch (error) {
 <span class="cstat-no" title="statement not covered" >      next(error);</span>
@@ -1604,7 +1625,7 @@ import { INote } from '../models/Note'; // For types
     }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const updatedNote = <span class="cstat-no" title="statement not covered" >await NoteService.uploadNoteFile(noteId, userId, file);</span>
+      const updatedNote = <span class="cstat-no" title="statement not covered" >await noteService.uploadNoteFile(noteId, userId, file);</span>
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!updatedNote) {</span>
 <span class="cstat-no" title="statement not covered" >        return next(new ErrorResponse(`Note not found with id of ${noteId} or upload failed`, 404));</span>
       }
@@ -1626,7 +1647,7 @@ import { INote } from '../models/Note'; // For types
     const { filters } = <span class="cstat-no" title="statement not covered" >req.query;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const notes = <span class="cstat-no" title="statement not covered" >await NoteService.getNotesByFilters(filters as string);</span>
+      const notes = <span class="cstat-no" title="statement not covered" >await noteService.getNotesByFilters(filters as string);</span>
 <span class="cstat-no" title="statement not covered" >      res.status(200).json({ success: true, data: notes });</span>
   } catch (error) {
 <span class="cstat-no" title="statement not covered" >      next(error);</span>
@@ -1651,7 +1672,7 @@ import { INote } from '../models/Note'; // For types
     const { rating } = <span class="cstat-no" title="statement not covered" >req.body;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const updatedNote = <span class="cstat-no" title="statement not covered" >await NoteService.rateNote(noteId, userId, rating);</span>
+      const updatedNote = <span class="cstat-no" title="statement not covered" >await noteService.rateNote(noteId, userId, rating);</span>
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!updatedNote) {</span>
 <span class="cstat-no" title="statement not covered" >        return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));</span>
       }
@@ -1677,7 +1698,7 @@ import { INote } from '../models/Note'; // For types
     const noteId = <span class="cstat-no" title="statement not covered" >req.params.id;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const updatedNote = <span class="cstat-no" title="statement not covered" >await NoteService.incrementDownloads(noteId, userId);</span>
+      const updatedNote = <span class="cstat-no" title="statement not covered" >await noteService.incrementDownloads(noteId, userId);</span>
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!updatedNote) {</span>
 <span class="cstat-no" title="statement not covered" >        return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));</span>
       }
@@ -1708,7 +1729,7 @@ import { INote } from '../models/Note'; // For types
     } = <span class="cstat-no" title="statement not covered" >req.body;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const flashcard = <span class="cstat-no" title="statement not covered" >await NoteService.createFlashcardForNote(noteId, userId, front, back);</span>
+      const flashcard = <span class="cstat-no" title="statement not covered" >await noteService.createFlashcardForNote(noteId, userId, front, back);</span>
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!flashcard) {</span>
 <span class="cstat-no" title="statement not covered" >        return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));</span>
       }
@@ -1734,7 +1755,7 @@ import { INote } from '../models/Note'; // For types
     const noteId = <span class="cstat-no" title="statement not covered" >req.params.id;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const summary = <span class="cstat-no" title="statement not covered" >await NoteService.generateAISummaryForNote(noteId, userId);</span>
+      const summary = <span class="cstat-no" title="statement not covered" >await noteService.generateAISummaryForNote(noteId, userId);</span>
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!summary) {</span>
 <span class="cstat-no" title="statement not covered" >        return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));</span>
       }
@@ -1760,7 +1781,7 @@ import { INote } from '../models/Note'; // For types
     const noteId = <span class="cstat-no" title="statement not covered" >req.params.id;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const flashcards = <span class="cstat-no" title="statement not covered" >await NoteService.generateAIFlashcardsForNote(noteId, userId);</span>
+      const flashcards = <span class="cstat-no" title="statement not covered" >await noteService.generateAIFlashcardsForNote(noteId, userId);</span>
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!flashcards) {</span>
 <span class="cstat-no" title="statement not covered" >    return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));</span>
   }
@@ -1797,7 +1818,7 @@ import { INote } from '../models/Note'; // For types
     }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const updatedNote = <span class="cstat-no" title="statement not covered" >await NoteService.saveGeneratedFlashcardsToNote(noteId, userId, flashcards);</span>
+      const updatedNote = <span class="cstat-no" title="statement not covered" >await noteService.saveGeneratedFlashcardsToNote(noteId, userId, flashcards);</span>
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!updatedNote) {</span>
         // This case should ideally be covered by service throwing ErrorResponse for not found
 <span class="cstat-no" title="statement not covered" >        return next(new ErrorResponse(`Note not found with id of ${noteId} or save operation failed`, 404));</span>
@@ -1816,7 +1837,7 @@ import { INote } from '../models/Note'; // For types
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-05-14T12:23:31.232Z
+                at 2025-05-19T21:14:30.217Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

@@ -10,7 +10,8 @@ import mongoose from 'mongoose';
 // Create a singleton instance of the NoteService
 const noteService = new NoteService();
 
-class NoteController {
+// Export as default so it can be imported correctly
+export default class NoteController {
   // @desc    Get all notes (with filtering and pagination)
 // @route   GET /api/v1/notes
 // @access  Public
@@ -585,6 +586,4 @@ class NoteController {
       next(error);
     }
   });
-}
-
-export default new NoteController(); 
+} 

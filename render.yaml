@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: edu-guardian-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm i && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/test
+    repo: https://github.com/YourGitHubUsername/edu-guardian.git
+    branch: main
+    rootDir: backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRE
+        value: 30d
+      - key: JWT_COOKIE_EXPIRE
+        value: 30
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false 

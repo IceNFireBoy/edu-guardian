@@ -1,51 +1,41 @@
-import React, { useState } from 'react';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { ReactNode, useState } from 'react';
 
-interface RestingModeOverlayProps {
-  onClose: () => void;
-}
+/**
+ * Custom hook for anti-cheating functionality
+ * This is a placeholder that would be implemented fully in a production environment
+ */
+export const useAntiCheating = () => {
+  const [isActive, setIsActive] = useState(false);
 
-const RestingModeOverlay: React.FC<RestingModeOverlayProps> = ({ onClose }) => {
-  return (
-    <div className="fixed inset-0 bg-blue-900/90 flex items-center justify-center z-50">
-      <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full mx-4">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Resting Mode Active</h2>
-        <p className="text-gray-600 mb-6">
-          Your screen is currently in resting mode to prevent eye strain. Click the button below to continue.
-        </p>
-        <button
-          onClick={onClose}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
-        >
-          Continue
-        </button>
+  const activate = () => setIsActive(true);
+  const deactivate = () => setIsActive(false);
+
+  // Placeholder component that would normally overlay during resting periods
+  const RestingModeOverlay = () => {
+    if (!isActive) return null;
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
+        <div className="bg-white p-5 rounded-lg shadow-lg max-w-md w-full">
+          <h2 className="text-xl font-bold mb-3">Resting Period</h2>
+          <p>
+            You've been studying for a while. Take a short break to maintain
+            effective learning.
+          </p>
+          <button
+            onClick={deactivate}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Resume Now
+          </button>
+        </div>
       </div>
-    </div>
-  );
-};
-
-interface UseAntiCheatingReturn {
-  isRestingMode: boolean;
-  RestingModeOverlay: React.FC<RestingModeOverlayProps>;
-  startRestingMode: () => void;
-  stopRestingMode: () => void;
-}
-
-export const useAntiCheating = (): UseAntiCheatingReturn => {
-  const [isRestingMode, setIsRestingMode] = useState(false);
-
-  const startRestingMode = () => {
-    setIsRestingMode(true);
-  };
-
-  const stopRestingMode = () => {
-    setIsRestingMode(false);
+    );
   };
 
   return {
-    isRestingMode,
+    isActive,
+    activate,
+    deactivate,
     RestingModeOverlay,
-    startRestingMode,
-    stopRestingMode
   };
 };
