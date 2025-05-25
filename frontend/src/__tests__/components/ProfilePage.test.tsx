@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, test, expect } from 'vitest';
-import ProfilePage from '../../src/pages/ProfilePage';
+import ProfilePage from '../../features/user/pages/ProfilePage';
 
 describe('ProfilePage', () => {
   test('displays user XP and badge grid', () => {

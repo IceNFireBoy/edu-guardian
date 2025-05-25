@@ -17,8 +17,9 @@ describe('AISummarizer', () => {
   const mockNoteId = 'test-note-id';
   const mockNoteTitle = 'Test Note';
   const mockInitialSummary = {
-    summary: 'Initial summary text',
-    keyPoints: ['Point 1', 'Point 2']
+    summary: 'Test Summary',
+    keyPoints: ['Key Point 1', 'Key Point 2'],
+    noteId: 'note123'
   };
 
   const mockGetAISummary = vi.fn();

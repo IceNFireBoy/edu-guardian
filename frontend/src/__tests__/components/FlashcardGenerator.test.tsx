@@ -1,6 +1,6 @@
 import { render, fireEvent, screen } from '@testing-library/react';
 import { describe, test, expect } from 'vitest';
-import FlashcardGenerator from '../../src/components/FlashcardGenerator';
+import FlashcardGenerator from '../../features/notes/components/FlashcardGenerator';
 
 describe('FlashcardGenerator', () => {
   test('generates flashcards from input text', async () => {

@@ -3,6 +3,7 @@ import { FlashcardDifficulty } from '../../config/constants';
 export interface Note {
   id: string;
   title: string;
+  content: string;
   description?: string;
   subject: string;
   grade: string;
@@ -10,35 +11,36 @@ export interface Note {
   quarter: string;
   topic: string;
   fileUrl: string;
-  fileType?: string;
+  fileType: string;
   fileSize?: number;
   thumbnailUrl?: string;
-  createdAt: string | Date;
-  updatedAt?: string | Date;
+  createdAt: string;
+  updatedAt: string;
+  viewCount: number;
+  downloadCount: number;
+  averageRating: number;
+  ratings: NoteRating[];
+  flashcards: Flashcard[];
   user: {
-    _id: string;
-    name?: string;
-    username?: string;
-    profileImage?: string;
+    id: string;
+    username: string;
+    email: string;
   };
-  averageRating?: number;
-  ratings?: NoteRating[];
-  viewCount?: number;
   isPublic: boolean;
   tags?: string[];
 
   aiSummary?: string | null;
   aiSummaryKeyPoints?: string[];
   aiSummaryGeneratedAt?: string | Date;
-  flashcards?: Flashcard[];
 }
 
 export interface NoteRating {
-  _id?: string;
-  value: number;
-  noteId: string;
-  userId: string;
-  createdAt: Date;
+  id: string;
+  rating: number;
+  user: {
+    id: string;
+    username: string;
+  };
 }
 
 export interface Flashcard {
@@ -106,9 +108,7 @@ export interface PDFViewerProps {
 
 export interface NoteCardProps {
   note: Note;
-  onRatingChange?: (noteId: string, rating: number) => void;
-  onView?: (noteId: string) => void;
-  onStudy?: (noteId: string) => void;
+  onView?: (note: Note) => void;
   className?: string;
 }
 

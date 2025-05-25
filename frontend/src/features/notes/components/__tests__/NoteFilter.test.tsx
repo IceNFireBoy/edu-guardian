@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import NoteFilter from '../../NoteFilter';
+import { Note } from '../../noteTypes';
 
 describe('NoteFilter', () => {
   const mockSubjects = ['Mathematics', 'Science', 'English'];
@@ -19,6 +20,59 @@ describe('NoteFilter', () => {
     searchQuery: ''
   };
 
+  const mockNotesFilter: Note[] = [
+    {
+      id: '1',
+      title: 'Test Note 1',
+      content: 'Test content 1',
+      fileUrl: 'http://example.com/test1.pdf',
+      fileType: 'application/pdf',
+      subject: 'Test Subject',
+      grade: 'Test Grade',
+      semester: 'Test Semester',
+      isPublic: true,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+      viewCount: 0,
+      downloadCount: 0,
+      averageRating: 0,
+      ratings: [],
+      flashcards: [],
+      user: {
+        id: '1',
+        username: 'testuser',
+        email: 'test@example.com'
+      },
+      quarter: 'Test Quarter',
+      topic: 'Test Topic'
+    },
+    {
+      id: '2',
+      title: 'Test Note 2',
+      content: 'Test content 2',
+      fileUrl: 'http://example.com/test2.pdf',
+      fileType: 'application/pdf',
+      subject: 'Test Subject',
+      grade: 'Test Grade',
+      semester: 'Test Semester',
+      isPublic: true,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+      viewCount: 0,
+      downloadCount: 0,
+      averageRating: 0,
+      ratings: [],
+      flashcards: [],
+      user: {
+        id: '1',
+        username: 'testuser',
+        email: 'test@example.com'
+      },
+      quarter: 'Test Quarter',
+      topic: 'Test Topic'
+    }
+  ];
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -26,7 +80,6 @@ describe('NoteFilter', () => {
   it('renders all filter options', () => {
     render(
       <NoteFilter
-        subjects={mockSubjects}
         grades={mockGrades}
         semesters={mockSemesters}
         quarters={mockQuarters}
@@ -36,7 +89,6 @@ describe('NoteFilter', () => {
       />
     );
     
-    expect(screen.getByLabelText('Subject')).toBeInTheDocument();
     expect(screen.getByLabelText('Grade')).toBeInTheDocument();
     expect(screen.getByLabelText('Semester')).toBeInTheDocument();
     expect(screen.getByLabelText('Quarter')).toBeInTheDocument();
@@ -47,7 +99,6 @@ describe('NoteFilter', () => {
   it('populates select options correctly', () => {
     render(
       <NoteFilter
-        subjects={mockSubjects}
         grades={mockGrades}
         semesters={mockSemesters}
         quarters={mockQuarters}
@@ -57,15 +108,10 @@ describe('NoteFilter', () => {
       />
     );
     
-    const subjectSelect = screen.getByLabelText('Subject');
     const gradeSelect = screen.getByLabelText('Grade');
     const semesterSelect = screen.getByLabelText('Semester');
     const quarterSelect = screen.getByLabelText('Quarter');
     const topicSelect = screen.getByLabelText('Topic');
-    
-    mockSubjects.forEach(subject => {
-      expect(subjectSelect).toHaveTextContent(subject);
-    });
     
     mockGrades.forEach(grade => {
       expect(gradeSelect).toHaveTextContent(grade);
@@ -84,32 +130,9 @@ describe('NoteFilter', () => {
     });
   });
 
-  it('calls onFilterChange when subject is changed', () => {
-    render(
-      <NoteFilter
-        subjects={mockSubjects}
-        grades={mockGrades}
-        semesters={mockSemesters}
-        quarters={mockQuarters}
-        topics={mockTopics}
-        onFilterChange={mockOnFilterChange}
-        initialFilters={mockInitialFilters}
-      />
-    );
-    
-    const subjectSelect = screen.getByLabelText('Subject');
-    fireEvent.change(subjectSelect, { target: { value: mockSubjects[0] } });
-    
-    expect(mockOnFilterChange).toHaveBeenCalledWith({
-      ...mockInitialFilters,
-      subject: mockSubjects[0]
-    });
-  });
-
   it('calls onFilterChange when grade is changed', () => {
     render(
       <NoteFilter
-        subjects={mockSubjects}
         grades={mockGrades}
         semesters={mockSemesters}
         quarters={mockQuarters}
@@ -131,7 +154,6 @@ describe('NoteFilter', () => {
   it('calls onFilterChange when semester is changed', () => {
     render(
       <NoteFilter
-        subjects={mockSubjects}
         grades={mockGrades}
         semesters={mockSemesters}
         quarters={mockQuarters}
@@ -153,7 +175,6 @@ describe('NoteFilter', () => {
   it('calls onFilterChange when quarter is changed', () => {
     render(
       <NoteFilter
-        subjects={mockSubjects}
         grades={mockGrades}
         semesters={mockSemesters}
         quarters={mockQuarters}
@@ -175,7 +196,6 @@ describe('NoteFilter', () => {
   it('calls onFilterChange when topic is changed', () => {
     render(
       <NoteFilter
-        subjects={mockSubjects}
         grades={mockGrades}
         semesters={mockSemesters}
         quarters={mockQuarters}
@@ -197,7 +217,6 @@ describe('NoteFilter', () => {
   it('calls onFilterChange when search query is changed', () => {
     render(
       <NoteFilter
-        subjects={mockSubjects}
         grades={mockGrades}
         semesters={mockSemesters}
         quarters={mockQuarters}
@@ -218,7 +237,6 @@ describe('NoteFilter', () => {
 
   it('applies initial filter values', () => {
     const initialFilters = {
-      subject: mockSubjects[0],
       grade: mockGrades[0],
       semester: mockSemesters[0],
       quarter: mockQuarters[0],
@@ -228,7 +246,6 @@ describe('NoteFilter', () => {
     
     render(
       <NoteFilter
-        subjects={mockSubjects}
         grades={mockGrades}
         semesters={mockSemesters}
         quarters={mockQuarters}
@@ -238,7 +255,6 @@ describe('NoteFilter', () => {
       />
     );
     
-    expect(screen.getByLabelText('Subject')).toHaveValue(initialFilters.subject);
     expect(screen.getByLabelText('Grade')).toHaveValue(initialFilters.grade);
     expect(screen.getByLabelText('Semester')).toHaveValue(initialFilters.semester);
     expect(screen.getByLabelText('Quarter')).toHaveValue(initialFilters.quarter);
@@ -248,7 +264,6 @@ describe('NoteFilter', () => {
 
   it('clears all filters when reset button is clicked', () => {
     const initialFilters = {
-      subject: mockSubjects[0],
       grade: mockGrades[0],
       semester: mockSemesters[0],
       quarter: mockQuarters[0],
@@ -258,7 +273,6 @@ describe('NoteFilter', () => {
     
     render(
       <NoteFilter
-        subjects={mockSubjects}
         grades={mockGrades}
         semesters={mockSemesters}
         quarters={mockQuarters}
@@ -277,7 +291,6 @@ describe('NoteFilter', () => {
     const customClass = 'custom-class';
     render(
       <NoteFilter
-        subjects={mockSubjects}
         grades={mockGrades}
         semesters={mockSemesters}
         quarters={mockQuarters}

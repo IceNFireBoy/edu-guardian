@@ -240,9 +240,9 @@ const NoteViewer: FC = () => {
     return (
       <ErrorBoundary fallback={<ErrorFallbackPDF error={new Error('PDF viewer crashed')} />}>
         <PDFViewer 
-          noteUrl={finalPdfUrl} 
-          noteTitle={finalNoteTitle || undefined} // Pass undefined if null
-          noteId={finalNoteId ? String(finalNoteId) : undefined} 
+          fileUrl={finalPdfUrl} 
+          noteTitle={finalNoteTitle} 
+          noteId={finalNoteId} 
         />
       </ErrorBoundary>
     );
@@ -250,7 +250,7 @@ const NoteViewer: FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-slate-900">
-      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
         <header className="bg-white dark:bg-slate-800 shadow-sm p-4 flex justify-between items-center">
           <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100 truncate max-w-md">{finalNoteTitle}</h1>

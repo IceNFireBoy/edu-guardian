@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, test, expect } from 'vitest';
-import BadgeGrid from '../../src/components/BadgeGrid';
+import BadgeGrid from '../../features/notes/components/BadgeGrid';
 import mockBadges from '../utils/mockBadges';
 
 describe('BadgeGrid', () => {

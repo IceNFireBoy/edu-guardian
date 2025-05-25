@@ -5,7 +5,6 @@ import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import Fallback from './components/Fallback';
-import Navigation from './components/Navigation';
 import { AuthProvider } from './features/auth/AuthContext';
 import PrivateRoute from './features/auth/PrivateRoute';
 import Login from './features/auth/Login';

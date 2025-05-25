@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import AIQuotaDisplay from '../AIQuotaDisplay';
 import { AIUsage } from '../../userTypes';
 import { AI_USAGE_LIMITS_FRONTEND } from '../../../../config/aiConfig';
+import { vi } from 'vitest';
 
 // Mock the config to control limits during tests
 vi.mock('../../../../config/aiConfig', () => ({
@@ -65,17 +66,17 @@ describe('AIQuotaDisplay Component', () => {
 
     it('should apply correct progress bar colors', () => {
       // Green (<=70%)
-      render(<AIQuotaDisplay aiUsage={{ summaryUsed: 1, flashcardUsed: 1, lastReset: ''}} />);
+      render(<AIQuotaDisplay aiUsage={{ summaryUsed: 1, flashcardUsed: 1, lastReset: new Date() }} />);
       const summaryBarGreen = screen.getByText(/AI Summary Quota/).closest('div')?.querySelector('div[style*="width"]');
       expect(summaryBarGreen).toHaveClass('bg-green-500');
 
       // Yellow (>70% and <=90%)
-      render(<AIQuotaDisplay aiUsage={{ summaryUsed: 4, flashcardUsed: 8, lastReset: '' }} />); // 4/5 = 80%, 8/10 = 80%
+      render(<AIQuotaDisplay aiUsage={{ summaryUsed: 4, flashcardUsed: 8, lastReset: new Date() }} />); // 4/5 = 80%, 8/10 = 80%
       const summaryBarYellow = screen.getByText(/AI Summary Quota/).closest('div')?.querySelector('div[style*="width"]');
       expect(summaryBarYellow).toHaveClass('bg-yellow-500');
       
       // Red (>90%)
-      render(<AIQuotaDisplay aiUsage={{ summaryUsed: 5, flashcardUsed: 10, lastReset: '' }} />); // 5/5 = 100%, 10/10 = 100%
+      render(<AIQuotaDisplay aiUsage={{ summaryUsed: 5, flashcardUsed: 10, lastReset: new Date() }} />); // 5/5 = 100%, 10/10 = 100%
       const summaryBarRed = screen.getByText(/AI Summary Quota/).closest('div')?.querySelector('div[style*="width"]');
       expect(summaryBarRed).toHaveClass('bg-red-500');
     });

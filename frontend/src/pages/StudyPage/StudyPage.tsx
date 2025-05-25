@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { callAuthenticatedApi, ApiResponseBase } from '../../api/notes'; // TS version
+import { callAuthenticatedApi, ApiResponse } from '../../api/notes'; // TS version
 import toast from 'react-hot-toast';
 import FlashcardViewer from '../../components/flashcards/FlashcardViewer'; // Update to .tsx (or omit extension)
 import Button from '../../components/ui/Button'; // Update to .tsx (or omit extension)
@@ -12,7 +12,7 @@ interface StudyPageParams extends Record<string, string | undefined> {
   noteId: string;
 }
 
-interface SummaryResponse extends ApiResponseBase {
+interface SummaryResponse extends ApiResponse {
   summary?: string | null;
   message?: string;
   // Add any other fields expected in the summary API response
@@ -118,7 +118,7 @@ const StudyPage: React.FC = () => {
       </Card>
 
       {/* Flashcard Section */}
-      <FlashcardProvider noteId={noteId}>
+      <FlashcardProvider noteId={noteId || ''}>
         <Card className="shadow-lg">
           <h2 className="text-xl font-semibold mb-4 text-gray-700 dark:text-slate-200">Flashcards</h2>
           {/* FlashcardViewer will handle its own loading/empty states */}

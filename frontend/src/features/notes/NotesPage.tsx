@@ -40,7 +40,7 @@ const NotesPage: React.FC = () => {
 
   const loadNotes = async () => {
     const fetchedNotes = await fetchNotes(filters);
-    setNotes(fetchedNotes);
+    setNotes(fetchedNotes.data);
   };
 
   const fetchUserData = async () => {
@@ -76,16 +76,9 @@ const NotesPage: React.FC = () => {
     setViewMode('list');
   };
 
-  const handleRatingSubmit = async (updatedNote: Note) => {
-    setNotes(prevNotes =>
-      prevNotes.map(note =>
-        note.id === updatedNote.id ? updatedNote : note
-      )
-    );
-    setSelectedNote(updatedNote);
-    if (user) {
-      await fetchUserData();
-    }
+  const handleRatingChange = async (noteId: string, rating: number) => {
+    setNotes(prevNotes => prevNotes.map(note => note.id === noteId ? { ...note, averageRating: rating } : note));
+    if (user) await fetchUserData();
   };
 
   const handleFlashcardSubmit = async (updatedNote: Note) => {
@@ -103,6 +96,14 @@ const NotesPage: React.FC = () => {
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({ ...prev, page: newPage }));
   };
+
+  // Utility to map user to UserStatsData
+  const mapUserToUserStatsData = (user: any): any => ({
+    xp: user?.xp || 0,
+    currentStreak: user?.streak?.current || 0,
+    recentActivity: user?.recentActivity || [],
+    achievements: user?.achievements || [],
+  });
 
   if (viewMode === 'pdf' && selectedNote) {
     return (
@@ -156,7 +157,7 @@ const NotesPage: React.FC = () => {
             </button>
           </div>
           <div>
-            {user && <UserStats user={user} userAchievements={userAchievements} />}
+            {user && <UserStats user={mapUserToUserStatsData(user)} />}
           </div>
         </div>
       </div>
@@ -223,8 +224,6 @@ const NotesPage: React.FC = () => {
                   key={note.id}
                   note={note}
                   onView={() => handleNoteClick(note)}
-                  onRatingChange={handleRatingSubmit}
-                  onStudy={() => navigate(`/study/${note.id}`)}
                 />
               ))}
             </div>

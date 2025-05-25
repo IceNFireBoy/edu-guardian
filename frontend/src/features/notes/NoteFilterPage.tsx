@@ -65,7 +65,7 @@ const NoteFilterPage: React.FC = () => {
 
   const loadNotes = useCallback(async () => {
     const fetchedNotes = await fetchNotes(filters);
-    setNotes(fetchedNotes);
+    setNotes(fetchedNotes.data);
     if (error) {
       toast.error(`Failed to fetch notes: ${error}`);
     }

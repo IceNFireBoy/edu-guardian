@@ -1,12 +1,53 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { rest } from 'msw';
+import { setupServer } from 'msw/node';
 import { server } from '../../../mocks/server';
 import { useNote } from '../useNote';
-import { Note, NoteFilter, PaginatedNotesResponse, AISummary, Flashcard, AIGenerationResult, NewlyAwardedBadgeInfo } from '../noteTypes';
+import { Note, NoteFilter, PaginatedNotesResponse, AISummary, Flashcard, AIGenerationResult, NewlyAwardedBadgeInfo, NoteUploadData } from '../noteTypes';
 
 const mockNotes: Note[] = [
-  { _id: 'note1', title: 'Note 1', subject: 'Math', user: 'user1', fileUrl:'',fileType:'pdf',xpValue:10,isPublic:true,createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), viewCount:0, downloadCount:0, averageRating:0, ratings:[], flashcards:[] },
-  { _id: 'note2', title: 'Note 2', subject: 'Science', user: 'user1', fileUrl:'',fileType:'pdf',xpValue:10,isPublic:true,createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), viewCount:0, downloadCount:0, averageRating:0, ratings:[], flashcards:[] },
+  {
+    id: 'note1',
+    title: 'Note 1',
+    content: 'Content 1',
+    fileUrl: '',
+    fileType: 'pdf',
+    subject: 'Math',
+    grade: '10',
+    semester: '1',
+    quarter: 'Q1',
+    topic: 'Algebra',
+    isPublic: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    viewCount: 0,
+    downloadCount: 0,
+    averageRating: 0,
+    ratings: [],
+    flashcards: [],
+    user: { id: 'user1', username: 'user1', email: 'user1@example.com' }
+  },
+  {
+    id: 'note2',
+    title: 'Note 2',
+    content: 'Content 2',
+    fileUrl: '',
+    fileType: 'pdf',
+    subject: 'Science',
+    grade: '10',
+    semester: '1',
+    quarter: 'Q1',
+    topic: 'Biology',
+    isPublic: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    viewCount: 0,
+    downloadCount: 0,
+    averageRating: 0,
+    ratings: [],
+    flashcards: [],
+    user: { id: 'user1', username: 'user1', email: 'user1@example.com' }
+  }
 ];
 
 const mockPaginatedResponse: PaginatedNotesResponse = {
@@ -19,7 +60,7 @@ const mockPaginatedResponse: PaginatedNotesResponse = {
 const mockSingleNote: Note = mockNotes[0];
 
 const mockNewlyAwardedBadge: NewlyAwardedBadgeInfo = {
-    _id: 'badge123',
+    id: 'badge123',
     name: 'AI Genius',
     icon: 'genius.svg',
     description: 'Generated AI content',
@@ -31,7 +72,7 @@ const mockNewlyAwardedBadge: NewlyAwardedBadgeInfo = {
 
 const mockAIGenerationResult: AIGenerationResult<AISummary> = {
     data: { 
-        _id: mockSingleNote._id,
+        id: mockSingleNote.id,
         aiSummary: { content: 'Mock AI Summary', keyPoints: ['KP1', 'KP2'], generatedAt: new Date().toISOString(), modelUsed: 'gpt-test' }
     },
     newlyAwardedBadges: [mockNewlyAwardedBadge],
@@ -41,13 +82,45 @@ const mockAIGenerationResult: AIGenerationResult<AISummary> = {
 
 const mockAIFlashcardsResult: AIGenerationResult<Flashcard[]> = {
     data: [
-        { _id: 'fc1', question: 'Q1', answer: 'A1', difficulty: 'easy', tag: 'test' }
+        { id: 'fc1', question: 'Q1', answer: 'A1', difficulty: 'easy' }
     ],
     newlyAwardedBadges: [mockNewlyAwardedBadge],
     userXPUpdate: { currentXP: 200, xpGained: 50, currentLevel: 3, levelUp: true },
     userStreakUpdate: { currentStreak: 6, maxStreak: 6, lastUsedAI: new Date().toISOString() }
 };
 
+const mockFullNote: Note = {
+  id: '1',
+  title: 'Test Note',
+  content: 'Test Content',
+  fileUrl: 'test.pdf',
+  fileType: 'pdf',
+  subject: 'Math',
+  grade: '10',
+  semester: '1',
+  quarter: 'Q1',
+  topic: 'Algebra',
+  isPublic: true,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  viewCount: 0,
+  downloadCount: 0,
+  averageRating: 0,
+  ratings: [],
+  flashcards: [],
+  user: { id: '1', username: 'testuser', email: 'test@example.com' }
+};
+
+const mockNoteData: NoteUploadData = {
+  file: new File([''], 'test.pdf', { type: 'application/pdf' }),
+  title: 'Test Note',
+  subject: 'Test Subject',
+  grade: 'Test Grade',
+  semester: 'Test Semester',
+  isPublic: true,
+  content: 'Test content',
+  tags: ['test']
+};
 
 describe('useNote Hook', () => {
   beforeEach(() => {
@@ -58,10 +131,13 @@ describe('useNote Hook', () => {
   describe('fetchNotes', () => {
     it('should fetch notes successfully', async () => {
       server.use(
-        http.get('/api/v1/notes', ({ request }) => {
+        rest.get('/api/v1/notes', ({ request }) => {
           const url = new URL(request.url);
           expect(url.searchParams.get('subject')).toBe('Math'); // Example filter check
-          return HttpResponse.json({ success: true, data: mockPaginatedResponse });
+          return {
+            status: 200,
+            body: JSON.stringify({ success: true, data: mockPaginatedResponse })
+          };
         })
       );
       const { result } = renderHook(() => useNote());
@@ -81,7 +157,7 @@ describe('useNote Hook', () => {
         localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data: mockPaginatedResponse }));
 
         const apiSpy = jest.fn();
-        server.use(http.get('/api/v1/notes', apiSpy)); // Spy on API calls
+        server.use(rest.get('/api/v1/notes', apiSpy)); // Spy on API calls
 
         const { result } = renderHook(() => useNote());
         let notesData: PaginatedNotesResponse | undefined;
@@ -98,7 +174,10 @@ describe('useNote Hook', () => {
         localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now() - 20 * 60 * 1000, data: mockPaginatedResponse })); // 20 mins ago (expired)
 
         server.use(
-            http.get('/api/v1/notes', () => HttpResponse.json({ success: true, data: { ...mockPaginatedResponse, data: [{...mockNotes[0], title: 'Fetched Note'}] } }))
+            rest.get('/api/v1/notes', () => ({
+                status: 200,
+                body: JSON.stringify({ success: true, data: { ...mockPaginatedResponse, data: [{...mockNotes[0], title: 'Fetched Note'}] } })
+            }))
         );
         const { result } = renderHook(() => useNote());
         let notesData: PaginatedNotesResponse | undefined;
@@ -114,14 +193,17 @@ describe('useNote Hook', () => {
   describe('fetchNote (single)', () => {
     it('should fetch a single note successfully', async () => {
       server.use(
-        http.get(`/api/v1/notes/${mockSingleNote._id}`, () => {
-          return HttpResponse.json({ success: true, data: mockSingleNote });
+        rest.get(`/api/v1/notes/${mockSingleNote.id}`, () => {
+          return {
+            status: 200,
+            body: JSON.stringify(mockSingleNote)
+          };
         })
       );
       const { result } = renderHook(() => useNote());
       let noteData: Note | null = null;
       await act(async () => {
-        noteData = await result.current.fetchNote(mockSingleNote._id);
+        noteData = await result.current.fetchNote(mockSingleNote.id);
       });
       expect(result.current.loading).toBe(false);
       expect(noteData).toEqual(mockSingleNote);
@@ -132,14 +214,17 @@ describe('useNote Hook', () => {
   describe('AI Generation', () => {
     it('generateAISummary should call API and return summary and badge info', async () => {
       server.use(
-        http.post(`/api/v1/notes/${mockSingleNote._id}/summarize`, () => {
-          return HttpResponse.json({ success: true, data: mockAIGenerationResult }); 
+        rest.post(`/api/v1/notes/${mockSingleNote.id}/summarize`, () => {
+          return {
+            status: 200,
+            body: JSON.stringify(mockAIGenerationResult)
+          };
         })
       );
       const { result } = renderHook(() => useNote());
       let summaryResult: AIGenerationResult<AISummary> | null = null;
       await act(async () => {
-        summaryResult = await result.current.generateAISummary(mockSingleNote._id);
+        summaryResult = await result.current.generateAISummary(mockSingleNote.id);
       });
       expect(result.current.loading).toBe(false);
       expect(summaryResult?.data.aiSummary?.content).toBe('Mock AI Summary');
@@ -149,14 +234,17 @@ describe('useNote Hook', () => {
 
     it('generateAIFlashcards should call API and return flashcards and badge info', async () => {
         server.use(
-          http.post(`/api/v1/notes/${mockSingleNote._id}/generate-flashcards`, () => {
-            return HttpResponse.json({ success: true, data: mockAIFlashcardsResult }); 
+          rest.post(`/api/v1/notes/${mockSingleNote.id}/generate-flashcards`, () => {
+            return {
+              status: 200,
+              body: JSON.stringify(mockAIFlashcardsResult)
+            };
           })
         );
         const { result } = renderHook(() => useNote());
         let flashcardsResult: AIGenerationResult<Flashcard[]> | null = null;
         await act(async () => {
-          flashcardsResult = await result.current.generateAIFlashcards(mockSingleNote._id);
+          flashcardsResult = await result.current.generateAIFlashcards(mockSingleNote.id);
         });
         expect(result.current.loading).toBe(false);
         expect(flashcardsResult?.data.length).toBe(1);
@@ -200,13 +288,16 @@ describe('useNote Hook', () => {
     });
 
     it('should upload to Cloudinary and then save note to backend', async () => {
-        const backendNoteResponse = { ...noteMetadata, _id: 'newNoteId', user: 'user123', fileUrl: 'http://cloudinary.com/test.pdf', fileSize: mockFile.size, fileType: 'pdf' };
+        const backendNoteResponse = { ...noteMetadata, id: 'newNoteId', user: { id: 'user123' }, fileUrl: 'http://cloudinary.com/test.pdf', fileSize: mockFile.size, fileType: 'pdf' };
         server.use(
-            http.post('/api/v1/notes', async ({request}) => {
+            rest.post('/api/v1/notes', async ({request}) => {
                 const body = await request.json() as any;
                 expect(body.fileUrl).toBe('http://cloudinary.com/test.pdf');
                 expect(body.title).toBe(noteMetadata.title);
-                return HttpResponse.json({ success: true, data: backendNoteResponse })
+                return {
+                    status: 200,
+                    body: JSON.stringify(backendNoteResponse)
+                };
             })
         );
 

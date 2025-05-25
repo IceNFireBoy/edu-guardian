@@ -1,0 +1,1 @@
+import { NoteFilter as NoteFilterType } from '../noteTypes'; 

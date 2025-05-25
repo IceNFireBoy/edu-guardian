@@ -206,7 +206,7 @@ const NoteStudySession: React.FC<NoteStudySessionProps> = ({
       {note && (
         <section>
           <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2 mt-2">AI TOOLS</h3>
-          <AIFeaturesPanel note={note} showManualFlashcard={false} className="p-0" />
+          <AIFeaturesPanel note={note} />
         </section>
       )}
     </aside>

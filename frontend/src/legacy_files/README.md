@@ -1,2 +1,0 @@
-// This directory contains legacy JavaScript and JSX files that have been superseded by TypeScript versions or are no longer actively used.
-// They are kept for reference but should not be imported into the main application. 

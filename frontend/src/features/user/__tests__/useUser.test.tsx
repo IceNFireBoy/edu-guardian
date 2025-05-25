@@ -1,5 +1,5 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { http, response } from 'msw';
 import { server } from '../../../mocks/server'; // MSW server
 import { useUser } from '../useUser';
 import { UserProfile, CompleteStudyPayload } from '../userTypes';

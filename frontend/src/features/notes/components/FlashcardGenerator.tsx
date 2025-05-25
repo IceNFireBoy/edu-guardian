@@ -355,7 +355,7 @@ const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ isOpen, onClose
           <div className="flex-1 overflow-y-auto p-4 md:p-6 styled-scrollbar">
             {profile?.aiUsage && flashcards.length === 0 && !isLoading && !internalError && (
               <div className="mb-6">
-                <AIQuotaDisplay aiUsage={profile.aiUsage} featureType="flashcard" compact={true} />
+                <AIQuotaDisplay aiUsage={profile.aiUsage} compact={true} />
               </div>
             )}
 
@@ -486,11 +486,7 @@ const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ isOpen, onClose
                     <h3 className="text-lg font-medium text-gray-800 dark:text-gray-100 mb-3">
                       Your Badges
                     </h3>
-                    <BadgeGrid 
-                      badges={profile.badges} 
-                      newBadgeIds={userNewBadgeIds}
-                      className="mt-4"
-                    />
+                    <BadgeGrid badges={profile.badges} newBadgeIds={userNewBadgeIds} />
                   </div>
                 )}
                 

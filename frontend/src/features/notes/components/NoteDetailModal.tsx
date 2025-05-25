@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTimes, FaShare, FaStar, FaRobot, FaLightbulb, FaDownload, FaTrash } from 'react-icons/fa';
+import { FaTimes, FaShare, FaStar, FaRobot, FaLightbulb, FaDownload, FaTrash, FaSpinner } from 'react-icons/fa';
 import { Note, NoteRating } from '../noteTypes';
 import { useNote } from '../useNote'; // For rateNote and deleteNote
 import { subjectColors, getSubjectColor } from '../NoteCard'; // Assuming NoteCard.tsx is in the same directory
@@ -35,11 +35,13 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
 
   React.useEffect(() => {
     if (note) {
-      // Initialize rating from the note object or local storage as a fallback
-      setCurrentRating(note.rating || getLocalRating(note.id) || 0);
+      // Use the first rating value if available, else fallback
+      const firstRating = note.ratings?.[0]?.value;
+      const localRating = getLocalRating(note.id);
+      setCurrentRating(firstRating || localRating || 0);
     }
     if (noteActionError) {
-        toast.error(noteActionError);
+      toast.error(noteActionError);
     }
   }, [note, noteActionError]);
 
@@ -52,18 +54,26 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
     const ratingResult = await rateNote(note.id, newRating);
     if (ratingResult) {
       setCurrentRating(newRating);
-      const updatedNote: Note = { ...note, rating: newRating, ratingCount: note.ratingCount + 1 }; // simplistic update
+      const updatedRatings: NoteRating[] = [
+        ...(note.ratings || []),
+        {
+          value: newRating,
+          noteId: note.id,
+          userId: 'current',
+          createdAt: new Date()
+        }
+      ];
+      const updatedNote: Note = { ...note, ratings: updatedRatings };
       onNoteUpdate(updatedNote);
       toast.success('Rating submitted!');
-      // Persist to local storage as a temporary measure if needed
       try {
         const ratingsData = localStorage.getItem('note_ratings') || '{}';
         const ratings = JSON.parse(ratingsData);
         ratings[note.id] = newRating;
         localStorage.setItem('note_ratings', JSON.stringify(ratings));
-      } catch (e) { console.error('Error saving rating to localStorage', e); }
-    } else {
-      // Error is handled by noteActionError effect
+      } catch (e) {
+        console.error('Error saving rating to localStorage', e);
+      }
     }
   };
 
@@ -145,9 +155,22 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
               </div>
               
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-                <div><strong className="text-gray-600 dark:text-gray-300">Views:</strong> <span className="text-gray-800 dark:text-gray-100">{note.viewCount}</span></div>
-                <div><strong className="text-gray-600 dark:text-gray-300">Rating:</strong> <span className="text-gray-800 dark:text-gray-100">{note.rating.toFixed(1)} ({note.ratingCount} votes)</span></div>
-                <div><strong className="text-gray-600 dark:text-gray-300">Flashcards:</strong> <span className="text-gray-800 dark:text-gray-100">{note.flashcardCount}</span></div>
+                <div>
+                  <strong className="text-gray-600 dark:text-gray-300">Views:</strong>{' '}
+                  <span className="text-gray-800 dark:text-gray-100">{note.viewCount || 0}</span>
+                </div>
+                <div>
+                  <strong className="text-gray-600 dark:text-gray-300">Rating:</strong>{' '}
+                  <span className="text-gray-800 dark:text-gray-100">
+                    {note.ratings?.length
+                      ? (note.ratings.reduce((sum, r) => sum + r.value, 0) / note.ratings.length).toFixed(1)
+                      : '0.0'} ({note.ratings?.length || 0} votes)
+                  </span>
+                </div>
+                <div>
+                  <strong className="text-gray-600 dark:text-gray-300">Flashcards:</strong>{' '}
+                  <span className="text-gray-800 dark:text-gray-100">{note.flashcards?.length || 0}</span>
+                </div>
               </div>
 
               <div>

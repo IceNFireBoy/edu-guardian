@@ -20,7 +20,7 @@ const NoteDetails: React.FC<NoteDetailsProps> = ({ noteId, onClose }) => {
       const fetchedNote = await fetchNote(noteId);
       if (fetchedNote) {
         setNote(fetchedNote);
-        setCurrentRating(fetchedNote.rating || 0); 
+        setCurrentRating(fetchedNote.ratings?.[0]?.rating || 0); 
       } else if (error && !fetchedNote){
         setNote(null);
       }

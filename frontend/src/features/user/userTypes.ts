@@ -9,11 +9,10 @@ export interface UserBadge {
   name: string;
   description: string;
   icon: string;
-  earnedAt: Date;
   level: 'bronze' | 'silver' | 'gold' | 'platinum';
+  category: 'upload' | 'ai' | 'streak' | 'achievement';
   xpReward: number;
-  category: string;
-  rarity: string;
+  earnedAt: string;
 }
 
 export interface UserStreak {

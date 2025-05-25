@@ -1,11 +1,26 @@
 import { useState, useCallback } from 'react';
 import { Note, NoteFilter, NoteUploadData, NoteRating, Flashcard, AISummary, PaginatedNotesResponse, ManualFlashcardPayload, AIGenerationResult, NewlyAwardedBadgeInfo } from './noteTypes';
-import { callAuthenticatedApi, ApiResponse } from '../../api/apiClient';
+import { callAuthenticatedApi, ApiResponse } from '../../api/notes';
 import { debug } from '../../components/DebugPanel'; // Assuming debug is available
 
-// Helper to get VITE vars or provide defaults for safety, though they should be set
-const getCloudinaryCloudName = () => import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dbnk6q2k6'; // Default only as fallback
-const getCloudinaryUploadPreset = () => import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'edu_guardian'; // Default only as fallback
+// Helper to get VITE vars or provide defaults for safety
+const getCloudinaryCloudName = (): string => {
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  if (!cloudName) {
+    console.warn('VITE_CLOUDINARY_CLOUD_NAME is not set in environment variables');
+    return 'dbnk6q2k6'; // Default only as fallback
+  }
+  return cloudName;
+};
+
+const getCloudinaryUploadPreset = (): string => {
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+  if (!uploadPreset) {
+    console.warn('VITE_CLOUDINARY_UPLOAD_PRESET is not set in environment variables');
+    return 'edu_guardian'; // Default only as fallback
+  }
+  return uploadPreset;
+};
 
 const CACHE_EXPIRATION_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -174,11 +189,6 @@ export const useNote = () => {
       const cloudName = getCloudinaryCloudName();
       const uploadPreset = getCloudinaryUploadPreset();
 
-      if (!cloudName || !uploadPreset) {
-        console.error('[useNote] Cloudinary configuration missing (VITE_CLOUDINARY_CLOUD_NAME or VITE_CLOUDINARY_UPLOAD_PRESET).');
-        throw new Error('Cloudinary configuration is missing. Cannot upload file.');
-      }
-
       const cloudinaryFormData = new FormData();
       cloudinaryFormData.append('file', file);
       cloudinaryFormData.append('upload_preset', uploadPreset);
@@ -196,53 +206,34 @@ export const useNote = () => {
         console.error('[useNote] Cloudinary upload failed:', errorText);
         throw new Error(`Cloudinary upload failed: ${errorText}`);
       }
+
       const cloudData = await cloudRes.json();
 
-      let thumbnailUrl = undefined;
-      // If Cloudinary provides a specific thumbnail URL (e.g., for PDFs if a transformation is set up)
-      // Example: if (cloudData.derived && cloudData.derived[0] && cloudData.derived[0].secure_url) {
-      // thumbnailUrl = cloudData.derived[0].secure_url;
-      // }
-      // For direct image uploads, the fileUrl itself can often serve as the thumbnailUrl or a smaller version can be requested.
+      let thumbnailUrl: string | undefined;
       if (cloudData.resource_type === 'image' && cloudData.secure_url) {
-        // Construct a URL for a smaller version, e.g., width 400px
-        // This depends on Cloudinary's URL transformation capabilities
-        // Example: /upload/w_400/ for width, or /upload/w_400,h_300,c_limit/
         const parts = cloudData.secure_url.split('/upload/');
         if (parts.length === 2) {
           thumbnailUrl = `${parts[0]}/upload/w_400,c_limit/${parts[1]}`;
         } else {
-            thumbnailUrl = cloudData.secure_url; // Fallback to original if split fails
+          thumbnailUrl = cloudData.secure_url;
         }
       }
-      // For PDFs, one might construct a URL like: 
-      // `https://res.cloudinary.com/${cloudName}/image/upload/w_400,pg_1/${cloudData.public_id}.jpg`
-      // This requires knowing the public_id and that it's an image transformation of a PDF.
-      // If fileType is 'pdf' and public_id is available:
-      // else if (cloudData.format === 'pdf' && cloudData.public_id) {
-      // thumbnailUrl = `https://res.cloudinary.com/${getCloudinaryCloudName()}/image/upload/w_400,h_300,c_limit,pg_1/${cloudData.public_id}.jpg`;
-      // }
 
       const backendPayload: BackendNoteUploadPayload = {
-        ...metadata, // title, description, subject, grade, semester, quarter, topic, isPublic
+        ...metadata,
         fileUrl: cloudData.secure_url,
         fileType: cloudData.format || file.type.split('/')[1] || 'unknown',
         fileSize: cloudData.bytes || file.size,
         publicId: cloudData.public_id,
         assetId: cloudData.asset_id,
         tags: metadata.tags || (cloudData.tags || []),
-        // isPublic is already in metadata from NoteUploadData
-        // thumbnailUrl: thumbnailUrl, // Add this field to BackendNoteUploadPayload if backend supports it
+        isPublic: metadata.isPublic,
       };
-      
-      // Add thumbnailUrl to the payload IF BackendNoteUploadPayload and the backend Note model/service expect it.
-      // For now, assuming INote on backend doesn't have thumbnailUrl yet, so we don't send it.
-      // If it did, it would be: const response = await callAuthenticatedApi<Note>('/api/v1/notes', 'POST', { ...backendPayload, thumbnailUrl });
 
       const response = await callAuthenticatedApi<Note>('/api/v1/notes', 'POST', backendPayload);
       
       if (response.success && response.data) {
-        clearAllNotesCaches(); // Invalidate cache on successful upload
+        clearAllNotesCaches();
         debug('[useNote] All notes caches cleared after successful upload.');
         return response.data;
       } else {

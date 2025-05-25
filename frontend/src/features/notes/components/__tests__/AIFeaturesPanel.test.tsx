@@ -8,7 +8,7 @@ import { toast } from 'react-hot-toast';
 vi.mock('../../useNote');
 vi.mock('react-hot-toast');
 vi.mock('../AISummarizer', () => ({
-  default: ({ isOpen, onClose, noteId, noteTitle }) => (
+  default: ({ isOpen, onClose, noteId, noteTitle }: { isOpen: boolean; onClose: () => void; noteId: string; noteTitle: string }) => (
     isOpen ? (
       <div data-testid="ai-summarizer-modal">
         <button onClick={onClose}>Close Summarizer</button>
@@ -20,7 +20,7 @@ vi.mock('../AISummarizer', () => ({
 }));
 
 vi.mock('../FlashcardGenerator', () => ({
-  default: ({ isOpen, onClose, noteId, noteTitle }) => (
+  default: ({ isOpen, onClose, noteId, noteTitle }: { isOpen: boolean; onClose: () => void; noteId: string; noteTitle: string }) => (
     isOpen ? (
       <div data-testid="flashcard-generator-modal">
         <button onClick={onClose}>Close Flashcard Generator</button>
@@ -33,15 +33,18 @@ vi.mock('../FlashcardGenerator', () => ({
 
 describe('AIFeaturesPanel', () => {
   const mockNote = {
-    id: 'test-note-id',
+    id: '1',
     title: 'Test Note',
-    content: 'Test content',
-    subject: 'Test Subject',
-    grade: '12',
+    content: 'Test Content',
+    subject: 'Math',
+    grade: '10',
     semester: '1',
     quarter: '1',
-    topic: 'Test Topic',
-    isPublic: true
+    topic: 'Algebra',
+    isPublic: true,
+    fileUrl: 'http://example.com/file.pdf',
+    createdAt: new Date(),
+    user: 'user123'
   };
 
   const mockAddManualFlashcard = vi.fn();

@@ -15,32 +15,37 @@ jest.mock('../../../api/apiClient', () => ({
 
 describe('NoteDetailModal', () => {
   const mockFullNote = {
-    _id: 'test-note-id',
-    id: 'test-note-id',
+    _id: '1',
+    id: '1',
     title: 'Test Note',
-    description: 'Test Description',
-    subject: 'Mathematics',
-    grade: '12',
-    semester: '1',
-    quarter: '1',
+    description: 'A test note',
+    content: 'Test content',
+    subject: 'Math',
+    grade: '10',
+    semester: 'Fall',
+    quarter: 'Q1',
     topic: 'Algebra',
     isPublic: true,
-    fileUrl: 'https://example.com/test.pdf',
-    fileType: 'pdf',
+    fileUrl: 'http://example.com/test.pdf',
+    fileType: 'application/pdf',
     fileSize: 1024 * 1024,
-    user: { _id: 'user-id-123', name: 'Test User' },
+    user: {
+      id: '1',
+      username: 'testuser',
+      email: 'test@example.com'
+    },
     tags: ['algebra', 'test'],
-    viewCount: 100,
-    downloadCount: 50,
+    viewCount: 0,
+    downloadCount: 0,
     ratings: [],
-    averageRating: 4.5,
+    averageRating: 0,
     aiSummary: null,
-    aiSummaryGeneratedAt: null,
+    aiSummaryGeneratedAt: '2024-01-01T00:00:00Z',
     aiSummaryKeyPoints: [],
     flashcards: [],
     slug: 'test-note',
-    createdAt: new Date('2024-01-01T00:00:00.000Z'),
-    updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z'
   };
 
   const mockUpdateNote = jest.fn();
@@ -72,6 +77,8 @@ describe('NoteDetailModal', () => {
         isOpen={true}
         onClose={() => {}}
         note={mockFullNote}
+        onNoteUpdate={mockUpdateNote}
+        onNoteDelete={mockDeleteNote}
       />
     );
     
@@ -86,6 +93,8 @@ describe('NoteDetailModal', () => {
         isOpen={false}
         onClose={() => {}}
         note={mockFullNote}
+        onNoteUpdate={mockUpdateNote}
+        onNoteDelete={mockDeleteNote}
       />
     );
     
@@ -99,6 +108,8 @@ describe('NoteDetailModal', () => {
         isOpen={true}
         onClose={mockOnClose}
         note={mockFullNote}
+        onNoteUpdate={mockUpdateNote}
+        onNoteDelete={mockDeleteNote}
       />
     );
     
@@ -112,6 +123,8 @@ describe('NoteDetailModal', () => {
         isOpen={true}
         onClose={() => {}}
         note={mockFullNote}
+        onNoteUpdate={mockUpdateNote}
+        onNoteDelete={mockDeleteNote}
       />
     );
     
@@ -131,6 +144,8 @@ describe('NoteDetailModal', () => {
         isOpen={true}
         onClose={() => {}}
         note={mockFullNote}
+        onNoteUpdate={mockUpdateNote}
+        onNoteDelete={mockDeleteNote}
       />
     );
     
@@ -150,6 +165,8 @@ describe('NoteDetailModal', () => {
         isOpen={true}
         onClose={() => {}}
         note={imageNote}
+        onNoteUpdate={mockUpdateNote}
+        onNoteDelete={mockDeleteNote}
       />
     );
     
@@ -170,6 +187,8 @@ describe('NoteDetailModal', () => {
         isOpen={true}
         onClose={() => {}}
         note={unknownNote}
+        onNoteUpdate={mockUpdateNote}
+        onNoteDelete={mockDeleteNote}
       />
     );
     
@@ -183,7 +202,8 @@ describe('NoteDetailModal', () => {
         isOpen={true}
         onClose={mockOnClose}
         note={mockFullNote}
-        isOwner={true}
+        onNoteUpdate={mockUpdateNote}
+        onNoteDelete={mockDeleteNote}
       />
     );
     
@@ -215,7 +235,8 @@ describe('NoteDetailModal', () => {
         isOpen={true}
         onClose={() => {}}
         note={mockFullNote}
-        isOwner={true}
+        onNoteUpdate={mockUpdateNote}
+        onNoteDelete={mockDeleteNote}
       />
     );
     
@@ -232,7 +253,8 @@ describe('NoteDetailModal', () => {
         isOpen={true}
         onClose={mockOnClose}
         note={mockFullNote}
-        isOwner={true}
+        onNoteUpdate={mockUpdateNote}
+        onNoteDelete={mockDeleteNote}
       />
     );
     
@@ -255,7 +277,8 @@ describe('NoteDetailModal', () => {
         isOpen={true}
         onClose={() => {}}
         note={mockFullNote}
-        isOwner={true}
+        onNoteUpdate={mockUpdateNote}
+        onNoteDelete={mockDeleteNote}
       />
     );
     
@@ -276,7 +299,8 @@ describe('NoteDetailModal', () => {
         isOpen={true}
         onClose={() => {}}
         note={mockFullNote}
-        isOwner={true}
+        onNoteUpdate={mockUpdateNote}
+        onNoteDelete={mockDeleteNote}
       />
     );
     
@@ -294,7 +318,8 @@ describe('NoteDetailModal', () => {
         isOpen={true}
         onClose={() => {}}
         note={mockFullNote}
-        isOwner={false}
+        onNoteUpdate={mockUpdateNote}
+        onNoteDelete={mockDeleteNote}
       />
     );
     

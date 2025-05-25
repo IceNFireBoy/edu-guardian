@@ -7,7 +7,20 @@ import { FaRobot, FaLightbulb, FaSpinner } from 'react-icons/fa';
 import { useNote } from '../useNote'; // Import the useNote hook
 
 interface AIFeaturesPanelProps {
-  note: Note;
+  note: {
+    id: string;
+    title: string;
+    content: string;
+    subject: string;
+    grade: string;
+    semester: string;
+    quarter: string;
+    topic: string;
+    isPublic: boolean;
+    fileUrl: string;
+    createdAt: Date;
+    user: string;
+  };
   showManualFlashcard?: boolean;
   className?: string;
 }

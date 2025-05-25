@@ -63,12 +63,7 @@ const HomePage: React.FC = () => {
       {/* User Stats (only when logged in and profile loaded) */}
       {/* Add explicit checks for profile properties if needed by UserStatsCard */}
       {profile && (
-        <UserStatsCard
-          xp={profile.xp ?? 0} // Provide default if potentially undefined
-          level={profile.level ?? 1}
-          currentStreak={profile.currentStreak ?? 0}
-          longestStreak={profile.longestStreak ?? 0}
-        />
+        <UserStatsCard xp={profile.xp} level={profile.level} streak={profile.streak} />
       )}
       
       {/* Welcome Message */}

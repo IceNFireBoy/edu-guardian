@@ -1,6 +1,6 @@
 import React, { useState, useEffect, FC, ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { FaTrophy, FaFire, FaStar, FaBook, FaCalendarAlt, FaUsers, FaChartBar } from 'react-icons/fa'; // Added more icons
+import { FaTrophy, FaFire, FaStar, FaBook, FaCalendarAlt, FaUsers, FaChartBar, FaSpinner } from 'react-icons/fa'; // Added more icons and FaSpinner
 import { useStreak } from '../hooks/useStreak'; // Assuming .ts version or will be created
 
 import SubjectCard from '../components/progress/SubjectCard'; // Already TSX
@@ -59,7 +59,7 @@ interface SubjectProgressDetail {
   percentage: number;
 }
 
-interface SubjectsProgressData {
+interface SubjectsData {
   [subject: string]: SubjectProgressDetail;
 }
 
@@ -73,7 +73,7 @@ interface InactiveSubjectInfo {
 }
 
 interface ProgressPageData {
-  subjectsData: SubjectsProgressData;
+  subjectsData: SubjectsData;
   subjectTimeData: SubjectTimeData;
   inactiveSubjects: InactiveSubjectInfo[];
   completedThisWeek: number;
@@ -81,7 +81,7 @@ interface ProgressPageData {
   currentStreak: number; // From useStreak
   xp?: number; // From useStreak
   xpForNextLevel?: number; // From useStreak
-  subjectProgress: SubjectsProgressData; // Duplicates subjectsData with percentage, could be merged
+  subjectProgress: SubjectsData; // Duplicates subjectsData with percentage, could be merged
 }
 
 // Assumed return from useStreak hook (adjust if useStreak.ts provides specific types)
@@ -126,7 +126,7 @@ const Progress: FC = () => {
         const completedNotes: StoredCompletedNote[] = JSON.parse(localStorage.getItem('completedNotes') || '[]');
         const allNotes: StoredNote[] = JSON.parse(localStorage.getItem('notes') || '[]');
         
-        const subjectDataMap: SubjectsProgressData = {};
+        const subjectDataMap: SubjectsData = {};
         const now = new Date();
         const validNotesBySubject: { [subject: string]: StoredNote[] } = {};
 
@@ -231,7 +231,7 @@ const Progress: FC = () => {
 
   // Demo data generation needs to accept streak data
   const getDemoProgressData = (currentStreakData: AssumedStreakData, currentGetXpForNextLevel: () => number): ProgressPageData => {
-    const demoSubjects: SubjectsProgressData = {
+    const demoSubjects: SubjectsData = {
       'Mathematics': { completed: 8, total: 12, timeSpent: 240, avgTime: '30 min', emojiStats: { "🤓": 5, "🤔": 2, "❗": 1 }, lastStudied: new Date(Date.now() - 2 * 24*60*60*1000), daysSinceLastStudy: 2, percentage: 67 },
       'Physics': { completed: 5, total: 10, timeSpent: 150, avgTime: '30 min', emojiStats: { "🤓": 2, "🤔": 2, "❗": 1 }, lastStudied: new Date(Date.now() - 4 * 24*60*60*1000), daysSinceLastStudy: 4, percentage: 50 },
       'Chemistry': { completed: 3, total: 8, timeSpent: 75, avgTime: '25 min', emojiStats: { "🤓": 1, "🤔": 1, "❗": 1 }, lastStudied: new Date(Date.now() - 10 * 24*60*60*1000), daysSinceLastStudy: 10, percentage: 38 },

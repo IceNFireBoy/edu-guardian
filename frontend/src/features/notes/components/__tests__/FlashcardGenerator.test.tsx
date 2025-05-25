@@ -1,16 +1,16 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, jest, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import FlashcardGenerator from '../FlashcardGenerator';
 import { useNote } from '../../useNote';
 import { useUser } from '../../../user/useUser';
 import { toast } from 'react-hot-toast';
 
 // Mock the hooks and dependencies
-jest.mock('../../useNote');
-jest.mock('../../../user/useUser');
-jest.mock('react-hot-toast');
-jest.mock('../../../api/apiClient', () => ({
-  callAuthenticatedApi: jest.fn()
+vi.mock('../../useNote');
+vi.mock('../../../user/useUser');
+vi.mock('react-hot-toast');
+vi.mock('../../../api/apiClient', () => ({
+  callAuthenticatedApi: vi.fn()
 }));
 
 describe('FlashcardGenerator', () => {
@@ -26,8 +26,8 @@ describe('FlashcardGenerator', () => {
     { _id: 'gen2', question: 'Generated Q2', answer: 'Generated A2', difficulty: 'medium', lastReviewed: null, nextReviewDate: null, efactor: 2.5, interval: 1, repetitions: 0, user: 'user1' }
   ];
 
-  const mockGenerateFlashcards = jest.fn();
-  const mockSaveFlashcards = jest.fn();
+  const mockGenerateFlashcards = vi.fn();
+  const mockSaveFlashcards = vi.fn();
   const mockNoteHookLoading = false;
   const mockNoteHookError = null;
 
@@ -40,7 +40,7 @@ describe('FlashcardGenerator', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     (useNote as any).mockReturnValue({
       generateFlashcards: mockGenerateFlashcards, 
       saveFlashcards: mockSaveFlashcards, 
@@ -80,7 +80,7 @@ describe('FlashcardGenerator', () => {
   });
 
   it('calls onClose when close button is clicked', () => {
-    const mockOnClose = jest.fn();
+    const mockOnClose = vi.fn();
     render(
       <FlashcardGenerator
         isOpen={true}

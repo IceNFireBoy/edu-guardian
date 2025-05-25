@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth'; // Assuming useAuth hook provides necessary auth state
-import { callAuthenticatedApi, ApiResponse } from '../api/apiClient';
+import { callAuthenticatedApi } from '../api/notes';
+import type { ApiResponse } from '../api/notes';
 import { toast } from 'react-hot-toast';
-import { Badge } from '../components/BadgeDetail'; // Import the Badge type
+import Badge from '../components/BadgeDetail'; // Import the Badge type
 import { debug } from '../components/DebugPanel'; // Assuming debug is available
 
 // --- Types for API Responses ---

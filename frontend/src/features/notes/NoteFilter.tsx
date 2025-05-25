@@ -285,7 +285,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
       link.href = URL.createObjectURL(blob);
       
       // Suggest a filename (use original name or a generic one)
-      const filename = note.originalName || `${note.title || 'note'}.${note.fileType === 'pdf' ? 'pdf' : 'file'}`;
+      const filename = note.title || `${note.title || 'note'}.${note.fileType === 'pdf' ? 'pdf' : 'file'}`;
       link.download = filename;
       
       // Append to body, click, and remove

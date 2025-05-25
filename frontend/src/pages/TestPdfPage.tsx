@@ -4,6 +4,8 @@ import PDFViewer from '../features/notes/PDFViewer'; // Corrected path to TSX ve
 
 const TestPdfPage: FC = () => {
   const hardcodedUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+  const hardcodedTitle = "Hardcoded Test PDF";
+  const hardcodedId = "test-pdf-id-hardcoded";
   
   console.log('[TestPdfPage] Rendering PDFViewer with hardcoded URL:', hardcodedUrl);
   
@@ -13,10 +15,9 @@ const TestPdfPage: FC = () => {
       <p>Attempting to load: {hardcodedUrl}</p>
       <div style={{ height: '80vh', border: '1px solid red' }}>
         <PDFViewer
-          // Pass noteUrl instead of fileUrl as per PDFViewer.tsx props
-          noteUrl={hardcodedUrl} 
-          noteTitle="Hardcoded Test PDF"
-          noteId="test-pdf-id-hardcoded"
+          fileUrl={hardcodedUrl}
+          noteTitle={hardcodedTitle}
+          noteId={hardcodedId}
         />
       </div>
     </div>

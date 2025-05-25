@@ -128,7 +128,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onView, compact = false }) =>
     if (note.fileType === 'pdf' || (note.fileUrl && note.fileUrl.toLowerCase().endsWith('.pdf'))) {
       // return <PDFThumbnail fileUrl={note.fileUrl} /> // Assuming PDFThumbnail can generate from URL
       // For now, using EnhancedPDFIcon which is already in use or simpler icon
-      return <EnhancedPDFIcon subjectColor={colorTheme.bg} classNameOverride="w-16 h-16" />;
+      return <EnhancedPDFIcon note={note} className="w-16 h-16" />;
     }
     // Fallback to generic file icon based on fileType or default
     if (note.fileType) {
@@ -234,6 +234,8 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onView, compact = false }) =>
       />
     );
   };
+
+  // Define getIcon function or use a different approach
 
   // Render the component in a try/catch block to prevent rendering errors
   try {

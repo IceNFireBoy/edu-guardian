@@ -1,3 +1,0 @@
-// This Toast.jsx (and its ToastProvider, useToast hook) is superseded by react-hot-toast and hooks/useToast.tsx.
-// Moved to legacy_files for reference.
-// ... existing code ... 

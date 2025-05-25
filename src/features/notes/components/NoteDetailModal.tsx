@@ -1,0 +1,1 @@
+import { Note, NoteRating } from '../noteTypes'; 

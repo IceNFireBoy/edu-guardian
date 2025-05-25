@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useCallback, ReactNode } from 'react';
-import { callAuthenticatedApi, ApiResponseBase } from '../api/notes';
+import { callAuthenticatedApi, ApiResponse } from '../api/notes';
 import toast from 'react-hot-toast';
 
 // --- Interfaces & Types ---
@@ -28,7 +28,7 @@ interface FlashcardState {
   originalOrder: Flashcard[];
 }
 
-interface GenerateFlashcardsResponse extends ApiResponseBase {
+interface GenerateFlashcardsResponse extends ApiResponse {
     flashcards?: { question: string; answer: string }[]; // Type from API before processing
     message?: string;
 }

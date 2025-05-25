@@ -15,8 +15,8 @@ const EnhancedPDFIcon: React.FC<EnhancedPDFIconProps> = ({ note, className = '' 
   // Format date if available
   const formatDate = (): string => {
     try {
-      if (note.uploadDate) {
-        const date = new Date(note.uploadDate);
+      if (note.createdAt) {
+        const date = new Date(note.createdAt);
         return date.toLocaleDateString(undefined, { 
           year: 'numeric', 
           month: 'short', 

@@ -26,12 +26,14 @@ interface OpenSections {
   flashcards: boolean;
 }
 
-interface SidebarProps {
-  note?: any;
-  noteId?: string;
+export interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+  className?: string;
+  note?: any; // TODO: Replace with proper Note type
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ note, noteId }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, note }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuthContext();
@@ -39,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ note, noteId }) => {
   // State for mobile status
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
   // isOpen controls overall sidebar visibility/expanded state
-  const [isOpen, setIsOpen] = useState<boolean>(!isMobile); 
+  const [isOpenState, setIsOpen] = useState<boolean>(!isMobile); 
 
   // openSections controls individual collapsible sections within the sidebar
   const [openSections, setOpenSections] = useState<OpenSections>({
@@ -145,13 +147,13 @@ const Sidebar: React.FC<SidebarProps> = ({ note, noteId }) => {
     }
   };
 
-  const currentSidebarWidthClass = isMobile ? (isOpen ? 'w-72' : 'w-0') : (isOpen ? 'w-64' : 'w-20');
-  const currentSidebarActualWidth = isMobile ? (isOpen ? 288 : 0) : (isOpen ? 256 : 80);
+  const currentSidebarWidthClass = isMobile ? (isOpenState ? 'w-72' : 'w-0') : (isOpenState ? 'w-64' : 'w-20');
+  const currentSidebarActualWidth = isMobile ? (isOpenState ? 288 : 0) : (isOpenState ? 256 : 80);
 
   // Sidebar Header Content Logic
   let headerContent;
   if (!isMobile) { // Desktop
-    if (isOpen) {
+    if (isOpenState) {
       headerContent = (
         <>
           <Link to="/" className="flex items-center space-x-2">
@@ -170,7 +172,7 @@ const Sidebar: React.FC<SidebarProps> = ({ note, noteId }) => {
       );
     }
   } else { // Mobile (only shown when isOpen is true, as an overlay)
-    if (isOpen) {
+    if (isOpenState) {
       headerContent = (
         <>
           <Link to="/" className="flex items-center space-x-2" onClick={toggleSidebar}> {/* Also close on nav */}
@@ -190,7 +192,7 @@ const Sidebar: React.FC<SidebarProps> = ({ note, noteId }) => {
       {isMobile && (
         <button 
           onClick={toggleSidebar}
-          className={`fixed top-4 left-4 z-[60] p-2 bg-white dark:bg-slate-800 rounded-lg shadow-md text-gray-800 dark:text-gray-100 ${isOpen ? 'hidden' : ''}` } /* Hide if mobile sidebar is open (close button is inside then) */
+          className={`fixed top-4 left-4 z-[60] p-2 bg-white dark:bg-slate-800 rounded-lg shadow-md text-gray-800 dark:text-gray-100 ${isOpenState ? 'hidden' : ''}` } /* Hide if mobile sidebar is open (close button is inside then) */
           aria-label="Open menu"
         >
           <FaBars size={24} />
@@ -198,7 +200,7 @@ const Sidebar: React.FC<SidebarProps> = ({ note, noteId }) => {
       )}
       
       {/* Mobile overlay (dimmed background) */}
-      {isMobile && isOpen && (
+      {isMobile && isOpenState && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -210,22 +212,22 @@ const Sidebar: React.FC<SidebarProps> = ({ note, noteId }) => {
       
       <AnimatePresence>
         {/* Render sidebar if not mobile OR if mobile and isOpen */}
-        {(!isMobile || isOpen) && (
+        {(!isMobile || isOpenState) && (
           <motion.div
             key="sidebar"
             initial={{ x: -currentSidebarActualWidth }}
             animate={{ x: 0, width: currentSidebarActualWidth }}
             exit={{ x: -currentSidebarActualWidth }}
             transition={{ type: 'spring', stiffness: 300, damping: 30, duration: 0.2 }}
-            className={`fixed top-0 left-0 h-full bg-white dark:bg-slate-800 shadow-xl z-[55] flex flex-col border-r border-gray-200 dark:border-slate-700 ${isMobile && !isOpen ? 'hidden' : ''}`}
+            className={`fixed top-0 left-0 h-full bg-white dark:bg-slate-800 shadow-xl z-[55] flex flex-col border-r border-gray-200 dark:border-slate-700 ${isMobile && !isOpenState ? 'hidden' : ''}`}
             style={{ width: currentSidebarActualWidth }}
           >
-            <div className={`p-4 border-b border-gray-200 dark:border-slate-700 flex items-center ${(!isMobile && isOpen) ? 'justify-between' : 'justify-center'}`}>
+            <div className={`p-4 border-b border-gray-200 dark:border-slate-700 flex items-center ${(!isMobile && isOpenState) ? 'justify-between' : 'justify-center'}`}>
               {headerContent}
             </div>
 
             {/* Main Scrollable Content - only if sidebar is fully open OR if on mobile (where it's an overlay) */}
-            {(isOpen || (isMobile && isOpen)) && (
+            {(isOpenState || (isMobile && isOpenState)) && (
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 <div className="bg-gray-50 dark:bg-slate-750 rounded-lg shadow">
                   <button
@@ -356,7 +358,7 @@ const Sidebar: React.FC<SidebarProps> = ({ note, noteId }) => {
                             className="overflow-hidden p-3 space-y-2 border-t border-gray-200 dark:border-slate-600"
                           >
                             <button
-                              onClick={() => navigate(`/study/${noteId}`)}
+                              onClick={() => navigate(`/study/${note.id}`)}
                               className={actionButtonClasses}
                             >
                               <FaBook size={16} className="text-blue-500" />
@@ -437,7 +439,7 @@ const Sidebar: React.FC<SidebarProps> = ({ note, noteId }) => {
             )}
             
             {/* Collapsed view (for desktop only) */}
-            {!isOpen && !isMobile && (
+            {!isOpenState && !isMobile && (
               <div className="flex-1 overflow-y-auto p-2 space-y-4">
                 <ul className="space-y-2">
                   {menuItems.map((item) => {

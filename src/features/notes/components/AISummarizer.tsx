@@ -1,0 +1,1 @@
+import { AISummary as AISummaryType, NewlyAwardedBadgeInfo } from '../noteTypes'; 

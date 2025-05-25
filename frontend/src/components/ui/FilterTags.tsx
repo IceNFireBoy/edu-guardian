@@ -3,27 +3,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaFilter } from 'react-icons/fa';
 import Button from './Button'; // Use Button component for clear all
 
-// Define the expected structure of the filters object
-interface Filters {
+export interface Filters {
+  subject?: string;
   grade?: string;
   semester?: string;
   quarter?: string;
-  subject?: string;
   topic?: string;
-  [key: string]: string | undefined; // Allow other potential string filters
+  searchQuery?: string;
+  [key: string]: string | undefined;
 }
 
-// Define the props for the component
 interface FilterTagsProps {
   filters: Filters;
-  onRemoveFilter: (key: keyof Filters) => void; // Callback to remove a single filter
+  onRemoveFilter: (key: keyof Filters) => void;
   onClearAllFilters?: () => void; // Optional callback to clear all filters
 }
 
 const FilterTags: React.FC<FilterTagsProps> = ({ filters, onRemoveFilter, onClearAllFilters }) => {
-  // Filter out empty/null/undefined filter values
-  const activeFilters = Object.entries(filters)
-    .filter(([_, value]) => value != null && value !== '') as [keyof Filters, string][];
+  const activeFilters = Object.entries(filters).filter(([_, value]) => value && value !== '');
   
   // Helper function to format filter name (more robustly)
   const formatFilterName = (key: keyof Filters): string => {
@@ -69,14 +66,14 @@ const FilterTags: React.FC<FilterTagsProps> = ({ filters, onRemoveFilter, onClea
               className="bg-primary/10 text-primary dark:bg-primary-light/10 dark:text-primary-light rounded-full px-3 py-1 flex items-center text-xs sm:text-sm font-medium whitespace-nowrap"
             >
               {/* Keep structured representation: Name: Value */}
-              <span className="mr-1">{formatFilterName(key)}:</span>
-              <span className="font-normal">{formatFilterValue(key, value)}</span>
+              <span className="mr-1">{formatFilterName(key as keyof Filters)}:</span>
+              <span className="font-normal">{formatFilterValue(key as keyof Filters, value)}</span>
               
               {onRemoveFilter && (
                 <button
-                  onClick={() => onRemoveFilter(key)}
+                  onClick={() => onRemoveFilter(key as keyof Filters)}
                   className="ml-2 p-0.5 rounded-full text-primary/70 dark:text-primary-light/70 hover:text-primary dark:hover:text-primary-light hover:bg-primary/10 dark:hover:bg-primary-light/20 transition-colors"
-                  aria-label={`Remove ${formatFilterName(key)} filter`}
+                  aria-label={`Remove ${formatFilterName(key as keyof Filters)} filter`}
                 >
                   <FaTimes size={10} />
                 </button>
