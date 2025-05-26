@@ -1,170 +1,148 @@
-import { render, screen } from '@testing-library/react';
-import NoteCard from '../../NoteCard';
-import { Note } from '../../noteTypes';
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import { describe, it, expect, vi } from 'vitest';
+import NoteCard from '../NoteCard';
+import { Note } from '../../../../types/note';
 
-const mockNotesCard: Note[] = [
-  {
-    id: '1',
-    title: 'Test Note 1',
-    content: 'Test content 1',
-    fileUrl: 'http://example.com/test1.pdf',
-    fileType: 'application/pdf',
-    subject: 'Test Subject',
-    grade: 'Test Grade',
-    semester: 'Test Semester',
-    isPublic: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-    viewCount: 0,
-    downloadCount: 0,
-    averageRating: 0,
-    ratings: [],
-    flashcards: [],
-    user: {
-      id: '1',
-      username: 'testuser',
-      email: 'test@example.com'
-    },
-    quarter: 'Test Quarter',
-    topic: 'Test Topic'
-  },
-  {
-    id: '2',
-    title: 'Test Note 2',
-    content: 'Test content 2',
-    fileUrl: 'http://example.com/test2.pdf',
-    fileType: 'application/pdf',
-    subject: 'Test Subject',
-    grade: 'Test Grade',
-    semester: 'Test Semester',
-    isPublic: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-    viewCount: 0,
-    downloadCount: 0,
-    averageRating: 0,
-    ratings: [],
-    flashcards: [],
-    user: {
-      id: '1',
-      username: 'testuser',
-      email: 'test@example.com'
-    },
-    quarter: 'Test Quarter',
-    topic: 'Test Topic'
-  }
-];
+// Mock the useStreak hook
+jest.mock('../../../../hooks/useStreak', () => ({
+  useStreak: () => ({
+    recordActivity: jest.fn()
+  })
+}));
 
-const mockNote: Note = {
-  id: '1',
-  title: 'Test Note',
-  description: 'Test Description',
-  content: 'Test Content',
-  subject: 'Test Subject',
-  grade: '10',
-  semester: '1',
-  quarter: 'Q1',
-  topic: 'Algebra',
-  isPublic: true,
-  fileUrl: 'http://example.com/file.pdf',
-  fileType: 'application/pdf',
-  createdAt: '2024-01-01T00:00:00Z',
-  updatedAt: '2024-01-01T00:00:00Z',
-  viewCount: 0,
-  downloadCount: 0,
-  averageRating: 0,
-  ratings: [],
-  flashcards: [],
-  user: { id: '1', username: 'testuser', email: 'test@example.com' }
-};
-
-const longNote: Note = {
-  id: '2',
-  title: 'Long Note',
-  description: 'A very long note',
-  content: 'Long content',
-  subject: 'Test Subject',
-  grade: '10',
-  semester: '1',
-  quarter: 'Q1',
-  topic: 'Algebra',
-  isPublic: true,
-  fileUrl: 'http://example.com/file.pdf',
-  fileType: 'application/pdf',
-  createdAt: '2024-01-01T00:00:00Z',
-  updatedAt: '2024-01-01T00:00:00Z',
-  viewCount: 0,
-  downloadCount: 0,
-  averageRating: 0,
-  ratings: [],
-  flashcards: [],
-  user: { id: '1', username: 'testuser', email: 'test@example.com' }
-};
-
-const imageNote: Note = {
-  id: '3',
-  title: 'Image Note',
-  description: 'A note with an image',
-  content: 'Image content',
-  subject: 'Test Subject',
-  grade: '10',
-  semester: '1',
-  quarter: 'Q1',
-  topic: 'Algebra',
-  isPublic: true,
-  fileUrl: 'http://example.com/image.jpg',
-  fileType: 'image/jpeg',
-  createdAt: '2024-01-01T00:00:00Z',
-  updatedAt: '2024-01-01T00:00:00Z',
-  viewCount: 0,
-  downloadCount: 0,
-  averageRating: 0,
-  ratings: [],
-  flashcards: [],
-  user: { id: '1', username: 'testuser', email: 'test@example.com' }
-};
-
-const unknownNote: Note = {
-  id: '4',
-  title: 'Unknown Note',
-  description: 'A note with unknown file type',
-  content: 'Unknown content',
-  subject: 'Test Subject',
-  grade: '10',
-  semester: '1',
-  quarter: 'Q1',
-  topic: 'Algebra',
-  isPublic: true,
-  fileUrl: 'http://example.com/unknown.xyz',
-  fileType: 'unknown',
-  createdAt: '2024-01-01T00:00:00Z',
-  updatedAt: '2024-01-01T00:00:00Z',
-  viewCount: 0,
-  downloadCount: 0,
-  averageRating: 0,
-  ratings: [],
-  flashcards: [],
-  user: { id: '1', username: 'testuser', email: 'test@example.com' }
-};
+// Mock the useNavigate hook
+const mockNavigate = jest.fn();
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockNavigate
+}));
 
 describe('NoteCard', () => {
-  it('renders a standard note', () => {
-    render(<NoteCard note={mockNote} />);
+  const mockNote: Note = {
+    _id: '1',
+    title: 'Test Note',
+    content: 'Test Content',
+    description: 'A test note',
+    fileUrl: 'http://example.com/file.pdf',
+    fileType: 'pdf',
+    fileSize: 1024,
+    subject: 'Math',
+    grade: '11',
+    semester: '1',
+    quarter: '1',
+    topic: 'Algebra',
+    tags: ['math'],
+    viewCount: 100,
+    downloadCount: 50,
+    ratings: [],
+    averageRating: 4.5,
+    aiSummary: '',
+    aiSummaryKeyPoints: [],
+    flashcards: [],
+    user: 'user123',
+    isPublic: true,
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
+    rating: 4.5,
+    ratingCount: 10
+  };
+
+  const renderNoteCard = (props = {}) => {
+    return render(
+      <BrowserRouter>
+        <NoteCard
+          note={mockNote}
+          onView={jest.fn()}
+          {...props}
+        />
+      </BrowserRouter>
+    );
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('renders note card with basic information', () => {
+    renderNoteCard();
+    
+    expect(screen.getByText('Test Note')).toBeInTheDocument();
+    expect(screen.getByText('Test Content')).toBeInTheDocument();
+    expect(screen.getByText('Mathematics')).toBeInTheDocument();
+    expect(screen.getByText('Public')).toBeInTheDocument();
+  });
+
+  it('handles view count and download count display', () => {
+    renderNoteCard();
+    
+    expect(screen.getByText('100')).toBeInTheDocument();
+    expect(screen.getByText('50')).toBeInTheDocument();
+  });
+
+  it('handles rating display', () => {
+    renderNoteCard();
+    
+    const stars = screen.getAllByTestId('star');
+    expect(stars).toHaveLength(5);
+    expect(stars[0]).toHaveClass('text-yellow-400');
+  });
+
+  it('handles view button click', () => {
+    const onView = jest.fn();
+    renderNoteCard({ onView });
+    
+    fireEvent.click(screen.getByText('View Details'));
+    expect(onView).toHaveBeenCalledWith(mockNote);
+    expect(mockNavigate).toHaveBeenCalledWith('/view-note?id=1');
+  });
+
+  it('renders compact view when compact prop is true', () => {
+    renderNoteCard({ compact: true });
+    
+    const card = screen.getByRole('button');
+    expect(card).toHaveClass('h-full');
+  });
+
+  it('handles invalid note data', () => {
+    render(
+      <BrowserRouter>
+        <NoteCard
+          note={{} as Note}
+          onView={jest.fn()}
+        />
+      </BrowserRouter>
+    );
+    
+    expect(screen.getByText('Untitled Note')).toBeInTheDocument();
+  });
+
+  it('handles missing file URL', () => {
+    const noteWithoutFile = { ...mockNote, fileUrl: undefined };
+    renderNoteCard({ note: noteWithoutFile });
+    
     expect(screen.getByText('Test Note')).toBeInTheDocument();
   });
 
-  it('renders a long note', () => {
-    render(<NoteCard note={longNote} />);
-    expect(screen.getByText('Long Note')).toBeInTheDocument();
+  it('handles different file types', () => {
+    const noteWithImage = { ...mockNote, fileType: 'image/jpeg' };
+    renderNoteCard({ note: noteWithImage });
+    
+    expect(screen.getByAltText('Test Note')).toBeInTheDocument();
   });
 
-  it('renders an image note', () => {
-    render(<NoteCard note={imageNote} />);
-    expect(screen.getByText('Image Note')).toBeInTheDocument();
+  it('handles dark mode classes', () => {
+    renderNoteCard();
+    
+    const card = screen.getByRole('button');
+    expect(card).toHaveClass('dark:bg-slate-800');
   });
 
-  it('renders an unknown file type note', () => {
-    render(<NoteCard note={unknownNote} />);
-    expect(screen.getByText('Unknown Note')).toBeInTheDocument();
+  it('handles motion animations', () => {
+    renderNoteCard();
+    
+    const card = screen.getByRole('button');
+    expect(card).toHaveClass('motion');
   });
 }); 

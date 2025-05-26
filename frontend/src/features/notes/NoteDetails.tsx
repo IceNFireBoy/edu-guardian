@@ -1,51 +1,105 @@
 import React, { useState, useEffect } from 'react';
-import { Note } from './noteTypes';
-import { useNote } from './useNote';
-import AIFeaturesPanel from './components/AIFeaturesPanel';
+import { useParams, useNavigate } from 'react-router-dom';
+import { FaStar, FaRegStar, FaDownload, FaEye, FaEdit, FaTrash, FaShare, FaRobot } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { FaRobot, FaLightbulb } from 'react-icons/fa';
+import { useNote } from '../hooks/useNote';
+import { useAuth } from '../hooks/useAuth';
+import { Note } from '../../types/note';
+import { getRelativeTime, formatDate } from '../../utils/dateUtils';
+import AIFeaturesPanel from './components/AIFeaturesPanel';
 
 interface NoteDetailsProps {
-  noteId: string;
-  onClose: () => void;
+  note: Note;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  loading?: boolean;
+  error?: string | null;
 }
 
-const NoteDetails: React.FC<NoteDetailsProps> = ({ noteId, onClose }) => {
-  const { fetchNote, rateNote, loading, error } = useNote();
-  const [note, setNote] = useState<Note | null>(null);
+const NoteDetails: React.FC<NoteDetailsProps> = ({ 
+  note, 
+  onEdit, 
+  onDelete,
+  loading = false,
+  error = null
+}) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [currentRating, setCurrentRating] = useState<number>(0);
+  const [isRating, setIsRating] = useState(false);
+  const { rateNote, downloadNote } = useNote();
 
   useEffect(() => {
-    const loadNote = async () => {
-      const fetchedNote = await fetchNote(noteId);
-      if (fetchedNote) {
-        setNote(fetchedNote);
-        setCurrentRating(fetchedNote.ratings?.[0]?.rating || 0); 
-      } else if (error && !fetchedNote){
-        setNote(null);
+    if (note.ratings && note.ratings.length > 0 && user?._id) {
+      const userRating = note.ratings.find(r => r.userId === user._id);
+      if (userRating) {
+        setCurrentRating(userRating.value);
       }
-    };
-    if (noteId) {
-      loadNote();
     }
-  }, [noteId, fetchNote]);
+  }, [note.ratings, user?._id]);
 
-  useEffect(() => {
-    if(error) {
-        toast.error(`Error: ${error}`);
+  const handleRatingChange = async (rating: number) => {
+    if (!user) {
+      toast.error('Please log in to rate notes');
+      return;
     }
-  }, [error]);
 
-  const handleRatingSubmit = async (newRating: number) => {
-    if (!note) return;
-    
-    const ratingResult = await rateNote(note.id, newRating);
-    if (ratingResult) {
-      const updatedNoteData = { ...note, rating: ratingResult.rating, ratingCount: (note.ratingCount || 0) + 1 }; 
-      setNote(updatedNoteData);
-      setCurrentRating(ratingResult.rating);
-      toast.success('Rating submitted!');
-    } 
+    setIsRating(true);
+    try {
+      const response = await rateNote(note._id, rating);
+      if (response?.success) {
+        setCurrentRating(rating);
+        toast.success('Rating submitted successfully');
+      } else {
+        toast.error(response?.error || 'Failed to submit rating');
+      }
+    } catch (error) {
+      toast.error('An error occurred while submitting your rating');
+    } finally {
+      setIsRating(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!note.fileUrl) {
+      toast.error('No file available for download');
+      return;
+    }
+
+    try {
+      const response = await downloadNote(note._id);
+      if (response?.success) {
+        // Create a temporary link and trigger download
+        const link = document.createElement('a');
+        link.href = response.downloadUrl;
+        link.download = note.title;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Download started');
+      } else {
+        toast.error(response?.error || 'Failed to download note');
+      }
+    } catch (error) {
+      toast.error('An error occurred while downloading the note');
+    }
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: note.title,
+        text: `Check out this note: ${note.title}`,
+        url: window.location.href
+      }).catch(() => {
+        toast.error('Failed to share note');
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href)
+        .then(() => toast.success('Link copied to clipboard'))
+        .catch(() => toast.error('Failed to copy link'));
+    }
   };
 
   if (loading && !note) return <div className="text-center py-10 text-gray-500 dark:text-gray-400">Loading note details...</div>;
@@ -57,38 +111,126 @@ const NoteDetails: React.FC<NoteDetailsProps> = ({ noteId, onClose }) => {
   const hasFlashcards = note.flashcards && note.flashcards.length > 0;
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-4 sm:p-6 space-y-6">
-      <div className="flex justify-between items-start">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{note.title}</h2>
-        <button
-          onClick={onClose}
-          className="px-3 py-1 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-slate-600"
-        >
-          Close
-        </button>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="max-w-4xl mx-auto p-6 bg-white dark:bg-slate-800 rounded-lg shadow-lg"
+    >
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            {note.title}
+          </h1>
+          <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-300">
+            <span className="flex items-center">
+              <FaEye className="mr-1" /> {note.viewCount} views
+            </span>
+            <span className="flex items-center">
+              <FaDownload className="mr-1" /> {note.downloadCount} downloads
+            </span>
+            <span>Last updated: {formatDate(note.updatedAt)}</span>
+          </div>
+        </div>
+        <div className="flex space-x-2">
+          {user && (user._id === note.user || user.role === 'admin') && (
+            <>
+              <button
+                onClick={onEdit}
+                className="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                title="Edit note"
+              >
+                <FaEdit />
+              </button>
+              <button
+                onClick={onDelete}
+                className="p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                title="Delete note"
+              >
+                <FaTrash />
+              </button>
+            </>
+          )}
+          <button
+            onClick={handleShare}
+            className="p-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+            title="Share note"
+          >
+            <FaShare />
+          </button>
+        </div>
       </div>
 
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1">Description</h3>
-        <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{note.description || "No description provided."}</p>
+      <div className="prose dark:prose-invert max-w-none mb-6">
+        <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg">
+          <p className="whitespace-pre-wrap">{note.content}</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-6 text-sm">
-        <div><strong className="text-gray-600 dark:text-gray-300">Subject:</strong> <span className="text-gray-800 dark:text-gray-100">{note.subject}</span></div>
-        <div><strong className="text-gray-600 dark:text-gray-300">Grade:</strong> <span className="text-gray-800 dark:text-gray-100">{note.grade}</span></div>
-        <div><strong className="text-gray-600 dark:text-gray-300">Semester:</strong> <span className="text-gray-800 dark:text-gray-100">{note.semester}</span></div>
-        <div><strong className="text-gray-600 dark:text-gray-300">Quarter:</strong> <span className="text-gray-800 dark:text-gray-100">{note.quarter}</span></div>
-        <div className="col-span-2"><strong className="text-gray-600 dark:text-gray-300">Topic:</strong> <span className="text-gray-800 dark:text-gray-100">{note.topic}</span></div>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-6 text-sm">
-        <div><strong className="text-gray-600 dark:text-gray-300">Views:</strong> <span className="text-gray-800 dark:text-gray-100">{note.viewCount || 0}</span></div>
-        <div><strong className="text-gray-600 dark:text-gray-300">Rating:</strong> <span className="text-gray-800 dark:text-gray-100">{(note.averageRating || 0).toFixed(1)} ({note.ratings?.length || 0} votes)</span></div>
-        <div><strong className="text-gray-600 dark:text-gray-300">Flashcards:</strong> <span className="text-gray-800 dark:text-gray-100">{note.flashcards?.length || 0}</span></div>
-         <div><strong className="text-gray-600 dark:text-gray-300">Public:</strong> <span className="text-gray-800 dark:text-gray-100">{note.isPublic ? 'Yes' : 'No'}</span></div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-gray-50 dark:bg-slate-700 p-3 rounded-lg">
+          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Subject</h3>
+          <p className="text-lg font-semibold text-gray-900 dark:text-white">{note.subject}</p>
+        </div>
+        <div className="bg-gray-50 dark:bg-slate-700 p-3 rounded-lg">
+          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Grade</h3>
+          <p className="text-lg font-semibold text-gray-900 dark:text-white">{note.grade}</p>
+        </div>
+        <div className="bg-gray-50 dark:bg-slate-700 p-3 rounded-lg">
+          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Semester</h3>
+          <p className="text-lg font-semibold text-gray-900 dark:text-white">{note.semester}</p>
+        </div>
+        <div className="bg-gray-50 dark:bg-slate-700 p-3 rounded-lg">
+          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Quarter</h3>
+          <p className="text-lg font-semibold text-gray-900 dark:text-white">{note.quarter}</p>
+        </div>
       </div>
 
-      {/* AI Generated Summary Section */}
+      {note.topic && (
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Topic</h3>
+          <div className="bg-gray-50 dark:bg-slate-700 p-3 rounded-lg">
+            <p className="text-gray-900 dark:text-white">{note.topic}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="border-t border-gray-200 dark:border-slate-700 pt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Rating</h3>
+          <div className="flex items-center">
+            <span className="text-2xl font-bold text-gray-900 dark:text-white mr-2">
+              {note.averageRating.toFixed(1)}
+            </span>
+            <div className="flex">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => handleRatingChange(star)}
+                  disabled={isRating}
+                  className={`text-2xl ${
+                    star <= currentRating
+                      ? 'text-yellow-400'
+                      : 'text-gray-300 dark:text-gray-600'
+                  } hover:text-yellow-400 transition-colors`}
+                >
+                  {star <= currentRating ? <FaStar /> : <FaRegStar />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {note.fileUrl && (
+          <button
+            onClick={handleDownload}
+            className="w-full btn btn-primary flex items-center justify-center"
+          >
+            <FaDownload className="mr-2" /> Download Note
+          </button>
+        )}
+      </div>
+
       <div className="border-t border-gray-200 dark:border-slate-700 pt-6">
         <div className="flex justify-between items-center mb-3">
             <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 flex items-center">
@@ -114,28 +256,25 @@ const NoteDetails: React.FC<NoteDetailsProps> = ({ noteId, onClose }) => {
             AI Summary not generated yet.
           </p>
         )}
+
         {hasKeyPoints && (
-          <div className="p-3 bg-gray-50 dark:bg-slate-700/50 rounded-md mb-3">
-            <h4 className="font-semibold text-gray-600 dark:text-gray-300 mb-1 text-sm">Key Points:</h4>
-            <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-300 text-sm">
-              {note.aiSummaryKeyPoints!.map((point, index) => (
-                <li key={index}>{point}</li>
+          <div className="mt-4">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Key Points</h4>
+            <ul className="list-disc list-inside space-y-1">
+              {note.aiSummaryKeyPoints.map((point, index) => (
+                <li key={index} className="text-sm text-gray-600 dark:text-gray-400">
+                  {point}
+                </li>
               ))}
             </ul>
           </div>
         )}
-        {(hasSummary || hasKeyPoints) && note.aiSummaryGeneratedAt && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-right">
-            <i>Summary Generated: {new Date(note.aiSummaryGeneratedAt).toLocaleString()}</i>
-          </p>
-        )}
       </div>
 
-      {/* AI Generated Flashcards Section - basic info, generation via AIFeaturesPanel */}
       <div className="border-t border-gray-200 dark:border-slate-700 pt-6">
         <div className="flex justify-between items-center mb-3">
             <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 flex items-center">
-                <FaLightbulb className="mr-2 text-yellow-500 dark:text-yellow-400" /> AI Flashcards
+                <FaRobot className="mr-2 text-yellow-500 dark:text-yellow-400" /> AI Flashcards
             </h3>
             {hasFlashcards && (
                  <span 
@@ -155,36 +294,13 @@ const NoteDetails: React.FC<NoteDetailsProps> = ({ noteId, onClose }) => {
             AI Flashcards not generated for this note yet.
           </p>
         )}
-        {/* The AIFeaturesPanel will contain buttons to open AISummarizer and FlashcardGenerator modals */}
-        {/* Pass initial data to AIFeaturesPanel if needed for regeneration logic or display in modals */}
-      </div>
-
-      <div className="border-t border-gray-200 dark:border-slate-700 pt-6">
-        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Rate this Note</h3>
-        <div className="flex items-center space-x-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                key={star}
-                type="button"
-                onClick={() => handleRatingSubmit(star)}
-                disabled={loading}
-                className={`text-2xl focus:outline-none ${star <= currentRating ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-500 hover:text-yellow-300'}`}
-                aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
-                >
-                ★
-                </button>
-            ))}
-            {loading && <span className="ml-2 text-sm text-gray-500">Processing...</span>}
-        </div>
       </div>
 
       <AIFeaturesPanel 
         note={note} 
-        showManualFlashcard={false} // Assuming we only want AI flashcards from here for now
-        // onAISummaryGenerated={(summaryData) => setNote(prev => prev ? {...prev, ...summaryData} : null)} // Example how to update note in place
-        // onAIFlashcardsGenerated={(flashcardsData) => setNote(prev => prev ? {...prev, flashcards: flashcardsData} : null)} // Example
+        showManualFlashcard={false}
       />
-    </div>
+    </motion.div>
   );
 };
 

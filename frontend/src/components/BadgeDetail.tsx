@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTrophy, FaMedal, FaCrown, FaStar, FaTimes, IconType } from 'react-icons/fa';
+import { FaTrophy, FaMedal, FaCrown, FaStar, FaTimes } from 'react-icons/fa';
+import { IconType } from 'react-icons';
 import { toast } from 'react-hot-toast';
 import { useBadges } from '../hooks/useBadges'; // Use TS version
 import Button from './ui/Button'; // Use our TSX Button

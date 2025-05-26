@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useFlashcards, Flashcard as FlashcardType } from '../../context/FlashcardContext'; // Import type
+import { useFlashcards } from '../../context/FlashcardContext';
+import type { Flashcard as FlashcardType } from '../../types/flashcard';
 import Button from '../ui/Button'; // TSX version
 
 interface FlashcardProps {

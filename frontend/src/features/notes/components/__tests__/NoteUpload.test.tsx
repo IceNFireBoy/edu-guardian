@@ -1,26 +1,32 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import NoteUpload from '../NoteUpload';
-import { Note } from '../../noteTypes';
+import { Note } from '../../../types/note';
 
-const mockNote: Note = {
+const mockNote = {
   _id: '1',
   title: 'Test Note',
-  content: 'Test content',
+  content: 'Some content',
   subject: 'Math',
-  grade: '10th',
-  semester: 'Fall',
-  quarter: 'Q1',
+  grade: '10',
+  semester: '1',
+  quarter: '1',
   topic: 'Algebra',
   isPublic: true,
-  fileUrl: 'test.pdf',
+  fileUrl: 'http://example.com/file.pdf',
   fileType: 'pdf',
-  viewCount: 0,
-  rating: 0,
-  ratingCount: 0,
+  viewCount: 10,
+  downloadCount: 2,
+  averageRating: 4.5,
+  ratingCount: 2,
+  ratings: [],
+  flashcards: [],
+  user: 'user123',
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
-  user: 'user123'
+  aiSummary: '',
+  aiSummaryKeyPoints: [],
+  asset_id: '1',
 };
 
 describe('NoteUpload', () => {

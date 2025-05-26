@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { Note, NoteFilter, NoteUploadData, NoteRating, Flashcard, AISummary, PaginatedNotesResponse, ManualFlashcardPayload, AIGenerationResult, NewlyAwardedBadgeInfo } from './noteTypes';
+import { Note } from '../types/note';
+import { NoteFilter, NoteUploadData, NoteRating, Flashcard, AISummary, PaginatedNotesResponse, ManualFlashcardPayload, AIGenerationResult, NewlyAwardedBadgeInfo } from './noteTypes';
 import { callAuthenticatedApi, ApiResponse } from '../../api/notes';
 import { debug } from '../../components/DebugPanel'; // Assuming debug is available
 
@@ -320,10 +321,12 @@ export const useNote = () => {
       
       if (response.success && response.data) {
         const summaryData: AISummary | null = response.data.data.aiSummary ? {
-          noteId: response.data.data._id, 
-          summary: response.data.data.aiSummary.content,
-          keyPoints: response.data.data.aiSummary.keyPoints || [],
-          generatedAt: response.data.data.aiSummary.generatedAt
+          noteId: response.data.data.aiSummary.noteId,
+          summary: response.data.data.aiSummary.summary,
+          keyPoints: response.data.data.aiSummary.keyPoints,
+          generatedAt: response.data.data.aiSummary.generatedAt instanceof Date 
+            ? response.data.data.aiSummary.generatedAt.toISOString()
+            : response.data.data.aiSummary.generatedAt
         } : null;
 
         return { 

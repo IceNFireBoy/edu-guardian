@@ -1,37 +1,52 @@
-import { http, HttpResponse } from 'msw';
+import { rest } from 'msw';
+import { setupServer } from 'msw/node';
+import { mockNotes, mockUsers, mockBadges } from './data';
 
 // Define your API base URL, e.g., from an environment variable or config
 // const API_BASE_URL = process.env.VITE_API_URL || '/api/v1'; // Vite uses VITE_ prefix for env vars
 // For tests, it's often simpler to use relative paths if your proxy is set up or absolute if needed.
 
 export const handlers = [
-  http.get('/api/v1/auth/profile', () => {
-    return HttpResponse.json({
-      success: true,
-      data: {
-        _id: 'user123',
-        name: 'Test User',
-        email: 'test@example.com',
-        username: 'testuser',
-        role: 'user',
-        xp: 100,
-        level: 2,
-        streak: { current: 3, max: 5, lastUsed: new Date().toISOString() },
-        aiUsage: { summaryUsed: 1, flashcardUsed: 2, lastReset: new Date().toISOString() },
-        profileImage: 'no-photo.jpg',
-        biography: 'Test bio',
-        preferences: { darkMode: false, emailNotifications: true },
-        badges: [],
-        activity: [],
-        subjects: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        emailVerified: true,
-        favoriteNotes: [],
-        totalSummariesGenerated: 1,
-        totalFlashcardsGenerated: 2
-      }
-    });
+  rest.get('/api/v1/notes', (req, res, ctx) => {
+    return res(ctx.json({ success: true, data: mockNotes }));
+  }),
+
+  rest.get('/api/v1/notes/:id', (req, res, ctx) => {
+    const note = mockNotes.find(n => n._id === req.params.id);
+    if (!note) {
+      return res(ctx.status(404), ctx.json({ success: false, message: 'Note not found' }));
+    }
+    return res(ctx.json({ success: true, data: note }));
+  }),
+
+  rest.post('/api/v1/notes', async (req, res, ctx) => {
+    const newNote = await req.json();
+    return res(ctx.json({ success: true, data: { ...newNote, _id: 'new-id' } }));
+  }),
+
+  rest.put('/api/v1/notes/:id', async (req, res, ctx) => {
+    const updatedNote = await req.json();
+    return res(ctx.json({ success: true, data: updatedNote }));
+  }),
+
+  rest.delete('/api/v1/notes/:id', (req, res, ctx) => {
+    return res(ctx.json({ success: true, message: 'Note deleted successfully' }));
+  }),
+
+  rest.get('/api/v1/users', (req, res, ctx) => {
+    return res(ctx.json({ success: true, data: mockUsers }));
+  }),
+
+  rest.get('/api/v1/users/:id', (req, res, ctx) => {
+    const user = mockUsers.find(u => u._id === req.params.id);
+    if (!user) {
+      return res(ctx.status(404), ctx.json({ success: false, message: 'User not found' }));
+    }
+    return res(ctx.json({ success: true, data: user }));
+  }),
+
+  rest.get('/api/v1/badges', (req, res, ctx) => {
+    return res(ctx.json({ success: true, data: mockBadges }));
   }),
 
   // TODO: Add more handlers here as you test components that make API calls.
@@ -52,8 +67,10 @@ export const handlers = [
 
   // Handler to catch unhandled requests during tests to prevent them from going to the actual network
   // This should generally be the last handler.
-  http.all('*', ({ request }) => {
-    console.warn(`Unhandled request: ${request.method} ${request.url}`);
-    return HttpResponse.json({ success: false, error: 'Not found' }, { status: 404 });
+  rest.all('*', (req, res, ctx) => {
+    console.warn(`Unhandled request: ${req.method} ${req.url}`);
+    return res(ctx.status(404), ctx.json({ success: false, message: 'Not found' }));
   })
-]; 
+];
+
+export const server = setupServer(...handlers); 

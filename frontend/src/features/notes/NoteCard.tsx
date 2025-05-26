@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaBookOpen, FaFilePdf, FaImage, FaFileAlt, FaExclamationCircle } from 'react-icons/fa';
+import { FaBookOpen, FaFilePdf, FaImage, FaFileAlt, FaExclamationCircle, FaEye, FaDownload, FaStar, FaFileWord, FaFilePowerpoint, FaFileExcel } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { Note } from './noteTypes';
+import { Note } from '../types/note';
+import { getRelativeTime } from '../utils/dateUtils';
 import { useStreak } from '../../hooks/useStreak';
 import PDFThumbnail from './PDFThumbnail';
 import EnhancedPDFIcon from './EnhancedPDFIcon';
@@ -98,10 +99,40 @@ const getRatingStats = (noteId: string): RatingStats => {
 interface NoteCardProps {
   note: Note;
   onView?: (note: Note) => void;
+  onEdit?: (note: Note) => void;
+  onDelete?: (note: Note) => void;
   compact?: boolean;
+  className?: string;
 }
 
-const NoteCard: React.FC<NoteCardProps> = ({ note, onView, compact = false }) => {
+const getIcon = (fileType?: string) => {
+  if (!fileType) return <FaFileAlt className="text-gray-500" />;
+  
+  switch (fileType.toLowerCase()) {
+    case 'pdf':
+      return <FaFilePdf className="text-red-500" />;
+    case 'doc':
+    case 'docx':
+      return <FaFileWord className="text-blue-500" />;
+    case 'ppt':
+    case 'pptx':
+      return <FaFilePowerpoint className="text-orange-500" />;
+    case 'xls':
+    case 'xlsx':
+      return <FaFileExcel className="text-green-500" />;
+    default:
+      return <FaFileAlt className="text-gray-500" />;
+  }
+};
+
+const NoteCard: React.FC<NoteCardProps> = ({
+  note,
+  onView,
+  onEdit,
+  onDelete,
+  compact = false,
+  className = ''
+}) => {
   // Handle invalid note prop
   if (!note || typeof note !== 'object') {
     console.error("NoteCard received invalid note prop:", note);
@@ -110,10 +141,11 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onView, compact = false }) =>
   
   const { recordActivity } = useStreak();
   const navigate = useNavigate();
-  const noteId = note.id || `note-${Math.random()}`;
+  const noteId = note._id;
   const { avg: averageRating, count: ratingCount } = getRatingStats(noteId);
   
   const colorTheme = getSubjectColor(note.subject);
+  const fileIcon = getIcon(note.fileType);
 
   const renderThumbnail = () => {
     // Prioritize explicitly provided thumbnailUrl
@@ -122,17 +154,15 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onView, compact = false }) =>
     }
     // If fileType is an image, use fileUrl directly
     if (note.fileType && (note.fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'svg'].includes(note.fileType.toLowerCase()))) {
-      return <img src={note.fileUrl} alt={note.title} className="w-full h-full object-cover" />;
+      return note.fileUrl ? <img src={note.fileUrl} alt={note.title} className="w-full h-full object-cover" /> : null;
     }
     // If PDF, use specialized PDF icon/thumbnail component
     if (note.fileType === 'pdf' || (note.fileUrl && note.fileUrl.toLowerCase().endsWith('.pdf'))) {
-      // return <PDFThumbnail fileUrl={note.fileUrl} /> // Assuming PDFThumbnail can generate from URL
-      // For now, using EnhancedPDFIcon which is already in use or simpler icon
       return <EnhancedPDFIcon note={note} className="w-16 h-16" />;
     }
     // Fallback to generic file icon based on fileType or default
     if (note.fileType) {
-        return <FaFileAlt className={`text-4xl ${colorTheme.text} ${colorTheme.darkText}`} />;
+      return <FaFileAlt className={`text-4xl ${colorTheme.text} ${colorTheme.darkText}`} />;
     }
     return <FaBookOpen className={`text-4xl ${colorTheme.text} ${colorTheme.darkText}`} />;
   };
@@ -169,7 +199,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onView, compact = false }) =>
   // Get description from note
   const getDescription = (): string => {
     try {
-      return note.description || 'No description available';
+      return note.content || 'No description available';
     } catch (err) {
       console.error("Error getting note description:", err);
       return 'No description available';
@@ -226,122 +256,88 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onView, compact = false }) =>
     }
     
     return (
-      <PDFThumbnail 
-        url={getImageUrl()} 
-        alt={getTitle()} 
-        className="w-full h-full"
+      <PDFThumbnail
+        fileUrl={note.fileUrl || ''}
         onError={() => setPdfThumbnailFailed(true)}
       />
     );
   };
 
-  // Define getIcon function or use a different approach
-
-  // Render the component in a try/catch block to prevent rendering errors
-  try {
-    // Compact view for grid layouts
-    if (compact) {
-      return (
-        <motion.div
-          key={noteId}
-          className={`rounded-lg shadow-lg overflow-hidden flex flex-col transition-all duration-300 ease-in-out hover:shadow-xl dark:bg-slate-800 ${compact ? 'h-full' : ''}`}
-          whileHover={{ y: compact ? 0 : -5 }}
-          onClick={handleView}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && handleView()}
-          aria-label={`View note: ${getTitle()}`}
-        >
-          <div className={`relative ${compact ? 'h-32' : 'h-40 md:h-48'} ${colorTheme.light} ${colorTheme.dark} flex items-center justify-center overflow-hidden`}>
-            {renderThumbnail()}
-            {/* Subject Tag */}
-            <div className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-semibold ${colorTheme.bg} text-white shadow`}>
-              {note.subject}
-            </div>
-          </div>
-
-          <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
-            <h3 className="font-semibold text-lg mb-1 line-clamp-2">
-              {getTitle()}
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2">
-              {getDescription()}
-            </p>
-          </div>
-          <div className="p-4 pt-0">
-            <button
-              onClick={handleView}
-              className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              View Note
-            </button>
-          </div>
-        </motion.div>
-      );
-    }
-
-    // Full view
-    return (
-      <motion.div
-        key={noteId}
-        className={`rounded-lg shadow-lg overflow-hidden flex flex-col transition-all duration-300 ease-in-out hover:shadow-xl dark:bg-slate-800 ${compact ? 'h-full' : ''}`}
-        whileHover={{ y: compact ? 0 : -5 }}
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className={`bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-slate-700 ${compact ? 'h-full flex flex-col' : ''} ${className}`}
+    >
+      <div 
+        className={`${compact ? 'h-32' : 'h-40'} relative cursor-pointer`}
         onClick={handleView}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === 'Enter' && handleView()}
-        aria-label={`View note: ${getTitle()}`}
       >
-        <div className="h-40 overflow-hidden bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-          {note.fileType === 'image' ? (
-            <img
-              src={getImageUrl()}
-              alt={getTitle()}
-              className="w-full h-full object-cover"
-            />
-          ) : isPDF() ? (
-            renderPDFThumbnail()
-          ) : (
-            getIcon()
-          )}
-        </div>
-        <div className="p-4">
-          <h3 className="font-semibold text-lg mb-1">
-            {getTitle()}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-            {getDescription()}
-          </p>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {getTags().map((tag, index) => (
-              <span
-                key={index}
-                className="px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 text-xs rounded"
-              >
-                {tag}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10" />
+        {renderThumbnail()}
+        <div className="absolute bottom-0 left-0 right-0 p-3 z-20">
+          <div className="flex items-center space-x-2">
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorTheme.light} ${colorTheme.text}`}>
+              {note.subject}
+            </span>
+            {note.isPublic && (
+              <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">
+                Public
               </span>
-            ))}
+            )}
           </div>
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                Rating: {averageRating.toFixed(1)} ({ratingCount})
-              </span>
+        </div>
+      </div>
+
+      <div className="p-4 flex-grow">
+        <h3 className="font-semibold text-lg mb-1 text-gray-900 dark:text-white line-clamp-2">
+          {getTitle()}
+        </h3>
+        <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mb-2">
+          {getDescription()}
+        </p>
+        
+        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center space-x-2">
+            <span className="flex items-center">
+              <FaEye className="mr-1" /> {note.viewCount}
+            </span>
+            <span className="flex items-center">
+              <FaDownload className="mr-1" /> {note.downloadCount}
+            </span>
+          </div>
+          <span>{getRelativeTime(note.updatedAt)}</span>
+        </div>
+      </div>
+
+      <div className="px-4 py-3 bg-gray-50 dark:bg-slate-700/50 border-t border-gray-200 dark:border-slate-600">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="flex text-yellow-400">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <FaStar
+                  key={star}
+                  className={`w-4 h-4 ${
+                    star <= averageRating ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'
+                  }`}
+                />
+              ))}
             </div>
-            <button
-              onClick={handleView}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              View Note
-            </button>
+            <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
+              ({ratingCount})
+            </span>
           </div>
+          <button
+            onClick={handleView}
+            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
+          >
+            View Details
+          </button>
         </div>
-      </motion.div>
-    );
-  } catch (err) {
-    console.error("Error rendering NoteCard:", err);
-    return <InvalidNoteCard error={err instanceof Error ? err.message : "Error rendering note"} />;
-  }
+      </div>
+    </motion.div>
+  );
 };
 
 export default NoteCard; 

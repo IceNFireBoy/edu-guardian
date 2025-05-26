@@ -1,8 +1,10 @@
+import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AIFeaturesPanel from '../AIFeaturesPanel';
 import { useNote } from '../../useNote';
 import { toast } from 'react-hot-toast';
+import { Note } from '../../../../types/note';
 
 // Mock the hooks and dependencies
 vi.mock('../../useNote');
@@ -32,19 +34,28 @@ vi.mock('../FlashcardGenerator', () => ({
 }));
 
 describe('AIFeaturesPanel', () => {
-  const mockNote = {
-    id: '1',
+  const mockNote: Note = {
+    _id: '1',
     title: 'Test Note',
-    content: 'Test Content',
+    content: 'Test content',
     subject: 'Math',
-    grade: '10',
+    grade: '11',
     semester: '1',
     quarter: '1',
     topic: 'Algebra',
     isPublic: true,
-    fileUrl: 'http://example.com/file.pdf',
-    createdAt: new Date(),
-    user: 'user123'
+    fileUrl: 'test.pdf',
+    fileType: 'pdf',
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
+    viewCount: 0,
+    downloadCount: 0,
+    averageRating: 0,
+    ratings: [],
+    flashcards: [],
+    user: 'user1',
+    ratingCount: 0,
+    rating: 0
   };
 
   const mockAddManualFlashcard = vi.fn();
@@ -130,7 +141,7 @@ describe('AIFeaturesPanel', () => {
       fireEvent.click(screen.getByText('Add Flashcard'));
       
       await waitFor(() => {
-        expect(mockAddManualFlashcard).toHaveBeenCalledWith(mockNote.id, {
+        expect(mockAddManualFlashcard).toHaveBeenCalledWith(mockNote._id, {
           question: 'Test Question',
           answer: 'Test Answer'
         });

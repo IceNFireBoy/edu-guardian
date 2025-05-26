@@ -2,7 +2,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../../mocks/server';
 import { useNote } from '../useNote';
-import { Note, NoteFilter, NoteUploadData } from '../noteTypes';
+import { Note, NoteFilter, NoteUploadData } from '../../types/note';
 
 // Mock data
 const mockNote: Note = {

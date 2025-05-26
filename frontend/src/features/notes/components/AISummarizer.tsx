@@ -2,23 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaRobot, FaSpinner, FaTimes, FaCopy, FaCheck, FaBookmark, FaAward } from 'react-icons/fa';
 import { useNote } from '../useNote';
-import { AISummary as AISummaryType, NewlyAwardedBadgeInfo } from '../noteTypes';
 import { useUser } from '../../user/useUser';
 import AIQuotaDisplay from '../../user/components/AIQuotaDisplay';
 import BadgeGrid from '../../user/components/BadgeGrid';
 import { toast } from 'react-hot-toast';
 import { callAuthenticatedApi } from '../../../api/apiClient';
+import { Note } from '../../types/note';
+
+interface AISummary {
+  noteId: string;
+  summary: string | null;
+  keyPoints: string[];
+  generatedAt: string;
+}
 
 interface AISummarizerProps {
   isOpen: boolean;
   onClose: () => void;
-  noteId: string; 
+  noteId: string;
   noteTitle?: string;
-  initialSummary?: AISummaryType | null; // Allow passing an initial summary
+  initialSummary?: AISummary | null;
 }
 
 const AISummarizer: React.FC<AISummarizerProps> = ({ isOpen, onClose, noteId, noteTitle, initialSummary }) => {
-  const [summary, setSummary] = useState<AISummaryType | null>(initialSummary || null);
+  const [summary, setSummary] = useState<AISummary | null>(null);
   const [copied, setCopied] = useState(false);
   const { getAISummary, loading, error } = useNote();
   const [internalError, setInternalError] = useState<string | null>(null);
@@ -28,28 +35,20 @@ const AISummarizer: React.FC<AISummarizerProps> = ({ isOpen, onClose, noteId, no
   const [showBadges, setShowBadges] = useState(false);
 
   useEffect(() => {
-    // Reset internal error when the main error from the hook changes or is cleared
     setInternalError(error);
   }, [error]);
 
   useEffect(() => {
-    // If the modal is opened and there's no summary yet, and not already loading, fetch it.
-    // For now, we rely on the button click, so this effect can be more for reset/cleanup.
     if (!isOpen) {
-      // setSummary(null); // Keep summary if modal is just re-opened, unless it should always refetch or clear
-      setInternalError(null); // Clear errors when modal closes
+      setInternalError(null);
       setStudyComplete(false);
       setShowBadges(false);
-    } else {
-      // If opened with an initial summary, set it.
-      if (initialSummary) {
-        setSummary(initialSummary);
-      }
+    } else if (initialSummary) {
+      setSummary(initialSummary);
     }
   }, [isOpen, initialSummary]);
 
   useEffect(() => {
-    // Show newly earned badges if there are any
     if (userNewBadgeIds && userNewBadgeIds.length > 0) {
       setShowBadges(true);
     }
@@ -61,8 +60,8 @@ const AISummarizer: React.FC<AISummarizerProps> = ({ isOpen, onClose, noteId, no
       toast.error('Note ID is missing.');
       return;
     }
-    setInternalError(null); 
-    setSummary(null); // Clear previous summary
+    setInternalError(null);
+    setSummary(null);
     
     const toastId = toast.loading('Generating AI Summary...');
     const response = await getAISummary(noteId);
@@ -71,27 +70,21 @@ const AISummarizer: React.FC<AISummarizerProps> = ({ isOpen, onClose, noteId, no
     if (response && response.data) {
       const summaryResult = response.data;
       if (!summaryResult || (!summaryResult.summary && (!summaryResult.keyPoints || summaryResult.keyPoints.length === 0))) {
-        setSummary({ 
-            noteId: noteId, 
-            summary: null,
-            keyPoints: [],
-            generatedAt: summaryResult?.generatedAt || new Date() 
+        setSummary({
+          noteId,
+          summary: null,
+          keyPoints: [],
+          generatedAt: new Date().toISOString()
         });
         toast.custom((t) => (
-          <div
-            className={`${
-              t.visible ? 'animate-enter' : 'animate-leave'
-            } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
-          >
+          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
             <div className="flex-1 w-0 p-4">
               <div className="flex items-start">
                 <div className="flex-shrink-0 pt-0.5">
                   <span className="text-xl">ℹ️</span>
                 </div>
                 <div className="ml-3 flex-1">
-                  <p className="text-sm font-medium text-gray-900">
-                    Content Notice
-                  </p>
+                  <p className="text-sm font-medium text-gray-900">Content Notice</p>
                   <p className="mt-1 text-sm text-gray-500">
                     AI couldn't generate a meaningful summary or key points for this note. The content might be too short or in an unsupported format.
                   </p>
@@ -109,28 +102,27 @@ const AISummarizer: React.FC<AISummarizerProps> = ({ isOpen, onClose, noteId, no
           </div>
         ), { duration: 6000 });
       } else {
-        setSummary(summaryResult);
+        setSummary({
+          noteId,
+          summary: summaryResult.summary || null,
+          keyPoints: summaryResult.keyPoints || [],
+          generatedAt: summaryResult.generatedAt ? new Date(summaryResult.generatedAt).toISOString() : new Date().toISOString()
+        });
         toast.success('AI Summary generated successfully!');
       }
       
       if (response.newlyAwardedBadges && response.newlyAwardedBadges.length > 0) {
-        fetchUserProfile(); // Refresh profile to update badge display on profile page
-        response.newlyAwardedBadges.forEach((badge: NewlyAwardedBadgeInfo) => {
+        fetchUserProfile();
+        response.newlyAwardedBadges.forEach((badge: { name: string; level: string; xpReward: number }) => {
           toast.custom((t) => (
-            <div
-              className={`${
-                t.visible ? 'animate-enter' : 'animate-leave'
-              } max-w-md w-full bg-green-500 text-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
-            >
+            <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-green-500 text-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
               <div className="flex-1 w-0 p-4">
                 <div className="flex items-start">
                   <div className="flex-shrink-0 pt-0.5">
                     <FaAward className="text-xl text-yellow-300" />
                   </div>
                   <div className="ml-3 flex-1">
-                    <p className="text-sm font-semibold">
-                      New Badge Unlocked!
-                    </p>
+                    <p className="text-sm font-semibold">New Badge Unlocked!</p>
                     <p className="mt-1 text-sm">
                       You've earned the "{badge.name}" ({badge.level}) badge! (+{badge.xpReward} XP)
                     </p>
@@ -149,26 +141,19 @@ const AISummarizer: React.FC<AISummarizerProps> = ({ isOpen, onClose, noteId, no
           ), { duration: 5000, icon: '🎉' });
         });
       }
+    } else if (error) {
+      toast.error(error || 'Failed to generate summary. Please try again.');
     } else {
-      // Error is handled by the useNote hook and will be in 'error' state
-      // internalError is set via useEffect listening to hook's error
-      // Show a generic toast error if internalError is set by the hook
-      if (error) { // 'error' is from useNote()
-        toast.error(error || 'Failed to generate summary. Please try again.');
-      } else {
-        toast.error('An unexpected issue occurred. Please try again.');
-      }
+      toast.error('An unexpected issue occurred. Please try again.');
     }
   };
-  
+
   const copyToClipboard = () => {
     if (!summary || !summary.summary) return;
     
     const textToCopy = `
 Summary of "${noteTitle || 'Note'}":
-
 ${summary.summary}
-
 ${summary.keyPoints && summary.keyPoints.length > 0 ? 'Key Points:\n' + summary.keyPoints.map(point => `• ${point}`).join('\n') : ''}
     `.trim();
     
@@ -184,7 +169,8 @@ ${summary.keyPoints && summary.keyPoints.length > 0 ? 'Key Points:\n' + summary.
     setCompletingStudy(true);
     const success = await completeStudy({
       noteId,
-      duration: 10, // Assume 10 minutes of study time when using summarizer
+      duration: 10,
+      pointsEarned: 10 // Add points earned for study completion
     });
     
     if (success) {
@@ -195,9 +181,9 @@ ${summary.keyPoints && summary.keyPoints.length > 0 ? 'Key Points:\n' + summary.
     }
     setCompletingStudy(false);
   };
-  
+
   if (!isOpen) return null;
-  
+
   return (
     <AnimatePresence>
       <motion.div
@@ -208,21 +194,18 @@ ${summary.keyPoints && summary.keyPoints.length > 0 ? 'Key Points:\n' + summary.
         role="dialog"
         aria-modal="true"
         aria-labelledby="summarizer-title"
-        onClick={onClose} // Close on overlay click
+        onClick={onClose}
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
           className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-          onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center bg-gray-50 dark:bg-slate-700">
-            <h2 
-              id="summarizer-title" 
-              className="text-xl font-semibold text-gray-800 dark:text-gray-100 flex items-center"
-            >
+            <h2 id="summarizer-title" className="text-xl font-semibold text-gray-800 dark:text-gray-100 flex items-center">
               <FaRobot className="mr-2 text-primary dark:text-primary-light" /> 
               AI Note Summarizer
             </h2>
@@ -237,7 +220,6 @@ ${summary.keyPoints && summary.keyPoints.length > 0 ? 'Key Points:\n' + summary.
           
           {/* Content */}
           <div className="flex-1 overflow-auto p-4 styled-scrollbar">
-            {/* Show AI quota if user profile is available */}
             {profile?.aiUsage && !summary && !loading && !internalError && (
               <div className="mb-6">
                 <AIQuotaDisplay aiUsage={profile.aiUsage} compact={true} />
@@ -273,7 +255,7 @@ ${summary.keyPoints && summary.keyPoints.length > 0 ? 'Key Points:\n' + summary.
               </div>
             )}
             
-            {internalError && !loading && !summary && ( // Only show this generic error if no summary is loaded yet
+            {internalError && !loading && !summary && (
               <div className="text-center py-8">
                 <div className="bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-lg mb-4 flex flex-col items-center max-w-md mx-auto">
                   <FaTimes className="text-3xl mb-2" />
@@ -289,7 +271,7 @@ ${summary.keyPoints && summary.keyPoints.length > 0 ? 'Key Points:\n' + summary.
               </div>
             )}
             
-            {summary && !loading && ( // Display summary if available
+            {summary && !loading && (
               <div className="space-y-6">
                 <div>
                   <div className="flex justify-between items-center mb-2 pb-2 border-b border-gray-200 dark:border-slate-600">
@@ -337,7 +319,7 @@ ${summary.keyPoints && summary.keyPoints.length > 0 ? 'Key Points:\n' + summary.
                   )}
                 </div>
 
-                {!studyComplete && profile && ( // Only show if user is logged in
+                {!studyComplete && profile && (
                   <div className="pt-4 border-t border-gray-200 dark:border-slate-700">
                     <h4 className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Actions:</h4>
                     <div className="flex flex-col sm:flex-row gap-3">

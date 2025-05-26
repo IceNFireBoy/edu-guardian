@@ -1,7 +1,7 @@
 import React, { FC } from 'react';
 import { motion } from 'framer-motion';
-import { CircularProgressbar, buildStyles, CircularProgressbarStyles } from 'react-circular-progressbar';
-import 'react-circular-progressbar/dist/styles.css';
+import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
+import type { CircularProgressbarStyles } from 'react-circular-progressbar/dist/types';
 import { FaBook, FaClock } from 'react-icons/fa';
 
 // --- Interfaces and Types ---

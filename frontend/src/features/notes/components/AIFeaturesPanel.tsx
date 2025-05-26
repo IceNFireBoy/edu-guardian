@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Note, Flashcard as FlashcardType, ManualFlashcardPayload } from '../noteTypes'; // FlashcardType to avoid conflict
+import { Note } from '../../types/note';
 import AISummarizer from './AISummarizer';
 import FlashcardGenerator from './FlashcardGenerator';
 import { toast } from 'react-hot-toast';
@@ -7,20 +7,7 @@ import { FaRobot, FaLightbulb, FaSpinner } from 'react-icons/fa';
 import { useNote } from '../useNote'; // Import the useNote hook
 
 interface AIFeaturesPanelProps {
-  note: {
-    id: string;
-    title: string;
-    content: string;
-    subject: string;
-    grade: string;
-    semester: string;
-    quarter: string;
-    topic: string;
-    isPublic: boolean;
-    fileUrl: string;
-    createdAt: Date;
-    user: string;
-  };
+  note: Note;
   showManualFlashcard?: boolean;
   className?: string;
 }
@@ -42,7 +29,7 @@ const AIFeaturesPanel: React.FC<AIFeaturesPanelProps> = ({ note, showManualFlash
       return;
     }
 
-    const createdFlashcard = await addManualFlashcard(note.id, manualFlashcardData);
+    const createdFlashcard = await addManualFlashcard(note._id, manualFlashcardData);
 
     if (createdFlashcard) {
       toast.success('Manual flashcard added!');
@@ -74,11 +61,11 @@ const AIFeaturesPanel: React.FC<AIFeaturesPanelProps> = ({ note, showManualFlash
           {showManualFlashcardForm && (
             <form onSubmit={handleManualFlashcardSubmit} className="space-y-3">
               <div>
-                <label htmlFor={`manual-q-${note.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor={`manual-q-${note._id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Question
                 </label>
                 <input
-                  id={`manual-q-${note.id}`}
+                  id={`manual-q-${note._id}`}
                   type="text"
                   value={manualFlashcardData.question}
                   onChange={(e) => setManualFlashcardData(prev => ({ ...prev, question: e.target.value }))}
@@ -87,11 +74,11 @@ const AIFeaturesPanel: React.FC<AIFeaturesPanelProps> = ({ note, showManualFlash
                 />
               </div>
               <div>
-                <label htmlFor={`manual-a-${note.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor={`manual-a-${note._id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Answer
                 </label>
                 <textarea
-                  id={`manual-a-${note.id}`}
+                  id={`manual-a-${note._id}`}
                   value={manualFlashcardData.answer}
                   onChange={(e) => setManualFlashcardData(prev => ({ ...prev, answer: e.target.value }))}
                   required
@@ -138,13 +125,13 @@ const AIFeaturesPanel: React.FC<AIFeaturesPanelProps> = ({ note, showManualFlash
           <AISummarizer 
             isOpen={showSummarizerModal} 
             onClose={() => setShowSummarizerModal(false)} 
-            noteId={note.id} 
+            noteId={note._id} 
             noteTitle={note.title} 
           />
           <FlashcardGenerator 
             isOpen={showFlashcardGeneratorModal} 
             onClose={() => setShowFlashcardGeneratorModal(false)} 
-            noteId={note.id} 
+            noteId={note._id} 
             noteTitle={note.title} 
           />
         </>

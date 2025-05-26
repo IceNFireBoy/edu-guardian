@@ -1,8 +1,8 @@
-import { Note } from '../noteTypes';
+import { Note } from '../../../types/note';
 
 const mockNotesFlashcard: Note[] = [
   {
-    id: '1',
+    _id: '1',
     title: 'Test Note 1',
     content: 'Test content 1',
     fileUrl: 'http://example.com/test1.pdf',
@@ -20,14 +20,12 @@ const mockNotesFlashcard: Note[] = [
     averageRating: 0,
     ratings: [],
     flashcards: [],
-    user: {
-      id: '1',
-      username: 'testuser',
-      email: 'test@example.com'
-    }
+    user: '1',
+    rating: 0,
+    ratingCount: 0
   },
   {
-    id: '2',
+    _id: '2',
     title: 'Test Note 2',
     content: 'Test content 2',
     fileUrl: 'http://example.com/test2.pdf',
@@ -45,10 +43,8 @@ const mockNotesFlashcard: Note[] = [
     averageRating: 0,
     ratings: [],
     flashcards: [],
-    user: {
-      id: '1',
-      username: 'testuser',
-      email: 'test@example.com'
-    }
+    user: '1',
+    rating: 0,
+    ratingCount: 0
   }
 ]; 

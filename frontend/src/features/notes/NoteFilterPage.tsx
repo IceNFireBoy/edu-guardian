@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaBookOpen } from 'react-icons/fa';
 import { useNote } from './useNote';
-import { Note, NoteFilter as NoteFilterType } from './noteTypes';
+import { Note, NoteFilter as NoteFilterType } from '../types/note';
 import FilterForm from './components/FilterForm';
 import NoteCard from './NoteCard';
 import NoteDetailModal from './components/NoteDetailModal';
@@ -110,17 +110,16 @@ const NoteFilterPage: React.FC = () => {
   };
 
   const handleNoteUpdate = (updatedNote: Note) => {
-    setNotes(prevNotes => prevNotes.map(n => n.id === updatedNote.id ? updatedNote : n));
-    if (selectedNote && selectedNote.id === updatedNote.id) {
+    setNotes(prevNotes => prevNotes.map(n => n._id === updatedNote._id ? updatedNote : n));
+    if (selectedNote && selectedNote._id === updatedNote._id) {
       setSelectedNote(updatedNote);
     }
   };
 
   const handleNoteDelete = (deletedNoteId: string) => {
-    setNotes(prevNotes => prevNotes.filter(n => n.id !== deletedNoteId));
-    // If the deleted note was selected, close the modal
-    if (selectedNote && selectedNote.id === deletedNoteId) {
-      handleCloseModal();
+    setNotes(prevNotes => prevNotes.filter(n => n._id !== deletedNoteId));
+    if (selectedNote && selectedNote._id === deletedNoteId) {
+      setSelectedNote(null);
     }
   };
 
@@ -150,7 +149,7 @@ const NoteFilterPage: React.FC = () => {
           <AnimatePresence>
             {notes.map(note => (
               <motion.div
-                key={note.id}
+                key={note._id}
                 layout
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}

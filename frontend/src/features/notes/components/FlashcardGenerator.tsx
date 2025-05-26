@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaLightbulb, FaSpinner, FaTimes, FaArrowRight, FaRedo, FaSave, FaPrint, FaCheck, FaBookmark, FaAward } from 'react-icons/fa';
 import { useNote } from '../useNote';
-import { Flashcard as FlashcardType, NewlyAwardedBadgeInfo } from '../noteTypes'; // Renamed to avoid conflict & Added NewlyAwardedBadgeInfo
+import { Note } from '../../types/note';
 import { toast } from 'react-hot-toast';
 import { useUser } from '../../user/useUser';
 import AIQuotaDisplay from '../../user/components/AIQuotaDisplay';
@@ -10,7 +10,7 @@ import BadgeGrid from '../../user/components/BadgeGrid';
 import { callAuthenticatedApi } from '../../../api/apiClient';
 
 interface IndividualFlashcardProps {
-  flashcard: FlashcardType;
+  flashcard: Note;
   index: number;
   isActive: boolean;
   onFlip?: (index: number) => void;
@@ -119,12 +119,12 @@ interface FlashcardGeneratorProps {
 interface SavedFlashcardSet {
   id: string; // Use noteId as id for simplicity or generate a new one
   title: string;
-  cards: FlashcardType[];
+  cards: Note[];
   createdAt: string;
 }
 
 const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ isOpen, onClose, noteId, noteTitle }) => {
-  const [flashcards, setFlashcards] = useState<FlashcardType[]>([]);
+  const [flashcards, setFlashcards] = useState<Note[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const {
     generateFlashcards: generateFlashcardsFromHook,
@@ -184,7 +184,7 @@ const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ isOpen, onClose
         
         if (response.newlyAwardedBadges && response.newlyAwardedBadges.length > 0) {
           fetchUserProfile();
-          response.newlyAwardedBadges.forEach((badge: NewlyAwardedBadgeInfo) => {
+          response.newlyAwardedBadges.forEach((badge: any) => {
             toast.custom((t) => (
               <div
                 className={`${

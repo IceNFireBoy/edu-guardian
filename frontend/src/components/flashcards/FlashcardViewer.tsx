@@ -17,7 +17,15 @@ const FlashcardViewer: React.FC = () => {
     unshuffleCards,
     isShuffled,
     showGenerationButton,
+    noteId,
   } = useFlashcards();
+
+  const handleGenerateFlashcards = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (noteId) {
+      generateFlashcards(noteId);
+    }
+  };
 
   // Scenario 1: Initial loading state (no cards fetched yet)
   if (isLoading && flashcards.length === 0) {
@@ -34,7 +42,7 @@ const FlashcardViewer: React.FC = () => {
     return (
       <div className="text-center py-10 px-4">
         <p className="text-red-500 dark:text-red-400 mb-4 text-lg">Error: {error}</p>
-        <Button onClick={generateFlashcards} disabled={isLoading} className="btn-red">
+        <Button onClick={handleGenerateFlashcards} disabled={isLoading} className="btn-red">
           {isLoading ? 'Generating...' : 'Try Generating Again'}
         </Button>
       </div>
@@ -46,7 +54,7 @@ const FlashcardViewer: React.FC = () => {
     return (
       <div className="text-center py-10 px-4">
         <p className="text-gray-600 dark:text-gray-400 mb-4 text-lg">No flashcards available for this note yet.</p>
-        <Button onClick={generateFlashcards} disabled={isLoading} className="btn-green">
+        <Button onClick={handleGenerateFlashcards} disabled={isLoading} className="btn-green">
           {isLoading ? <LoadingSpinner size="sm" /> : 'Generate Flashcards'}
         </Button>
       </div>
@@ -60,7 +68,7 @@ const FlashcardViewer: React.FC = () => {
         <p className="text-gray-600 dark:text-gray-400 mb-4 text-lg">
           No flashcards could be generated for this note. The content might not be suitable or long enough.
         </p>
-        <Button onClick={generateFlashcards} disabled={isLoading} className="btn-blue">
+        <Button onClick={handleGenerateFlashcards} disabled={isLoading} className="btn-blue">
           {isLoading ? <LoadingSpinner size="sm" /> : 'Try Generating Again'}
         </Button>
       </div>
@@ -117,7 +125,7 @@ const FlashcardViewer: React.FC = () => {
       {flashcards.length > 0 && (
         <div className="mt-4 flex flex-wrap justify-center gap-3 border-t dark:border-gray-700 pt-6 w-full max-w-lg">
             <Button 
-                onClick={generateFlashcards} 
+                onClick={handleGenerateFlashcards}
                 disabled={isLoading} 
                 className="btn-indigo text-sm"
             >

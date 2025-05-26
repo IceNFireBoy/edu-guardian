@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaFilePdf, FaCalendarAlt, FaBookOpen } from 'react-icons/fa';
-import { Note } from './noteTypes';
+import { Note } from '../types/note';
 import { getSubjectColor } from './NoteCard';
 
 interface EnhancedPDFIconProps {

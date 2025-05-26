@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaClock, FaPause, FaPlay, FaCoffee, FaStopwatch } from 'react-icons/fa';
-import { Note, NoteStudySession as NoteStudySessionType } from '../noteTypes'; // Assuming NoteStudySessionType is in noteTypes
+import { Note } from '../../types/note';
 import AIFeaturesPanel from './AIFeaturesPanel'; // Corrected import path
 // import FinishStudyingButton from '../../progress/FinishStudyingButton'; // Assuming this will be converted/available
 // For now, let's create a placeholder for FinishStudyingButton if it's not critical for this step
@@ -30,22 +30,20 @@ const formatTime = (timeInSeconds: number): string => {
 // };
 
 interface NoteStudySessionProps {
-  note: Note | null; // Can be null if note data isn't loaded yet
-  // noteUrl?: string; // From original, seems unused if PDFViewer is not here
-  // noteTitle?: string; // Available from note object
-  // noteId?: string; // Available from note object
-  // subject?: string; // Available from note object
-  sidebarMode?: boolean; // To render only controls
-  onBreakStateChange?: (breakState: { isBreakActive: boolean; breakTime: number; cancelBreak: () => void }) => void;
-  // onSessionEnd?: (sessionData: NoteStudySessionType) => void; // For saving session data
+  note: Note | null;
+  onClose?: () => void;
+  className?: string;
 }
 
-const NoteStudySession: React.FC<NoteStudySessionProps> = ({ 
+const NoteStudySession: React.FC<NoteStudySessionProps> = ({
   note,
-  sidebarMode = true, // Defaulting to sidebarMode as per original dominant use case
-  onBreakStateChange,
-  // onSessionEnd 
+  onClose,
+  className = ''
 }) => {
+  if (!note) {
+    return null;
+  }
+
   const [sessionTime, setSessionTime] = useState<number>(0); 
   const [breakTime, setBreakTime] = useState<number>(0); 
   const [isBreakActive, setIsBreakActive] = useState<boolean>(false);
@@ -94,16 +92,6 @@ const NoteStudySession: React.FC<NoteStudySessionProps> = ({
     setBreakTime(0);
   }, []);
 
-  useEffect(() => {
-    if (typeof onBreakStateChange === 'function') {
-      onBreakStateChange({
-        isBreakActive,
-        breakTime,
-        cancelBreak,
-      });
-    }
-  }, [isBreakActive, breakTime, onBreakStateChange, cancelBreak]);
-
   const startShortBreak = () => {
     setBreakTime(10 * 60);
     setIsBreakActive(true);
@@ -146,70 +134,65 @@ const NoteStudySession: React.FC<NoteStudySessionProps> = ({
     // }
   };
 
-  if (!sidebarMode) {
-    // Original component had a PDFViewer here if not in sidebarMode.
-    // For this refactor, assuming sidebarMode is the primary use or PDF viewing is handled by parent.
-    console.warn('NoteStudySession is primarily designed for sidebarMode in this refactor.');
-    return null; 
-  }
-
   return (
-    <aside className="flex flex-col gap-4 overflow-y-auto max-h-screen p-4 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 min-w-[280px] max-w-[350px] shadow-lg sticky top-0 z-40">
-      <section>
-        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">SESSION TIMER</h3>
-        <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-slate-800 rounded-md">
-          <FaClock className="text-primary dark:text-primary-light" />
-          <span className="font-mono text-lg text-gray-700 dark:text-gray-200">{formatTime(sessionTime)}</span>
-          <button onClick={togglePause} className="ml-auto p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full" aria-label={isPaused ? 'Resume timer' : 'Pause timer'}>
-            {isPaused ? <FaPlay className="text-green-500" /> : <FaPause className="text-yellow-500" />}
-          </button>
-        </div>
-      </section>
-      
-      <section>
-        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">BREAK TIMER</h3>
-        {isBreakActive ? (
-          <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/30 rounded-md">
-            <FaCoffee className="text-blue-500" />
-            <span className="font-mono text-lg text-blue-700 dark:text-blue-300">{formatTime(breakTime)}</span>
-            <button onClick={cancelBreak} className="ml-auto p-1 bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 text-red-700 dark:text-red-200 rounded-full text-xs">End</button>
-          </div>
-        ) : (
-          <div className="relative">
-            <button onClick={() => setShowBreakOptions((v) => !v)} className="btn btn-outline btn-sm w-full flex items-center justify-center gap-1">
-              <FaStopwatch /> Take a Break
-            </button>
-            {showBreakOptions && (
-              <div className="absolute mt-1 w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl p-3 z-50 flex flex-col gap-2">
-                <button onClick={startShortBreak} className="w-full text-left px-3 py-2 hover:bg-blue-100 dark:hover:bg-slate-700 rounded">Short Break (10 min)</button>
-                <button onClick={startLongBreak} className="w-full text-left px-3 py-2 hover:bg-blue-100 dark:hover:bg-slate-700 rounded">Long Break (30 min)</button>
-                <div className="flex items-center gap-2 pt-1 border-t border-gray-200 dark:border-slate-700 mt-1">
-                  <input type="number" min="1" value={customTime} onChange={e => setCustomTime(e.target.value)} placeholder="Mins" className="w-1/2 input input-sm dark:bg-slate-700" />
-                  <button onClick={startCustomBreak} className="btn btn-primary btn-sm flex-grow" disabled={!customTime || isNaN(parseInt(customTime)) || parseInt(customTime) <= 0}>Set Custom</button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-      
-      <section>
-         <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">ACTIONS</h3>
-        <FinishStudyingButtonPlaceholder
-          noteId={note?.id}
-          onFinish={handleFinishStudying} // Replace with actual onFinish from props if session data is saved
-          initialStartTime={studyStartTime}
-          subject={note?.subject}
-        />
-      </section>
-      
-      {note && (
+    <div className={`note-study-session ${className}`}>
+      <aside className="flex flex-col gap-4 overflow-y-auto max-h-screen p-4 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 min-w-[280px] max-w-[350px] shadow-lg sticky top-0 z-40">
         <section>
-          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2 mt-2">AI TOOLS</h3>
-          <AIFeaturesPanel note={note} />
+          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">SESSION TIMER</h3>
+          <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-slate-800 rounded-md">
+            <FaClock className="text-primary dark:text-primary-light" />
+            <span className="font-mono text-lg text-gray-700 dark:text-gray-200">{formatTime(sessionTime)}</span>
+            <button onClick={togglePause} className="ml-auto p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full" aria-label={isPaused ? 'Resume timer' : 'Pause timer'}>
+              {isPaused ? <FaPlay className="text-green-500" /> : <FaPause className="text-yellow-500" />}
+            </button>
+          </div>
         </section>
-      )}
-    </aside>
+        
+        <section>
+          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">BREAK TIMER</h3>
+          {isBreakActive ? (
+            <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/30 rounded-md">
+              <FaCoffee className="text-blue-500" />
+              <span className="font-mono text-lg text-blue-700 dark:text-blue-300">{formatTime(breakTime)}</span>
+              <button onClick={cancelBreak} className="ml-auto p-1 bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 text-red-700 dark:text-red-200 rounded-full text-xs">End</button>
+            </div>
+          ) : (
+            <div className="relative">
+              <button onClick={() => setShowBreakOptions((v) => !v)} className="btn btn-outline btn-sm w-full flex items-center justify-center gap-1">
+                <FaStopwatch /> Take a Break
+              </button>
+              {showBreakOptions && (
+                <div className="absolute mt-1 w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl p-3 z-50 flex flex-col gap-2">
+                  <button onClick={startShortBreak} className="w-full text-left px-3 py-2 hover:bg-blue-100 dark:hover:bg-slate-700 rounded">Short Break (10 min)</button>
+                  <button onClick={startLongBreak} className="w-full text-left px-3 py-2 hover:bg-blue-100 dark:hover:bg-slate-700 rounded">Long Break (30 min)</button>
+                  <div className="flex items-center gap-2 pt-1 border-t border-gray-200 dark:border-slate-700 mt-1">
+                    <input type="number" min="1" value={customTime} onChange={e => setCustomTime(e.target.value)} placeholder="Mins" className="w-1/2 input input-sm dark:bg-slate-700" />
+                    <button onClick={startCustomBreak} className="btn btn-primary btn-sm flex-grow" disabled={!customTime || isNaN(parseInt(customTime)) || parseInt(customTime) <= 0}>Set Custom</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+        
+        <section>
+           <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">ACTIONS</h3>
+          <FinishStudyingButtonPlaceholder
+            noteId={note?._id}
+            onFinish={handleFinishStudying} // Replace with actual onFinish from props if session data is saved
+            initialStartTime={studyStartTime}
+            subject={note?.subject}
+          />
+        </section>
+        
+        {note && (
+          <section>
+            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2 mt-2">AI TOOLS</h3>
+            <AIFeaturesPanel note={note} />
+          </section>
+        )}
+      </aside>
+    </div>
   );
 };
 

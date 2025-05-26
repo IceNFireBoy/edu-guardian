@@ -19,7 +19,8 @@ describe('AISummarizer', () => {
   const mockInitialSummary = {
     summary: 'Test Summary',
     keyPoints: ['Key Point 1', 'Key Point 2'],
-    noteId: 'note123'
+    noteId: 'note123',
+    generatedAt: new Date().toISOString()
   };
 
   const mockGetAISummary = vi.fn();

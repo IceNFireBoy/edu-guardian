@@ -4,6 +4,7 @@ import FlashcardGenerator from '../FlashcardGenerator';
 import { useNote } from '../../useNote';
 import { useUser } from '../../../user/useUser';
 import { toast } from 'react-hot-toast';
+import { Note } from '../../../../types/note';
 
 // Mock the hooks and dependencies
 vi.mock('../../useNote');

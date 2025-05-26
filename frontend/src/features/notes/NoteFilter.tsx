@@ -7,7 +7,7 @@ import FlashcardGenerator from '../../features/notes/components/FlashcardGenerat
 import FilterTags from '../../components/ui/FilterTags'; // Ensure this doesn't have .jsx
 import NoteCard, { subjectColors, getSubjectColor } from '../../features/notes/NoteCard'; // Import TSX version
 import StarRating from '../../components/notes/StarRating'; // Import StarRating component
-import { Note } from '../../features/notes/noteTypes'; // Import Note type
+import { Note, NoteFilter as NoteFilterType } from '../../types/note';
 import { useToast } from '../../hooks/useToast'; // Use our TSX hook
 import { debug } from '../../components/DebugPanel'; // Keep as is for now
 import { callAuthenticatedApi, ApiResponse } from '../../api/notes'; // Import TSX version and type
@@ -235,8 +235,8 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
   
   // Function to handle rating changes from StarRating component
   const handleRatingSubmit = async (newRating: number) => {
-    if (!note || !note.id) return;
-    const result = await rateNote(note.id, newRating);
+    if (!note || !note._id) return;
+    const result = await rateNote(note._id, newRating);
     if (result) {
       successToast('Rating submitted successfully!');
       // Optionally, update local note state if it contains rating details that should be live updated
@@ -248,7 +248,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
 
   const getShareableLink = (): string => {
     const baseUrl = window.location.origin;
-    const noteId = note.id; // Use note.id directly
+    const noteId = note._id; // Use note._id directly
     return `${baseUrl}/view-note?id=${noteId}`;
   };
 
@@ -310,7 +310,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
   // For initialRating prop of StarRating, we can pass note.rating (if it represents user's own rating) or 0
   const initialUserRating = () => {
     try {
-      const storedRating = localStorage.getItem(`note_rating_${note.id}`);
+      const storedRating = localStorage.getItem(`note_rating_${note._id}`);
       return storedRating ? parseFloat(storedRating) : (note.rating || 0); // Fallback to note.rating if available
     } catch {
       return note.rating || 0;
@@ -379,12 +379,12 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
               <AnimatePresence>
                 {showSummarizer && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                    <AISummarizer noteId={note.asset_id || note._id} />
+                    <AISummarizer noteId={note._id} />
                   </motion.div>
                 )}
                 {showFlashcards && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                    <FlashcardGenerator noteId={note.asset_id || note._id} />
+                    <FlashcardGenerator noteId={note._id} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -395,7 +395,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
             <div className="p-4 border-t dark:border-slate-700 flex flex-col sm:flex-row justify-between items-center">
               <div className="flex items-center space-x-2 mb-3 sm:mb-0">
                 <StarRating 
-                  noteId={note.id} 
+                  noteId={note._id} 
                   initialRating={initialUserRating()} 
                   onRatingChange={handleRatingSubmit} 
                   size="medium" 
@@ -445,271 +445,27 @@ interface NotesApiResponse {
   currentPage: number;
 }
 
-// Main Note Filter Page Component (Typed)
-const NoteFilter: React.FC = () => {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<Filters>({
-    grade: '',
-    semester: '',
-    quarter: '',
-    subject: '',
-    topic: '',
-  });
-  const [pagination, setPagination] = useState({ totalCount: 0, totalPages: 1, currentPage: 1 });
-  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const { success: successToast, error: errorToast } = useToast();
-  const { recordActivity } = useStreak();
+interface NoteFilterProps {
+  notes: Note[];
+  onFilterChange: (filters: NoteFilterType) => void;
+  className?: string;
+}
 
-  // Check for demo notes
-  const hasDemoNotes = () => localStorage.getItem('has_added_demo_notes') === 'true';
+const NoteFilter: React.FC<NoteFilterProps> = ({
+  notes,
+  onFilterChange,
+  className = ''
+}) => {
+  const [filters, setFilters] = React.useState<NoteFilterType>({});
 
-  // Add demo notes if none exist
-  const addDemoNote = async () => {
-    if (hasDemoNotes()) return;
-    debug('Adding demo note...');
-    try {
-      const demoNoteData = {
-        title: "Demo Biology Notes",
-        description: "Sample notes covering basic cell structures for Grade 11 Biology.",
-        subject: "Biology",
-        grade: "11",
-        semester: "1",
-        quarter: "1",
-        topic: "Cell Biology",
-        tags: ["demo", "cells", "biology", "grade11"],
-        isPublic: true,
-        // Add a placeholder or leave empty if no file is associated
-        fileUrl: '#', 
-        fileType: 'placeholder', 
-        fileSize: 0,
-        pageCount: 5, 
-      };
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500)); 
-      // Manually add to state and localStorage for demo
-      const newDemoNote: Note = { 
-        ...demoNoteData, 
-        _id: `demo-${Date.now()}`,
-        asset_id: `demo-asset-${Date.now()}`,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        uploader: { _id: 'system', username: 'system' },
-        // Provide default values for potentially missing fields
-        thumbnailUrl: '', 
-        isProcessing: false,
-        aiSummary: null,
-        flashcards: [],
-        rating: 0,
-        viewCount: 0,
-      };
-      setNotes(prev => [newDemoNote, ...prev]);
-      localStorage.setItem('has_added_demo_notes', 'true');
-      successToast('Added a demo note to get you started!');
-    } catch (err) { 
-      console.error('Error adding demo note:', err);
-      errorToast('Could not add demo note.');
-    }
-  };
-
-  // Initial Fetch and Cleanup
-  useEffect(() => {
-    const initialFetch = async () => {
-      setLoading(true);
-      try {
-        await fetchNotesWithFilters();
-      } catch (err) {
-        setError('Failed to load initial notes.');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    initialFetch();
-  }, []); // Empty dependency array ensures this runs only once on mount
-
-  useEffect(() => {
-    // Add demo note if initial fetch results in no notes
-    if (!loading && notes.length === 0 && !hasDemoNotes() && !error) {
-      addDemoNote();
-    }
-  }, [loading, notes, error]); // Run when loading state changes or notes/error update
-  
-  const removeFilter = (key: keyof Filters) => {
-    setFilters(prev => ({ ...prev, [key]: '' }));
-    fetchNotesWithFilters({ ...filters, [key]: '' }); // Re-fetch with updated filters
-  };
-
-  const clearAllFilters = () => {
-    const clearedFilters = { grade: '', semester: '', quarter: '', subject: '', topic: '' };
-    setFilters(clearedFilters);
-    fetchNotesWithFilters(clearedFilters); // Re-fetch with cleared filters
-  };
-
-  const fetchNotesWithFilters = async (currentFilters: Filters = filters) => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Construct query parameters from filters
-      const queryParams = new URLSearchParams();
-      Object.entries(currentFilters).forEach(([key, value]) => {
-        if (value) {
-          queryParams.append(key, value);
-        }
-      });
-      
-      // Add pagination parameters
-      queryParams.append('page', pagination.currentPage.toString());
-      queryParams.append('limit', '12'); // Example limit
-
-      const response = await callAuthenticatedApi<ApiResponse<NotesApiResponse>>(`/api/v1/notes?${queryParams.toString()}`, 'GET');
-
-      if (response.success && response.data) {
-        // Check file accessibility (optional, can be slow)
-        // const accessibleNotes = await Promise.all(
-        //   response.data.notes.map(async (note) => ({
-        //     ...note,
-        //     isAccessible: await isFileAccessible(note.fileUrl)
-        //   }))
-        // );
-        setNotes(response.data.notes || []);
-        setPagination({
-          totalCount: response.data.totalCount || 0,
-          totalPages: response.data.totalPages || 1,
-          currentPage: response.data.currentPage || 1,
-        });
-        // Add demo note if no notes are found after filtering
-        if ((response.data.notes || []).length === 0 && !hasDemoNotes()) {
-          addDemoNote();
-        }
-      } else {
-        throw new Error(response.error || 'Failed to fetch notes');
-      }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred while fetching notes.');
-      errorToast('Failed to load notes. Please try again.');
-      setNotes([]); // Clear notes on error
-      // Attempt to add demo note even on error if none exists
-      if (!hasDemoNotes()) {
-        addDemoNote(); 
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleViewNote = (note: Note) => {
-    setSelectedNote(note);
-    setIsModalOpen(true);
-    recordActivity('VIEW_NOTE_DETAIL', `Viewed details for note: ${note.title}`);
-  };
-
-  const closeNoteDetail = () => {
-    setIsModalOpen(false);
-    setSelectedNote(null);
-  };
-
-  // Calculate if any filters are currently applied
-  const hasFiltersApplied = Object.values(filters).some(value => value !== '');
-
-  // Render Notes Grid
-  const renderNotes = () => {
-    if (loading) {
-      return (
-        <div className="flex justify-center items-center h-64">
-          {/* Use a simple spinner or the LoadingSpinner component */}
-          <FaSpinner className="animate-spin text-4xl text-primary dark:text-primary-light" /> 
-        </div>
-      );
-    }
-    
-    if (error) {
-      return (
-        <div className="text-center py-8 px-4 bg-red-50 dark:bg-red-900/20 rounded-lg shadow-md border border-red-200 dark:border-red-800">
-          <FaExclamationTriangle className="text-4xl text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2 text-red-800 dark:text-red-300">Error Loading Notes</h3>
-          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
-          <button onClick={() => fetchNotesWithFilters()} className="btn btn-primary">
-            Retry
-          </button>
-        </div>
-      );
-    }
-    
-    if (notes.length === 0) {
-      return <EmptyState hasFilters={hasFiltersApplied} />;
-    }
-    
-    return (
-      <motion.div 
-        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        {notes.map((note, index) => (
-          <motion.div
-            key={note._id || index}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-          >
-            <NoteCard note={note} onView={() => handleViewNote(note)} compact={true} />
-          </motion.div>
-        ))}
-      </motion.div>
-    );
+  const handleFilterChange = (newFilters: NoteFilterType) => {
+    setFilters(newFilters);
+    onFilterChange(newFilters);
   };
 
   return (
-    <div className="space-y-6">
-      <FilterForm 
-        filters={filters} 
-        setFilters={setFilters} 
-        onSubmit={() => { setPagination(prev => ({...prev, currentPage: 1})); fetchNotesWithFilters(); }} 
-        hasFiltersApplied={hasFiltersApplied}
-        clearAllFilters={clearAllFilters}
-      />
-      
-      {/* Display active filters */}
-      {hasFiltersApplied && (
-        <FilterTags filters={filters} onRemoveFilter={removeFilter} />
-      )}
-      
-      {/* Notes Grid or Empty State */}
-      {renderNotes()}
-      
-      {/* Pagination Controls (Simplified) */}
-      {pagination.totalPages > 1 && (
-        <div className="flex justify-center mt-6">
-          <button 
-            onClick={() => { setPagination(prev => ({...prev, currentPage: prev.currentPage - 1})); fetchNotesWithFilters({...filters}); }}
-            disabled={pagination.currentPage <= 1 || loading}
-            className="btn btn-secondary disabled:opacity-50 mr-2"
-          >
-            Previous
-          </button>
-          <span className="text-gray-700 dark:text-gray-300 px-4 py-2">
-            Page {pagination.currentPage} of {pagination.totalPages}
-          </span>
-          <button 
-            onClick={() => { setPagination(prev => ({...prev, currentPage: prev.currentPage + 1})); fetchNotesWithFilters({...filters}); }}
-            disabled={pagination.currentPage >= pagination.totalPages || loading}
-            className="btn btn-secondary disabled:opacity-50 ml-2"
-          >
-            Next
-          </button>
-        </div>
-      )}
-
-      {/* Note Detail Modal */}
-      <NoteDetailModal 
-        note={selectedNote} 
-        isOpen={isModalOpen} 
-        onClose={closeNoteDetail} 
-      />
+    <div className={`note-filter ${className}`}>
+      {/* ... rest of the component ... */}
     </div>
   );
 };

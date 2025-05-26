@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaShare, FaStar, FaRobot, FaLightbulb, FaDownload, FaTrash, FaSpinner } from 'react-icons/fa';
-import { Note, NoteRating } from '../noteTypes';
+import { Note } from '../../../types/note';
 import { useNote } from '../useNote'; // For rateNote and deleteNote
 import { subjectColors, getSubjectColor } from '../NoteCard'; // Assuming NoteCard.tsx is in the same directory
 import AISummarizer from './AISummarizer';

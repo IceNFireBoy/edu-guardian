@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { UserProfile, UserAchievement } from '../features/user/userTypes';
+import { UserProfile } from '../features/user/userTypes';
 import { Trophy, Star, BookOpen, Clock } from 'lucide-react';
-import Achievements, { UserAchievement as AchievementsUserAchievement } from './Achievements'; // Import TSX component and type
+import Achievements from './Achievements';
 import { FaLevelUpAlt, FaFire, FaListAlt, FaSync } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
@@ -24,7 +24,7 @@ interface UserStatsData {
 }
 
 interface UserStatsProps {
-  user: UserProfile;
+  profile: UserProfile;
   className?: string;
 }
 
@@ -51,50 +51,51 @@ const xpToNextLevel = (xp: number): number => {
 
 // --- UserStats Component ---
 
-const UserStats: React.FC<UserStatsProps> = ({ user, className = '' }) => {
+const UserStats: React.FC<UserStatsProps> = ({ profile, className }) => {
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow p-6 ${className}`}>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="text-center">
-          <div className="flex items-center justify-center mb-2">
-            <Trophy className="w-6 h-6 text-yellow-500" />
+    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ${className}`}>
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+        <div className="flex items-center">
+          <Trophy className="w-6 h-6 text-yellow-500 mr-2" />
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Level</h3>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{profile.level}</p>
           </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{user.level}</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Level</div>
-        </div>
-        
-        <div className="text-center">
-          <div className="flex items-center justify-center mb-2">
-            <Star className="w-6 h-6 text-blue-500" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{user.xp}</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">XP</div>
-        </div>
-        
-        <div className="text-center">
-          <div className="flex items-center justify-center mb-2">
-            <BookOpen className="w-6 h-6 text-green-500" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{user.streak.current}</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Day Streak</div>
-        </div>
-        
-        <div className="text-center">
-          <div className="flex items-center justify-center mb-2">
-            <Clock className="w-6 h-6 text-purple-500" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{user.badges.length}</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Badges</div>
         </div>
       </div>
-      
-      <div className="mt-6">
-        <Link 
-          to="/profile/achievements" 
-          className="text-primary hover:text-primary-dark text-sm font-medium"
-        >
-          View all achievements →
-        </Link>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+        <div className="flex items-center">
+          <Star className="w-6 h-6 text-blue-500 mr-2" />
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">XP</h3>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{profile.xp}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+        <div className="flex items-center">
+          <BookOpen className="w-6 h-6 text-green-500 mr-2" />
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Notes</h3>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{profile.notes?.length || 0}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+        <div className="flex items-center">
+          <Clock className="w-6 h-6 text-purple-500 mr-2" />
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Streak</h3>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{profile.streak?.current || 0} days</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="col-span-full">
+        <Achievements achievements={profile.achievements || []} />
       </div>
     </div>
   );

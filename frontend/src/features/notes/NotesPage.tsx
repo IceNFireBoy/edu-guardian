@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { useNote } from './useNote';
-import { Note, NoteFilter } from './noteTypes';
+import { Note } from '../types/note';
 import PDFViewer from './PDFViewer';
 import NoteDetails from './NoteDetails';
 import NoteCard from './NoteCard';
@@ -77,14 +77,14 @@ const NotesPage: React.FC = () => {
   };
 
   const handleRatingChange = async (noteId: string, rating: number) => {
-    setNotes(prevNotes => prevNotes.map(note => note.id === noteId ? { ...note, averageRating: rating } : note));
+    setNotes(prevNotes => prevNotes.map(note => note._id === noteId ? { ...note, averageRating: rating } : note));
     if (user) await fetchUserData();
   };
 
   const handleFlashcardSubmit = async (updatedNote: Note) => {
     setNotes(prevNotes =>
       prevNotes.map(note =>
-        note.id === updatedNote.id ? updatedNote : note
+        note._id === updatedNote._id ? updatedNote : note
       )
     );
     setSelectedNote(updatedNote);
@@ -111,7 +111,7 @@ const NotesPage: React.FC = () => {
         <PDFViewer
           fileUrl={selectedNote.fileUrl}
           onLoad={async () => {
-            await fetch(`/api/v1/notes/${selectedNote.id}/view`, { method: 'POST' });
+            await fetch(`/api/v1/notes/${selectedNote._id}/view`, { method: 'POST' });
             if (user) {
               await fetchUserData();
             }
@@ -140,7 +140,7 @@ const NotesPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <NoteDetails
-              noteId={selectedNote.id}
+              noteId={selectedNote._id}
               onClose={handleBackToList}
             />
             {!hasPDF && (
@@ -157,7 +157,7 @@ const NotesPage: React.FC = () => {
             </button>
           </div>
           <div>
-            {user && <UserStats user={mapUserToUserStatsData(user)} />}
+            {user && <UserStats userData={user} />}
           </div>
         </div>
       </div>
@@ -221,7 +221,7 @@ const NotesPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {notes.map(note => (
                 <NoteCard
-                  key={note.id}
+                  key={note._id}
                   note={note}
                   onView={() => handleNoteClick(note)}
                 />

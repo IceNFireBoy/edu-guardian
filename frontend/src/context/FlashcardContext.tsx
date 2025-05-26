@@ -19,9 +19,10 @@ interface CardResponse {
 
 interface FlashcardState {
   flashcards: Flashcard[];
-  currentCardIndex: number;
+  currentIndex: number;
   isLoading: boolean;
   error: string | null;
+  showGenerationButton: boolean;
   cardResponses: { [cardId: string]: CardResponse };
   isShuffled: boolean;
   originalOrder: Flashcard[];
@@ -62,27 +63,29 @@ type Action =
   | { type: ActionType.SHOW_GENERATION_BUTTON };
 
 // Context Value Type
-interface FlashcardContextValue extends FlashcardState {
-  generateFlashcards: (noteId: string) => Promise<void>;
-  goToNextCard: () => void;
-  goToPreviousCard: () => void;
+interface FlashcardContextValue {
+  flashcards: Flashcard[];
+  currentIndex: number;
+  isLoading: boolean;
+  error: string | null;
   showGenerationButton: boolean;
-  setShowGenerationButton: (show: boolean) => void;
-  recordResponse: (status: 'correct' | 'incorrect') => void;
+  generateFlashcards: (noteId: string) => Promise<void>;
+  saveFlashcards: () => Promise<void>;
+  nextCard: () => void;
+  previousCard: () => void;
   shuffleCards: () => void;
-  unshuffleCards: () => void;
-  resetFlashcardState: () => void;
-  setCurrentCardIndex: (index: number) => void;
-  hideGenerationButton: () => void;
+  isShuffled: boolean;
+  toggleShowGenerationButton: () => void;
 }
 
 // --- Initial State & Reducer ---
 
 const initialState: FlashcardState = {
   flashcards: [],
-  currentCardIndex: 0,
+  currentIndex: 0,
   isLoading: false,
   error: null,
+  showGenerationButton: true,
   cardResponses: {},
   isShuffled: false,
   originalOrder: [],
@@ -100,7 +103,7 @@ function flashcardReducer(state: FlashcardState, action: Action): FlashcardState
         isLoading: false,
         flashcards: action.payload,
         originalOrder: action.payload,
-        currentCardIndex: 0,
+        currentIndex: 0,
         cardResponses: {}, 
         isShuffled: false,
         showGenerationButton: action.payload.length === 0, 
@@ -111,7 +114,7 @@ function flashcardReducer(state: FlashcardState, action: Action): FlashcardState
             isLoading: false,
             flashcards: [],
             originalOrder: [],
-            currentCardIndex: 0,
+            currentIndex: 0,
             cardResponses: {},
             isShuffled: false,
             showGenerationButton: true, 
@@ -121,9 +124,9 @@ function flashcardReducer(state: FlashcardState, action: Action): FlashcardState
     case ActionType.SET_CURRENT_CARD_INDEX:
       // Ensure index stays within bounds
       const newIndex = Math.max(0, Math.min(action.payload, state.flashcards.length - 1));
-      return { ...state, currentCardIndex: newIndex };
+      return { ...state, currentIndex: newIndex };
     case ActionType.RECORD_RESPONSE:
-      const currentCard = state.flashcards[state.currentCardIndex];
+      const currentCard = state.flashcards[state.currentIndex];
       if (!currentCard) return state; // Should not happen if index is valid
       const cardId = currentCard._id; 
       return {
@@ -142,14 +145,14 @@ function flashcardReducer(state: FlashcardState, action: Action): FlashcardState
       return {
         ...state,
         flashcards: shuffled,
-        currentCardIndex: 0,
+        currentIndex: 0,
         isShuffled: true,
       };
     case ActionType.UNSHUFFLE_CARDS:
       return {
         ...state,
         flashcards: state.originalOrder,
-        currentCardIndex: 0,
+        currentIndex: 0,
         isShuffled: false,
       };
     case ActionType.HIDE_GENERATION_BUTTON:
@@ -214,16 +217,16 @@ export const FlashcardProvider: React.FC<FlashcardProviderProps> = ({ children, 
     }
   }, [noteId]);
 
-  const goToNextCard = () => {
+  const nextCard = () => {
     if (state.flashcards.length === 0) return;
-    dispatch({ type: ActionType.SET_CURRENT_CARD_INDEX, payload: (state.currentCardIndex + 1) % state.flashcards.length });
+    dispatch({ type: ActionType.SET_CURRENT_CARD_INDEX, payload: (state.currentIndex + 1) % state.flashcards.length });
   };
 
-  const goToPreviousCard = () => {
+  const previousCard = () => {
     if (state.flashcards.length === 0) return;
     dispatch({ 
         type: ActionType.SET_CURRENT_CARD_INDEX, 
-        payload: (state.currentCardIndex - 1 + state.flashcards.length) % state.flashcards.length 
+        payload: (state.currentIndex - 1 + state.flashcards.length) % state.flashcards.length 
     });
   };
 
@@ -255,17 +258,18 @@ export const FlashcardProvider: React.FC<FlashcardProviderProps> = ({ children, 
   }, []);
 
   const value: FlashcardContextValue = {
-    ...state,
+    flashcards: state.flashcards,
+    currentIndex: state.currentIndex,
+    isLoading: state.isLoading,
+    error: state.error,
+    showGenerationButton: state.showGenerationButton,
     generateFlashcards,
-    goToNextCard,
-    goToPreviousCard,
-    recordResponse,
+    saveFlashcards: () => Promise.resolve(),
+    nextCard,
+    previousCard,
     shuffleCards,
-    unshuffleCards,
-    resetFlashcardState,
-    setCurrentCardIndex: (index: number) => dispatch({ type: ActionType.SET_CURRENT_CARD_INDEX, payload: index}),
-    hideGenerationButton: () => dispatch({type: ActionType.HIDE_GENERATION_BUTTON}),
-    showGenerationButton: () => dispatch({type: ActionType.SHOW_GENERATION_BUTTON}),
+    isShuffled: state.isShuffled,
+    toggleShowGenerationButton: () => dispatch({ type: ActionType.SHOW_GENERATION_BUTTON }),
   };
 
   return <FlashcardContext.Provider value={value}>{children}</FlashcardContext.Provider>;

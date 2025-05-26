@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNote } from './useNote';
-import { Note, NoteUploadData } from './noteTypes';
+import { Note } from '../types/note';
 
 interface UploadNoteProps {
   onUploadSuccess?: (note: Note) => void;
