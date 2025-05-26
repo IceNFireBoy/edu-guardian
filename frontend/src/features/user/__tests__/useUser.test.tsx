@@ -1,5 +1,5 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { http, response } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { server } from '../../../mocks/server'; // MSW server
 import { useUser } from '../useUser';
 import { UserProfile, CompleteStudyPayload } from '../userTypes';
@@ -73,7 +73,7 @@ describe('useUser Hook', () => {
 
     server.use(
       http.put('/api/v1/auth/profile', async ({ request }) => {
-        const body = await request.json() as Partial<UserProfile>;
+        const body = await request.json();
         expect(body).toEqual(updates); // Verify payload
         return HttpResponse.json({ success: true, data: { ...mockProfile, ...body } });
       })

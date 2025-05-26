@@ -2,9 +2,10 @@ import User, { IUser, IUserActivity, IUserBadge } from '../models/User';
 import Note, { INote } from '../models/Note';
 import { QuotaExceededError, NotFoundError, BadRequestError } from '../utils/customErrors';
 import { AI_USAGE_LIMITS, QUOTA_RESET_HOURS, AI_USER_TIERS } from '../config/aiConfig';
-import mongoose from 'mongoose';
+import mongoose, { SortOrder } from 'mongoose';
 import { IBadge } from '../models/Badge';
 import ErrorResponse from '../utils/errorResponse';
+import bcrypt from 'bcryptjs';
 
 interface IBadgeEarned {
     badge: IBadge;
@@ -61,20 +62,76 @@ interface UserNotesQueryOptions {
     // Add other note filters if necessary e.g. by subject, grade for user's notes
 }
 
-export class UserService {
-    public async getUsers(): Promise<IUser[]> {
-        // TODO: Implement pagination and filtering if necessary for admin views
-        return User.find().select('-password').lean();
+export default class UserService {
+    public static async getUsers(): Promise<IUser[]> {
+        return await User.find();
     }
 
-    public async getUserById(userId: string): Promise<IUser | null> {
-        // Ensure to fetch the full user document for updates, not lean() if we need to save.
-        // For methods that modify and save, we should fetch the Mongoose document.
-        // For read-only, .lean() is fine.
-        return User.findById(userId).select('-password').lean(); 
+    public static async getUserById(id: string): Promise<IUser | null> {
+        return await User.findById(id);
     }
 
-    private async findUserForUpdate(userId: string): Promise<IUser> {
+    public static async getUserByUsername(username: string): Promise<IUser | null> {
+        return await User.findOne({ username });
+    }
+
+    public static async createUser(userData: Partial<IUser>): Promise<IUser> {
+        return await User.create(userData);
+    }
+
+    public static async updateUser(id: string, userData: Partial<IUser>): Promise<IUser | null> {
+        return await User.findByIdAndUpdate(id, userData, {
+            new: true,
+            runValidators: true
+        });
+    }
+
+    public static async deleteUser(id: string): Promise<IUser | null> {
+        return await User.findByIdAndDelete(id);
+    }
+
+    public static async updateUserPassword(id: string, currentPassword: string, newPassword: string): Promise<void> {
+        const user = await User.findById(id).select('+password');
+        if (!user) {
+            throw new ErrorResponse('User not found', 404);
+        }
+
+        if (!user.password) {
+            throw new ErrorResponse('User password not set', 400);
+        }
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            throw new ErrorResponse('Current password is incorrect', 401);
+        }
+
+        user.password = newPassword;
+        await user.save();
+    }
+
+    public static async getUserBadges(userId: string): Promise<IUserBadge[]> {
+        const user = await User.findById(userId).populate('badges.badge');
+        if (!user) {
+            throw new ErrorResponse('User not found', 404);
+        }
+        return user.badges;
+    }
+
+    public static async getLeaderboard(options: LeaderboardQueryOptions): Promise<IUser[]> {
+        const { timeframe, category, limit = 10 } = options as any;
+        const sortOptions: Record<string, SortOrder> = { xp: -1 };
+
+        let query: any = {};
+        if (category) {
+            query = { 'badges.badge.category': category };
+        }
+
+        return await User.find(query)
+            .sort(sortOptions)
+            .limit(limit);
+    }
+
+    private static async findUserForUpdate(userId: string): Promise<IUser> {
         const user = await User.findById(userId);
         if (!user) {
             throw new NotFoundError('User not found');
@@ -82,38 +139,7 @@ export class UserService {
         return user;
     }
 
-    public async createUser(userData: Partial<IUser>): Promise<IUser> {
-        // Password hashing is handled by pre-save hook in User model
-        const user = new User(userData);
-        await user.save();
-        // Return user without password
-        const userObject = user.toObject();
-        delete userObject.password;
-        return userObject as IUser;
-    }
-
-    public async updateUser(userId: string, updateData: Partial<IUser>): Promise<IUser | null> {
-        // Ensure password is not updated directly through this admin route
-        // If password reset is needed for admin, create a separate secure method
-        if (updateData.password) {
-            delete updateData.password;
-        }
-        const user = await User.findByIdAndUpdate(userId, updateData, { new: true, runValidators: true }).select('-password').lean();
-        return user;
-    }
-
-    public async deleteUser(userId: string): Promise<boolean> {
-        const user = await User.findById(userId);
-        if (!user) {
-            return false;
-        }
-        // Consider what to do with user's content (notes, etc.) - soft delete or reassign?
-        // For now, hard delete user document.
-        await user.deleteOne(); 
-        return true;
-    }
-
-    public async getUserPublicProfile(username: string): Promise<Partial<IUser> | null> {
+    public static async getUserPublicProfile(username: string): Promise<Partial<IUser> | null> {
         // Fetch user by username, select only public fields
         const user = await User.findOne({ username })
             .select('username name profileImage biography badges activity level xp currentStreak longestStreak createdAt subjects') // Customize fields
@@ -132,23 +158,6 @@ export class UserService {
         return user;
     }
     
-    public async getUserBadges(userId: string): Promise<IBadgeEarned[]> {
-        const user = await User.findById(userId)
-            .select('badges')
-            .populate({
-                path: 'badges.badge',
-                select: 'name description icon rarity level xpReward' // Ensure Badge model fields
-            })
-            .lean();
-        if (!user || !user.badges) return [];
-        // Map badges to IBadgeEarned
-        return user.badges.map((b: IUserBadge & { badge: IBadge }) => ({
-            badge: b.badge,
-            earnedAt: b.earnedAt,
-            criteriaMet: b.criteriaMet
-        }));
-    }
-    
     /**
      * Get user activity log with pagination and filtering
      * 
@@ -157,7 +166,7 @@ export class UserService {
      * @returns Paginated activity log with count and page information
      * @throws NotFoundError if the user doesn't exist
      */
-    public async getUserActivityLog(userId: string, queryOptions: UserActivityQueryOptions): Promise<PaginatedActivityResult> {
+    public static async getUserActivityLog(userId: string, queryOptions: UserActivityQueryOptions): Promise<PaginatedActivityResult> {
         // Validate userId format
         if (!mongoose.Types.ObjectId.isValid(userId)) {
             throw new ErrorResponse('Invalid user ID format', 400);
@@ -225,7 +234,7 @@ export class UserService {
      * @returns Paginated notes with count and page information
      * @throws NotFoundError if the user doesn't exist
      */
-    public async getUserUploadedNotes(userId: string, queryOptions: UserNotesQueryOptions): Promise<PaginatedNotesResult> {
+    public static async getUserUploadedNotes(userId: string, queryOptions: UserNotesQueryOptions): Promise<PaginatedNotesResult> {
         // Validate userId format
         if (!mongoose.Types.ObjectId.isValid(userId)) {
             throw new ErrorResponse('Invalid user ID format', 400);
@@ -245,7 +254,7 @@ export class UserService {
         // Determine sort options
         const sortField = queryOptions.sortBy ?? 'createdAt';
         const sortOrder = queryOptions.sortOrder === 'asc' ? 1 : -1;
-        const sortOptions = { [sortField]: sortOrder };
+        const sortOptions: Record<string, SortOrder> = { [sortField]: sortOrder };
 
         // Query for notes
         const notes = await Note.find({ user: userId })
@@ -274,7 +283,7 @@ export class UserService {
      * @returns Paginated notes with count and page information
      * @throws NotFoundError if the user doesn't exist
      */
-    public async getUserFavoriteNotes(userId: string, queryOptions: UserNotesQueryOptions): Promise<PaginatedNotesResult> {
+    public static async getUserFavoriteNotes(userId: string, queryOptions: UserNotesQueryOptions): Promise<PaginatedNotesResult> {
         // Validate userId format
         if (!mongoose.Types.ObjectId.isValid(userId)) {
             throw new ErrorResponse('Invalid user ID format', 400);
@@ -304,7 +313,7 @@ export class UserService {
         // Determine sort options
         const sortField = queryOptions.sortBy ?? 'createdAt';
         const sortOrder = queryOptions.sortOrder === 'asc' ? 1 : -1;
-        const sortOptions = { [sortField]: sortOrder };
+        const sortOptions: Record<string, SortOrder> = { [sortField]: sortOrder };
 
         // Query for notes, ensuring only public or user-owned notes are returned
         // This addresses potential privacy concerns if a note was made private after being favorited
@@ -338,100 +347,6 @@ export class UserService {
         };
     }
 
-    /**
-     * Add a note to a user's favorites list
-     * 
-     * @param userId - The ID of the user adding the note to favorites
-     * @param noteId - The ID of the note to add to favorites
-     * @throws ErrorResponse if the note is not found or not accessible
-     */
-    public async addNoteToFavorites(userId: string, noteId: string): Promise<void> {
-        // Validate that noteId exists, is a valid ObjectId, and the note is public or owned by the user
-        if (!mongoose.Types.ObjectId.isValid(noteId)) {
-            throw new ErrorResponse('Invalid note ID format', 400);
-        }
-        
-        const note = await Note.findById(noteId);
-        if (!note) {
-            throw new ErrorResponse('Note not found', 404);
-        }
-        
-        // Check if the note is public or owned by the user
-        if (!note.isPublic && note.user.toString() !== userId) {
-            throw new ErrorResponse('Cannot add private note of another user to favorites', 403);
-        }
-        
-        // Use findUserForUpdate to ensure user exists
-        const user = await this.findUserForUpdate(userId);
-        
-        // Add to favorites if not already there
-        if (!user.favoriteNotes.some(id => id.toString() === noteId)) {
-            user.favoriteNotes.push(new mongoose.Types.ObjectId(noteId));
-            await user.save();
-        }
-    }
-
-    /**
-     * Remove a note from a user's favorites list
-     * 
-     * @param userId - The ID of the user removing the note from favorites
-     * @param noteId - The ID of the note to remove from favorites
-     * @throws ErrorResponse if the user or note ID is invalid
-     */
-    public async removeNoteFromFavorites(userId: string, noteId: string): Promise<void> {
-        // Validate noteId format
-        if (!mongoose.Types.ObjectId.isValid(noteId)) {
-            throw new ErrorResponse('Invalid note ID format', 400);
-        }
-        
-        // Use findUserForUpdate to ensure user exists
-        const user = await this.findUserForUpdate(userId);
-        
-        // Remove from favorites if present
-        const noteIndex = user.favoriteNotes.findIndex(id => id.toString() === noteId);
-        if (noteIndex !== -1) {
-            user.favoriteNotes.splice(noteIndex, 1);
-            await user.save();
-        }
-        // No error if note wasn't in favorites - operation is idempotent
-    }
-    
-    /**
-     * Get a leaderboard of users sorted by achievements
-     * 
-     * @param options - Leaderboard query options (limit, sortBy, timeframe)
-     * @returns An object containing the leaderboard users and total count
-     */
-    public async getLeaderboard(options: LeaderboardQueryOptions): Promise<LeaderboardResult> {
-        // Validate and sanitize options
-        const limit = options.limit && options.limit > 0 ? Math.min(options.limit, 100) : 10; // Cap max at 100
-        const sortBy = options.sortBy || 'xp';
-        
-        // Create sort criteria object for MongoDB
-        const sortCriteria: { [key: string]: 1 | -1 } = { [sortBy]: -1 }; // Always descending for leaderboard
-        
-        // For tie-breaking and consistent ordering, add a secondary sort by _id
-        sortCriteria._id = 1;
-        
-        // Build query - only include users with public profiles
-        const query = { emailVerified: true }; // Only include verified users
-        
-        // Count total users that match the query
-        const total = await User.countDocuments(query);
-        
-        // Select fields relevant for leaderboard display
-        const users = await User.find(query)
-            .sort(sortCriteria)
-            .limit(limit)
-            .select('username name profileImage xp level streak.current streak.max createdAt')
-            .lean();
-            
-        return {
-            users,
-            total
-        };
-    }
-
     // New AI Quota and Streak Methods
 
     /**
@@ -439,7 +354,7 @@ export class UserService {
      * @param user - The user object to check
      * @returns - True if quota should be reset, false otherwise
      */
-    private isQuotaResetDue(user: IUser): boolean {
+    private static isQuotaResetDue(user: IUser): boolean {
         const now = new Date();
         const lastReset = user.aiUsage.lastReset || new Date(0);
         const hoursSinceLastReset = (now.getTime() - lastReset.getTime()) / (1000 * 60 * 60);
@@ -450,7 +365,7 @@ export class UserService {
      * Reset a user's AI quota
      * @param user - The user object to reset quota for
      */
-    private resetUserQuota(user: IUser): void {
+    private static resetUserQuota(user: IUser): void {
         user.aiUsage.summaryUsed = 0;
         user.aiUsage.flashcardUsed = 0;
         user.aiUsage.lastReset = new Date();
@@ -462,7 +377,7 @@ export class UserService {
      * @param type - The type of AI feature to check (summary or flashcard)
      * @throws QuotaExceededError if the user has exceeded their quota
      */
-    public async checkUserQuota(userId: string, type: 'summary' | 'flashcard'): Promise<void> {
+    public static async checkUserQuota(userId: string, type: 'summary' | 'flashcard'): Promise<void> {
         const user = await this.findUserForUpdate(userId);
 
         // Admin/Premium bypass
@@ -491,7 +406,7 @@ export class UserService {
      * @param userId - The ID of the user to increment usage for
      * @param type - The type of AI feature to increment (summary or flashcard)
      */
-    public async incrementAIUsage(userId: string, type: 'summary' | 'flashcard'): Promise<void> {
+    public static async incrementAIUsage(userId: string, type: 'summary' | 'flashcard'): Promise<void> {
         const user = await this.findUserForUpdate(userId);
 
         // Check if quota reset is due and reset if necessary
@@ -518,7 +433,7 @@ export class UserService {
      * @param userId - The ID of the user to update streak for
      * @returns The updated user object
      */
-    public async updateUserAIStreak(userId: string): Promise<IUser> {
+    public static async updateUserAIStreak(userId: string): Promise<IUser> {
         const user = await this.findUserForUpdate(userId);
         const today = new Date();
         
@@ -557,6 +472,33 @@ export class UserService {
         await user.save();
         return user.toObject({ virtuals: true }) as IUser;
     }
-}
 
-export default UserService; 
+    public static async addNoteToFavorites(userId: string, noteId: string): Promise<IUser> {
+        const user = await User.findById(userId);
+        if (!user) {
+            throw new ErrorResponse('User not found', 404);
+        }
+        // Ensure favoriteNotes exists
+        if (!Array.isArray((user as any).favoriteNotes)) {
+            (user as any).favoriteNotes = [];
+        }
+        // Add noteId if not already present
+        if (!(user as any).favoriteNotes.some((id: any) => id.toString() === noteId)) {
+            (user as any).favoriteNotes.push(noteId);
+            await user.save();
+        }
+        return user;
+    }
+
+    public static async removeNoteFromFavorites(userId: string, noteId: string): Promise<IUser> {
+        const user = await User.findById(userId);
+        if (!user) {
+            throw new ErrorResponse('User not found', 404);
+        }
+        if (Array.isArray((user as any).favoriteNotes)) {
+            (user as any).favoriteNotes = (user as any).favoriteNotes.filter((id: any) => id.toString() !== noteId);
+            await user.save();
+        }
+        return user;
+    }
+} 

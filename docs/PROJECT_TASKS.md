@@ -471,4 +471,6 @@ Finalize advanced features by refining AI-powered tools, enhancing UI/UX consist
     - Test responsiveness and UI of new filter controls in `BadgeGrid.tsx`.
 
 ---
-**This document should be kept up to date as TODOs are resolved or new placeholders are added during the refactoring process.** 
+**This document should be kept up to date as TODOs are resolved or new placeholders are added during the refactoring process.**
+
+- [x] Refactor all NoteService static method calls to use instance methods throughout the backend (controllers, services, and tests). This improves consistency and maintainability. All usages now rely on the noteService instance. 

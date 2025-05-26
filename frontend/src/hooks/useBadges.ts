@@ -3,7 +3,7 @@ import { useAuth } from './useAuth'; // Assuming useAuth hook provides necessary
 import { callAuthenticatedApi } from '../api/notes';
 import type { ApiResponse } from '../api/notes';
 import { toast } from 'react-hot-toast';
-import Badge from '../components/BadgeDetail'; // Import the Badge type
+import type { Badge, BadgeRarity, BadgeCategory } from '../components/BadgeDetail';
 import { debug } from '../components/DebugPanel'; // Assuming debug is available
 
 // --- Types for API Responses ---

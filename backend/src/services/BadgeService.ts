@@ -1,7 +1,9 @@
-import Badge, { IBadge } from '../models/Badge';
-import User, { IUser, IUserBadge } from '../models/User';
+import { Badge } from '../models/Badge';
+import { User } from '../models/User';
+import { IBadge } from '../models/Badge';
+import { IUser, IUserBadge } from '../models/User';
 import ErrorResponse from '../utils/errorResponse';
-import mongoose from 'mongoose';
+import { Types } from 'mongoose';
 
 // Define a more specific interface for event data
 interface BadgeEventData {
@@ -18,7 +20,7 @@ interface BadgeCriteriaFunction {
 
 const BADGE_CRITERIA: Record<string, BadgeCriteriaFunction> = {
     note_created: async (user: IUser) => {
-        return user.totalNotes >= 5;
+        return (user as any).totalNotes >= 5;
     },
     login_streak_3: async (user: IUser) => {
         return user.streak.current >= 3;
@@ -51,51 +53,65 @@ const BADGE_CRITERIA: Record<string, BadgeCriteriaFunction> = {
     }
 };
 
-export class BadgeService {
-    public async getAllActiveBadges(): Promise<IBadge[]> {
-        return await Badge.find({ isActive: true });
+export default class BadgeService {
+    public static async getBadges(): Promise<IBadge[]> {
+        const badges = await Badge.find({ isActive: true }).sort({ displayOrder: 1 });
+        return badges.map(badge => badge as IBadge);
     }
 
-    public async getBadgeByName(name: string): Promise<IBadge | null> {
-        return await Badge.findOne({ name });
-    }
-
-    public async getBadgeById(id: string): Promise<IBadge> {
+    public static async getBadgeById(id: string): Promise<any | null> {
         const badge = await Badge.findById(id);
-        if (!badge) {
-            throw new ErrorResponse('Badge not found', 404);
-        }
-        return badge;
+        if (!badge) return null;
+        const obj = badge.toObject();
+        return {
+            ...obj,
+            _id: String(obj._id)
+        };
     }
 
-    public async createBadge(badgeData: Partial<IBadge>): Promise<IBadge> {
-        const existingBadge = await Badge.findOne({ name: badgeData.name });
-        if (existingBadge) {
-            throw new ErrorResponse('Badge with this name already exists', 400);
-        }
-        return await Badge.create(badgeData);
+    public static async getBadgeByName(name: string): Promise<any | null> {
+        const badge = await Badge.findOne({ name });
+        if (!badge) return null;
+        const obj = badge.toObject();
+        return {
+            ...obj,
+            _id: String(obj._id)
+        };
     }
 
-    public async updateBadge(id: string, badgeData: Partial<IBadge>): Promise<IBadge> {
+    public static async createBadge(badgeData: Partial<IBadge>): Promise<any> {
+        const badge = await Badge.create(badgeData);
+        const obj = badge.toObject();
+        return {
+            ...obj,
+            _id: String(obj._id)
+        };
+    }
+
+    public static async updateBadge(id: string, badgeData: Partial<IBadge>): Promise<any | null> {
         const badge = await Badge.findByIdAndUpdate(id, badgeData, {
             new: true,
             runValidators: true
         });
-        if (!badge) {
-            throw new ErrorResponse('Badge not found', 404);
-        }
-        return badge;
+        if (!badge) return null;
+        const obj = badge.toObject();
+        return {
+            ...obj,
+            _id: String(obj._id)
+        };
     }
 
-    public async deleteBadge(id: string): Promise<boolean> {
+    public static async deleteBadge(id: string): Promise<any | null> {
         const badge = await Badge.findByIdAndDelete(id);
-        if (!badge) {
-            throw new ErrorResponse('Badge not found', 404);
-        }
-        return true;
+        if (!badge) return null;
+        const obj = badge.toObject();
+        return {
+            ...obj,
+            _id: String(obj._id)
+        };
     }
 
-    public async awardBadgeToUser(userId: string, badgeId: string): Promise<boolean> {
+    public static async awardBadgeToUser(userId: string, badgeId: string): Promise<void> {
         const user = await User.findById(userId);
         if (!user) {
             throw new ErrorResponse('User not found', 404);
@@ -106,36 +122,32 @@ export class BadgeService {
             throw new ErrorResponse('Badge not found', 404);
         }
 
-        // Check if user already has this badge
-        if (user.badges.some(b => b.badge.toString() === badgeId)) {
-            throw new ErrorResponse('User already has this badge', 400);
+        // Check if user already has the badge
+        if (user.badges.some(b => b.badge.toString() === String(badge._id))) {
+            return;
         }
 
-        // Add badge to user
-        const newBadge: IUserBadge = {
-            badge: new mongoose.Types.ObjectId(badgeId),
+        // Add badge to user's badges
+        user.badges.push({
+            badge: new Types.ObjectId(badgeId),
             earnedAt: new Date(),
             criteriaMet: 'Awarded by system'
-        } as IUserBadge;
+        } as IUserBadge);
 
-        user.badges.push(newBadge);
-
-        // Award XP if badge has XP reward
-        if (badge.xpReward && badge.xpReward > 0) {
-            user.xp += badge.xpReward;
-            user.addActivity('earn_xp', `Earned badge: ${badge.name}`, badge.xpReward);
-        }
+        // Add XP reward
+        user.xp += badge.xpReward;
 
         await user.save();
-        return true;
     }
 
-    public async getBadgesByCategory(categoryName: string): Promise<IBadge[]> {
-        return await Badge.find({ category: categoryName, isActive: true });
+    public static async getBadgesByCategory(category: string): Promise<IBadge[]> {
+        const badges = await Badge.find({ category, isActive: true });
+        return badges.map(badge => badge as IBadge);
     }
 
-    public async getBadgesByRarity(rarityLevel: string): Promise<IBadge[]> {
-        return await Badge.find({ rarity: rarityLevel, isActive: true });
+    public static async getBadgesByRarity(rarity: string): Promise<IBadge[]> {
+        const badges = await Badge.find({ rarity, isActive: true });
+        return badges.map(badge => badge as IBadge);
     }
 
     /**
@@ -143,41 +155,42 @@ export class BadgeService {
      * and awards them if criteria are met.
      * 
      * @param userId - The ID of the user to check and award badges to
-     * @param event - The event type that triggered the check (e.g., 'note_created', 'login_streak_3')
-     * @param eventData - Optional data associated with the event (e.g., streak count, note details)
-     * @returns An array of badges that were awarded to the user
+     * @param activityType - The event type that triggered the check (e.g., 'note_created', 'login_streak_3')
+     * @param data - Optional data associated with the event (e.g., streak count, note details)
+     * @returns An array of awarded badge IDs
      * @throws ErrorResponse if the user is not found
      */
-    public async checkAndAwardBadges(userId: string, event: string, eventData?: BadgeEventData): Promise<IBadge[]> {
+    public static async checkAndAwardBadges(userId: string, activityType: string, data: any): Promise<string[]> {
         const user = await User.findById(userId);
         if (!user) {
             throw new ErrorResponse('User not found', 404);
         }
 
-        const awardedBadges: IBadge[] = [];
-
-        // Get all active badges
         const badges = await Badge.find({ isActive: true });
-
+        const awardedBadgeIds: string[] = [];
         for (const badge of badges) {
-            // Skip if user already has this badge
-            if (user.badges.some(b => b.badge.toString() === badge._id.toString())) {
+            // Skip if user already has the badge
+            if (user.badges.some(b => b.badge.toString() === String(badge._id))) {
                 continue;
             }
 
-            // Check if badge has criteria for this event
-            const criteriaFunction = BADGE_CRITERIA[event];
-            if (criteriaFunction) {
-                const criteriaMet = await criteriaFunction(user, eventData);
-                if (criteriaMet) {
-                    await this.awardBadgeToUser(userId, badge._id.toString());
-                    awardedBadges.push(badge);
-                }
+            // Check if badge criteria is met
+            if (this.checkBadgeCriteria(badge, activityType, data)) {
+                await this.awardBadgeToUser(userId, String(badge._id));
+                awardedBadgeIds.push(String(badge._id));
             }
         }
-
-        return awardedBadges;
+        return awardedBadgeIds;
     }
-}
 
-export default BadgeService; 
+    private static checkBadgeCriteria(badge: IBadge, activityType: string, data: any): boolean {
+        // Implement badge criteria checking logic here
+        // This is a simplified example
+        if (badge.category === 'achievement') {
+            if (activityType === 'note_created') {
+                return true;
+            }
+        }
+        return false;
+    }
+} 

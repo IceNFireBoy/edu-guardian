@@ -1,11 +1,11 @@
 export interface AIUsage {
   summaryUsed: number;
   flashcardUsed: number;
-  lastReset: Date;
+  lastReset: string;
 }
 
 export interface UserBadge {
-  id: string;
+  _id: string;
   name: string;
   description: string;
   icon: string;
@@ -18,15 +18,15 @@ export interface UserBadge {
 export interface UserStreak {
   current: number;
   max: number;
-  lastUsed: Date;
+  lastUsed: string;
 }
 
 export interface UserActivity {
-  id: string;
+  _id: string;
   action: string;
   description: string;
   xpEarned: number;
-  timestamp: Date;
+  timestamp: string;
 }
 
 export interface UserPreferences {
@@ -39,22 +39,29 @@ export interface UserProfile {
   name: string;
   email: string;
   username: string;
-  role: string;
-  profileImage?: string;
-  biography?: string;
+  role: 'user' | 'admin';
   xp: number;
   level: number;
   streak: UserStreak;
   aiUsage: AIUsage;
+  profileImage?: string;
+  biography?: string;
+  preferences?: UserPreferences;
   badges: UserBadge[];
   activity: UserActivity[];
-  preferences: UserPreferences;
-  createdAt: Date;
+  subjects: string[];
+  createdAt: string;
+  updatedAt: string;
   emailVerified: boolean;
+  favoriteNotes: string[];
+  totalSummariesGenerated: number;
+  totalFlashcardsGenerated: number;
+  summaryQuota?: number;
+  flashcardQuota?: number;
 }
 
 export interface CompleteStudyPayload {
   noteId: string;
-  duration: number; // Study duration in minutes
-  flashcardsReviewed?: number;
+  duration: number;
+  pointsEarned: number;
 }

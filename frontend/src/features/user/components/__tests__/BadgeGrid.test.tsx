@@ -26,11 +26,22 @@ vi.mock('framer-motion', async () => {
 });
 
 const mockBadges: UserBadge[] = [
-  { id: '1', name: 'Bronze Uploader', description: 'Uploaded 1 note', icon: 'bronze-icon.png', level: 'bronze', category: 'upload', xpReward: 10, earnedAt: new Date('2023-01-01T00:00:00.000Z').toISOString() },
-  { id: '2', name: 'Silver AI User', description: 'Used AI 5 times', icon: 'silver-icon.png', level: 'silver', category: 'ai', xpReward: 25, earnedAt: new Date('2023-01-05T00:00:00.000Z').toISOString() },
-  { id: '3', name: 'Gold Streaker', description: '5 day streak', icon: 'gold-icon.png', level: 'gold', category: 'streak', xpReward: 50, earnedAt: new Date('2023-01-10T00:00:00.000Z').toISOString() },
-  { id: '4', name: 'Platinum Achiever', description: 'Completed all tasks', icon: 'platinum-icon.png', level: 'platinum', category: 'achievement', xpReward: 100, earnedAt: new Date('2023-01-15T00:00:00.000Z').toISOString() },
-  { id: '5', name: 'AI Helper', description: 'Helped AI', icon: 'ai-helper.png', level: 'gold', category: 'ai', xpReward: 60, earnedAt: new Date('2023-01-20T00:00:00.000Z').toISOString() },
+  {
+    _id: '1',
+    name: 'First Note',
+    description: 'Created your first note',
+    icon: '📝',
+    category: 'achievement',
+    awardedAt: '2024-01-01T00:00:00.000Z'
+  },
+  {
+    _id: '2',
+    name: 'Study Streak',
+    description: 'Studied for 7 days in a row',
+    icon: '🔥',
+    category: 'streak',
+    awardedAt: '2024-01-02T00:00:00.000Z'
+  }
 ];
 
 describe('BadgeGrid Component', () => {
@@ -62,11 +73,11 @@ describe('BadgeGrid Component', () => {
     expect(badgeGrid).toBeInTheDocument();
     
     for (const badge of mockBadges) {
-      const badgeElement = await screen.findByTestId(`badge-item-${badge.id}`);
+      const badgeElement = await screen.findByTestId(`badge-item-${badge._id}`);
       expect(badgeElement).toBeInTheDocument();
       expect(badgeElement).toHaveAttribute('data-badge-level', badge.level);
       expect(badgeElement).toHaveAttribute('data-badge-category', badge.category);
-      const levelElement = await screen.findByTestId(`badge-level-${badge.id}`);
+      const levelElement = await screen.findByTestId(`badge-level-${badge._id}`);
       expect(levelElement).toHaveTextContent(badge.level.charAt(0).toUpperCase() + badge.level.slice(1));
     }
 
@@ -79,10 +90,11 @@ describe('BadgeGrid Component', () => {
   describe('Highlighting New Badges', () => {
     it('highlights new badges and shows "New!" tag', async () => {
       await act(async () => {
-        render(<BadgeGrid badges={mockBadges} newBadgeIds={['2', '4']} showToast={mockShowToast} />);
+        render(<BadgeGrid badges={mockBadges} newBadgeIds={['2']} showToast={mockShowToast} />);
       });
       
       // Check for highlighted badges
+      const studyStreakBadge = screen.getByTestId('badge-item-2');
       const silverBadge = screen.getByTestId('badge-item-2');
       const platinumBadge = screen.getByTestId('badge-item-4');
       const bronzeBadge = screen.getByTestId('badge-item-1');

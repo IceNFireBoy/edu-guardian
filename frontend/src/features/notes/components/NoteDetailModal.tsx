@@ -37,7 +37,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
     if (note) {
       // Use the first rating value if available, else fallback
       const firstRating = note.ratings?.[0]?.value;
-      const localRating = getLocalRating(note.id);
+      const localRating = getLocalRating(note._id);
       setCurrentRating(firstRating || localRating || 0);
     }
     if (noteActionError) {
@@ -51,16 +51,17 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
 
   const handleRatingSubmit = async (newRating: number) => {
     if (!note) return;
-    const ratingResult = await rateNote(note.id, newRating);
+    const ratingResult = await rateNote(note._id, newRating);
     if (ratingResult) {
       setCurrentRating(newRating);
       const updatedRatings: NoteRating[] = [
         ...(note.ratings || []),
         {
+          _id: `temp-${Date.now()}`,
+          noteId: note._id,
+          userId: 'current-user',
           value: newRating,
-          noteId: note.id,
-          userId: 'current',
-          createdAt: new Date()
+          createdAt: new Date().toISOString()
         }
       ];
       const updatedNote: Note = { ...note, ratings: updatedRatings };
@@ -69,7 +70,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
       try {
         const ratingsData = localStorage.getItem('note_ratings') || '{}';
         const ratings = JSON.parse(ratingsData);
-        ratings[note.id] = newRating;
+        ratings[note._id] = newRating;
         localStorage.setItem('note_ratings', JSON.stringify(ratings));
       } catch (e) {
         console.error('Error saving rating to localStorage', e);
@@ -79,7 +80,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
 
   const getShareableLink = (): string => {
     const baseUrl = window.location.origin;
-    return `${baseUrl}/view-note?id=${note.id}`; // Assuming a route like this exists
+    return `${baseUrl}/view-note?id=${note._id}`; // Assuming a route like this exists
   };
 
   const handleShare = () => {
@@ -103,10 +104,10 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
   const handleDelete = async () => {
     if (!note) return;
     if (window.confirm('Are you sure you want to delete this note? This action cannot be undone.')) {
-        const success = await deleteNoteHook(note.id);
+        const success = await deleteNoteHook(note._id);
         if (success) {
             toast.success('Note deleted successfully.');
-            onNoteDelete(note.id);
+            onNoteDelete(note._id);
             onClose();
         } else {
             // Error is handled by noteActionError effect
@@ -229,13 +230,13 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
                 <AISummarizer 
                   isOpen={showSummarizer} 
                   onClose={() => setShowSummarizer(false)} 
-                  noteId={note.id} 
+                  noteId={note._id} 
                   noteTitle={note.title} 
                 />
                 <FlashcardGenerator 
                   isOpen={showFlashcards} 
                   onClose={() => setShowFlashcards(false)} 
-                  noteId={note.id} 
+                  noteId={note._id} 
                   noteTitle={note.title} 
                 />
               </>

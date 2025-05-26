@@ -51,7 +51,7 @@ const StudyPage: React.FC = () => {
           toast.success(data.message || 'Summary generated successfully!');
         } else if (data.summary === null) { // Explicitly null summary is a valid state
           setSummary(null);
-          toast.info(data.message || 'Summary processed, but no content was generated this time.');
+          toast(data.message || 'Summary processed, but no content was generated this time.');
         } else {
           // If success is true but summary is undefined (not null)
           setSummary(null); // Default to null

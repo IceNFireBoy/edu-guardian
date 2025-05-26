@@ -23,7 +23,6 @@ interface FlashcardState {
   isLoading: boolean;
   error: string | null;
   cardResponses: { [cardId: string]: CardResponse };
-  showGenerationButton: boolean;
   isShuffled: boolean;
   originalOrder: Flashcard[];
 }
@@ -64,16 +63,17 @@ type Action =
 
 // Context Value Type
 interface FlashcardContextValue extends FlashcardState {
-  generateFlashcards: () => Promise<void>;
+  generateFlashcards: (noteId: string) => Promise<void>;
   goToNextCard: () => void;
   goToPreviousCard: () => void;
+  showGenerationButton: boolean;
+  setShowGenerationButton: (show: boolean) => void;
   recordResponse: (status: 'correct' | 'incorrect') => void;
   shuffleCards: () => void;
   unshuffleCards: () => void;
   resetFlashcardState: () => void;
   setCurrentCardIndex: (index: number) => void;
   hideGenerationButton: () => void;
-  showGenerationButton: () => void;
 }
 
 // --- Initial State & Reducer ---
@@ -84,7 +84,6 @@ const initialState: FlashcardState = {
   isLoading: false,
   error: null,
   cardResponses: {},
-  showGenerationButton: true,
   isShuffled: false,
   originalOrder: [],
 };
@@ -179,7 +178,7 @@ export const FlashcardProvider: React.FC<FlashcardProviderProps> = ({ children, 
   const generateFlashcards = useCallback(async () => {
     if (!noteId) {
         dispatch({ type: ActionType.FETCH_ERROR, payload: 'Note ID is missing.' });
-        toast.error('Cannot generate flashcards without a Note ID.');
+        toast('Cannot generate flashcards without a Note ID.');
         return;
     }
     dispatch({ type: ActionType.FETCH_START });
@@ -192,16 +191,16 @@ export const FlashcardProvider: React.FC<FlashcardProviderProps> = ({ children, 
       if (data.success && data.flashcards) {
         if (data.flashcards.length > 0) {
            // Add a unique _id to each card for keying and response tracking
-          const processedFlashcards: Flashcard[] = data.flashcards.map((card, index) => ({
+          const processedFlashcards: Flashcard[] = data.flashcards.map((card: Flashcard, index: number) => ({
              ...card,
              _id: `card-${noteId}-${index}-${Date.now()}` // Generate a more robust unique ID
             }));
           dispatch({ type: ActionType.FETCH_SUCCESS, payload: processedFlashcards });
-          toast.success(data.message || 'Flashcards generated successfully!');
+          toast(data.message || 'Flashcards generated successfully!');
         } else {
             // Success true, but flashcards array is empty
             dispatch({ type: ActionType.NO_CARDS_GENERATED });
-            toast.success(data.message || 'No flashcards generated. The content might not be suitable.');
+            toast(data.message || 'No flashcards generated. The content might not be suitable.');
         }
       } else {
         // Handle API error or unexpected success response format
@@ -211,7 +210,7 @@ export const FlashcardProvider: React.FC<FlashcardProviderProps> = ({ children, 
       console.error("Error generating flashcards:", err);
       const errorMessage = err.message || 'Failed to generate flashcards.';
       dispatch({ type: ActionType.FETCH_ERROR, payload: errorMessage });
-      toast.error(errorMessage);
+      toast(errorMessage);
     }
   }, [noteId]);
 
@@ -235,24 +234,24 @@ export const FlashcardProvider: React.FC<FlashcardProviderProps> = ({ children, 
   const shuffleCards = () => {
     if (state.flashcards.length > 1) {
         dispatch({ type: ActionType.SHUFFLE_CARDS });
-        toast.success('Flashcards shuffled!');
+        toast('Flashcards shuffled!');
     } else {
-        toast.info('Not enough cards to shuffle.');
+        toast('Not enough cards to shuffle.');
     }
   };
   
   const unshuffleCards = () => {
     if (state.isShuffled) {
         dispatch({ type: ActionType.UNSHUFFLE_CARDS });
-        toast.info('Flashcards returned to original order.');
+        toast('Flashcards returned to original order.');
     } else {
-        toast.info('Flashcards are already in order.');
+        toast('Flashcards are already in order.');
     }
   };
 
   const resetFlashcardState = useCallback(() => {
     dispatch({ type: ActionType.RESET_STATE });
-    toast.info('Flashcard state reset.');
+    toast('Flashcard state reset.');
   }, []);
 
   const value: FlashcardContextValue = {

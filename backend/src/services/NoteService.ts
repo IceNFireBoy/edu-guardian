@@ -1,8 +1,10 @@
 import Note, { INote } from '../models/Note';
-import { NotFoundError, BadRequestError, QuotaExceededError } from '../utils/customErrors'; // Import if needed directly
-import UserService from './UserService'; // Import UserService instance
-import BadgeService from './BadgeService'; // Import BadgeService
+import { IUser } from '../models/User';
 import ErrorResponse from '../utils/errorResponse';
+import BadgeService from './BadgeService';
+import UserService from './UserService';
+import { Types } from 'mongoose';
+import { NotFoundError, BadRequestError, QuotaExceededError } from '../utils/customErrors'; // Import if needed directly
 import { FilterQuery, PopulateOptions } from 'mongoose';
 import { extractTextFromFile } from '../utils/extractTextFromFile';
 import OpenAI from 'openai';
@@ -49,10 +51,119 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const badgeService = new BadgeService();
-const userService = new UserService();
+export default class NoteService {
+  public async createNote(noteData: Partial<INote>, userId: string): Promise<INote> {
+    const user = await UserService.getUserById(userId);
+    if (!user) {
+      throw new ErrorResponse('User not found', 404);
+    }
 
-export class NoteService {
+    const note = await Note.create({
+      ...noteData,
+      user: userId
+    });
+
+    await BadgeService.checkAndAwardBadges(userId, 'note_created', { noteId: note._id });
+    return note;
+  }
+
+  public async getNoteById(id: string): Promise<INote | null> {
+    return await Note.findById(id).populate('user', 'name email');
+  }
+
+  public async updateNote(id: string, noteData: Partial<INote>): Promise<INote | null> {
+    return await Note.findByIdAndUpdate(id, noteData, {
+      new: true,
+      runValidators: true
+    });
+  }
+
+  public async deleteNote(id: string): Promise<INote | null> {
+    return await Note.findByIdAndDelete(id);
+  }
+
+  public async getNotesByUser(userId: string): Promise<INote[]> {
+    return await Note.find({ user: userId });
+  }
+
+  public async generateAISummary(noteId: string, userId: string): Promise<string> {
+    const note = await Note.findById(noteId);
+    if (!note) {
+      throw new ErrorResponse('Note not found', 404);
+    }
+
+    const user = await UserService.getUserById(userId);
+    if (!user) {
+      throw new ErrorResponse('User not found', 404);
+    }
+
+    await UserService.checkUserQuota(userId, 'summary');
+
+    // Simulate AI summary generation
+    const summary = `AI-generated summary for note: ${note.title}`;
+
+    note.aiSummary = summary;
+    await note.save();
+
+    await UserService.incrementAIUsage(userId, 'summary');
+    await UserService.updateUserAIStreak(userId);
+
+    return summary;
+  }
+
+  public async generateAIFlashcards(noteId: string, userId: string): Promise<Array<{ question: string; answer: string; difficulty: string }>> {
+    const note = await Note.findById(noteId);
+    if (!note) {
+      throw new ErrorResponse('Note not found', 404);
+    }
+
+    const user = await UserService.getUserById(userId);
+    if (!user) {
+      throw new ErrorResponse('User not found', 404);
+    }
+
+    await UserService.checkUserQuota(userId, 'flashcard');
+
+    // Simulate AI flashcard generation
+    const flashcards = [
+      {
+        question: 'Sample question 1',
+        answer: 'Sample answer 1',
+        difficulty: 'easy'
+      },
+      {
+        question: 'Sample question 2',
+        answer: 'Sample answer 2',
+        difficulty: 'medium'
+      }
+    ];
+
+    note.flashcards = flashcards as any; // Cast to any to satisfy INoteFlashcard[]
+    await note.save();
+
+    await UserService.incrementAIUsage(userId, 'flashcard');
+    await UserService.updateUserAIStreak(userId);
+
+    return flashcards;
+  }
+
+  public async getNotesByCategory(category: string): Promise<INote[]> {
+    return await Note.find({ category });
+  }
+
+  public async getNotesByTag(tag: string): Promise<INote[]> {
+    return await Note.find({ tags: tag });
+  }
+
+  public async searchNotes(query: string): Promise<INote[]> {
+    return await Note.find({
+      $or: [
+        { title: { $regex: query, $options: 'i' } },
+        { content: { $regex: query, $options: 'i' } }
+      ]
+    });
+  }
+
   public async getAllNotes(
     filters: NoteQueryFilters,
     pagination: PaginationOptions
@@ -93,131 +204,6 @@ export class NoteService {
     const totalPages = Math.ceil(count / limit);
 
     return { notes, count, totalPages, currentPage: page };
-  }
-
-  public async getNoteById(noteId: string): Promise<INote | null> {
-    const note = await Note.findById(noteId)
-                           .populate({ path: 'user', select: 'name username profileImage' })
-                           // .populate({ path: 'ratings.user', select: 'name username' })
-                           .lean(); // Using lean if no save operations after fetch
-
-    if (!note) {
-      // ErrorResponse will be thrown by controller if service returns null
-      return null;
-    }
-
-    // Increment view count (if not using lean() or handle separately)
-    // If using lean, this update needs to be a separate operation
-    await Note.findByIdAndUpdate(noteId, { $inc: { viewCount: 1 } });
-
-    // Re-fetch if you need the absolute latest viewCount and still want to use lean for the main fetch
-    // Or, return note and increment viewCount in the background (less critical for immediate response)
-    // For simplicity here, we assume viewCount on the initially fetched lean doc is acceptable for response.
-    // To return the updated doc, remove .lean() or re-fetch.
-    
-    return { ...note, viewCount: (note.viewCount ?? 0) + 1 }; // Manually increment for lean response
-  }
-
-  public async createNote(noteData: Partial<INote>, userId: string): Promise<INote> {
-    // Ensure the user ID is added to the note data
-    const dataToSave: Partial<INote> = {
-      ...noteData,
-      user: userId as any // mongoose.Types.ObjectId will be handled by Mongoose
-    };
-
-    // Title, subject, grade, semester, quarter, topic, fileUrl, fileType, fileSize are required by schema/routes
-    // Other fields like description, tags are optional
-    // slug will be auto-generated by pre-save hook
-    // viewCount, downloadCount, averageRating, ratings, flashcards, aiSummary will have defaults or be empty initially
-
-    const note = await Note.create(dataToSave);
-    // No need to manually populate user here as we are creating.
-    // If client needs populated user immediately, a separate getById call might be cleaner or adjust response.
-    return note;
-  }
-
-  public async updateNoteById(noteId: string, userId: string, noteData: Partial<INote>): Promise<INote | null> {
-    let note = await Note.findById(noteId);
-
-    if (!note) {
-      return null; // Controller will send 404
-    }
-
-    // Check ownership
-    // Convert note.user (which could be ObjectId) to string for comparison
-    if (note.user.toString() !== userId) {
-      // Throw an error that will be caught by asyncHandler and passed to the error handler
-      // This results in a 401 or 403, which is more appropriate than returning null here
-      throw new ErrorResponse('User not authorized to update this note', 401);
-    }
-
-    // Update allowed fields
-    // Client should only send fields they intend to change.
-    // Fields like 'user', 'slug' (unless title changes), 'ratings', 'averageRating', 'flashcards', 'aiSummary' 
-    // 'viewCount', 'downloadCount' are generally not updated directly via this method.
-    // 'fileUrl', 'fileType', 'fileSize' might be updated if a new file is uploaded, handled separately or here.
-    // For simplicity, allowing update of most textual and descriptive fields. 
-    // More granular control can be added if needed.
-
-    // List of fields that can be updated by the user:
-    const updatableFields: (keyof INote)[] = [
-        'title',
-        'description',
-        'subject',
-        'grade',
-        'semester',
-        'quarter',
-        'topic',
-        'tags',
-        'isPublic',
-        // If file re-upload is part of this, add fileUrl, fileType, fileSize, publicId, assetId
-        'fileUrl', 
-        'fileType',
-        'fileSize',
-        'publicId',
-        'assetId'
-    ];
-
-    let hasChanges = false;
-    for (const field of updatableFields) {
-        if (noteData[field] !== undefined && noteData[field] !== (note as any)[field]) {
-            (note as any)[field] = noteData[field];
-            if (field === 'title') {
-                // If title changes, slug should be regenerated by pre-save hook
-                note.isModified('title'); // Mark title as modified for pre-save hook
-            }
-            hasChanges = true;
-        }
-    }
-
-    if (!hasChanges) {
-        // If no actual changes to updatable fields, just return the current note
-        // Or, could throw an error/return specific message indicating no changes were made.
-        return note;
-    }
-
-    // The pre-save hook for slug and averageRating (if ratings were part of updateData, which they are not here)
-    // will run automatically upon saving.
-    note = await note.save();
-    
-    // Optionally, populate user details after saving if needed for the response
-    // await note.populate({ path: 'user', select: 'name username profileImage' });
-
-    return note;
-  }
-
-  public async deleteNoteById(noteId: string, userId: string): Promise<INote | null> {
-    const note = await Note.findById(noteId);
-    if (!note) {
-      return null; // Controller will handle 404
-    }
-    if (note.user.toString() !== userId) {
-      throw new ErrorResponse('User not authorized to delete this note', 401);
-    }
-    // Instead of remove, which is deprecated, use deleteOne or findByIdAndDelete
-    // await note.remove(); deprecated
-    await Note.findByIdAndDelete(noteId);
-    return note; // Return the note that was deleted
   }
 
   public async getUserNotes(userId: string): Promise<INote[]> {
@@ -270,17 +256,6 @@ export class NoteService {
     
     await note.save();
     return note;
-  }
-
-  public async searchNotes(searchTerm: string): Promise<INote[]> {
-    // Basic text search, can be expanded with more specific fields or regex
-    const notes = await Note.find({ 
-        $text: { $search: searchTerm }, 
-        isPublic: true 
-    })
-    .populate({ path: 'user', select: 'name username profileImage' })
-    .lean();
-    return notes;
   }
 
   public async uploadNoteFile(noteId: string, userId: string, file: MulterFile): Promise<INote | null> {
@@ -399,8 +374,8 @@ export class NoteService {
     updatedUser: IUser
   ): Promise<IUserBadgeEarnedAPIResponse[]> {
     // Check for and award badges
-    const newlyAwardedFeatureBadges = await badgeService.checkAndAwardBadges(userId, aiFeatureType);
-    const newlyAwardedStreakBadges = await badgeService.checkAndAwardBadges(
+    const newlyAwardedFeatureBadges = await BadgeService.checkAndAwardBadges(userId, aiFeatureType, {});
+    const newlyAwardedStreakBadges = await BadgeService.checkAndAwardBadges(
       userId, 
       'ai_streak', 
       { streak: updatedUser.streak.current }
@@ -412,7 +387,7 @@ export class NoteService {
 
     // Format for API response
     return (await Promise.all(allNewlyAwardedBadges.map(async badgeName => {
-      const badge = await badgeService.getBadgeByName(badgeName);
+      const badge = await BadgeService.getBadgeByName(badgeName);
       if (!badge) return undefined;
       return {
         badgeId: badge._id.toString(),
@@ -455,7 +430,7 @@ export class NoteService {
     const note = await this.validateNoteForAIProcessing(noteId, userId);
 
     // Check user's AI quota
-    await userService.checkUserQuota(userId, 'summary');
+    await UserService.checkUserQuota(userId, 'summary');
 
     // Extract text from the note's file
     const text = await extractTextFromFile(note.fileUrl);
@@ -483,14 +458,14 @@ export class NoteService {
       const summary = completion.choices[0].message.content;
 
       // Update note with summary
-      note.aiSummary = summary;
+      note.aiSummary = summary ?? undefined;
       await note.save();
 
       // Increment user's AI usage
-      await userService.incrementAIUsage(userId, 'summary');
+      await UserService.incrementAIUsage(userId, 'summary');
 
       // Update user's AI streak
-      const updatedUser = await userService.updateUserAIStreak(userId);
+      const updatedUser = await UserService.updateUserAIStreak(userId);
 
       // Process badges
       const badges = await this.processAIFeatureBadges(userId, 'ai_summary_generated', updatedUser);
@@ -525,7 +500,7 @@ export class NoteService {
     const note = await this.validateNoteForAIProcessing(noteId, userId);
 
     // Check user's AI quota
-    await userService.checkUserQuota(userId, 'flashcard');
+    await UserService.checkUserQuota(userId, 'flashcard');
 
     // Extract text from the note's file
     const text = await extractTextFromFile(note.fileUrl);
@@ -559,10 +534,10 @@ export class NoteService {
       });
 
       const flashcardsText = completion.choices[0].message.content;
-      let flashcards = [];
+      let flashcards: { question: string; answer: string; difficulty: string }[] = [];
       
       try {
-        flashcards = this.parseAndValidateFlashcards(flashcardsText);
+        flashcards = this.parseAndValidateFlashcards(flashcardsText || '');
       } catch (parseError) {
         throw new BadRequestError(`Failed to parse flashcards: ${parseError.message}`);
       }
@@ -575,10 +550,10 @@ export class NoteService {
       }
 
       // Increment user's AI usage
-      await userService.incrementAIUsage(userId, 'flashcard');
+      await UserService.incrementAIUsage(userId, 'flashcard');
 
       // Update user's AI streak
-      const updatedUser = await userService.updateUserAIStreak(userId);
+      const updatedUser = await UserService.updateUserAIStreak(userId);
 
       // Process badges
       const badges = await this.processAIFeatureBadges(userId, 'ai_flashcards_generated', updatedUser);
@@ -605,7 +580,7 @@ export class NoteService {
    * @param flashcardsText - JSON string containing flashcards
    * @returns Array of validated flashcards
    */
-  private parseAndValidateFlashcards(flashcardsText: string): Array<{ question: string; answer: string; difficulty: string }> {
+  private parseAndValidateFlashcards(flashcardsText: string): { question: string; answer: string; difficulty: string }[] {
     // Try to parse JSON, with multiple fallback strategies
     let parsed;
     try {
@@ -722,8 +697,4 @@ export class NoteService {
       throw new BadRequestError(`Failed to save flashcards: ${error.message}`);
     }
   }
-
-  // ... other note service methods (create, update, delete, etc.)
-}
-
-export default NoteService; 
+} 

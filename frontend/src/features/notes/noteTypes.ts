@@ -1,7 +1,7 @@
 import { FlashcardDifficulty } from '../../config/constants';
 
 export interface Note {
-  id: string;
+  _id: string;
   title: string;
   content: string;
   description?: string;
@@ -10,6 +10,7 @@ export interface Note {
   semester: string;
   quarter: string;
   topic: string;
+  isPublic: boolean;
   fileUrl: string;
   fileType: string;
   fileSize?: number;
@@ -21,33 +22,34 @@ export interface Note {
   averageRating: number;
   ratings: NoteRating[];
   flashcards: Flashcard[];
-  user: {
-    id: string;
-    username: string;
-    email: string;
-  };
-  isPublic: boolean;
-  tags?: string[];
-
+  user: string;
+  ratingCount: number;
+  rating: number;
   aiSummary?: string | null;
   aiSummaryKeyPoints?: string[];
-  aiSummaryGeneratedAt?: string | Date;
+  aiSummaryGeneratedAt?: string;
+  tags?: string[];
 }
 
 export interface NoteRating {
-  id: string;
-  rating: number;
-  user: {
-    id: string;
-    username: string;
-  };
+  _id: string;
+  noteId: string;
+  userId: string;
+  value: number;
+  createdAt: string;
 }
 
 export interface Flashcard {
-  _id?: string;
+  _id: string;
   question: string;
   answer: string;
   difficulty: FlashcardDifficulty;
+  lastReviewed?: string | null;
+  nextReviewDate?: string | null;
+  efactor?: number;
+  interval?: number;
+  repetitions?: number;
+  user?: string;
 }
 
 export interface ManualFlashcardPayload {
@@ -84,8 +86,8 @@ export interface NoteUploadData {
 export interface NoteStudySession {
   noteId: string;
   userId: string;
-  startTime: Date;
-  endTime?: Date;
+  startTime: string;
+  endTime?: string;
   flashcardsReviewed: number;
   correctAnswers: number;
   incorrectAnswers: number;
@@ -96,7 +98,7 @@ export interface AISummary {
   noteId: string;
   summary: string | null;
   keyPoints?: string[];
-  generatedAt?: string | Date;
+  generatedAt?: string;
 }
 
 export interface PDFViewerProps {
@@ -144,5 +146,8 @@ export interface AIGenerationResult<T> {
 }
 
 export interface PaginatedNotesResponse {
-  // ... existing code ...
+  data: Note[];
+  count: number;
+  totalPages: number;
+  currentPage: number;
 } 

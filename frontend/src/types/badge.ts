@@ -1,26 +1,32 @@
-export interface Badge {
-  _id: string;
+import { Document } from 'mongoose';
+
+export interface IBadge extends Document {
   name: string;
   description: string;
   imageUrl: string;
+  category: 'achievement' | 'engagement' | 'level' | 'streak';
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-  category: string;
-  requirements: {
+  criteria: {
     type: string;
-    value: number;
+    threshold: number;
   };
   xpReward: number;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface UserBadge extends Badge {
+export interface IUserBadge {
+  badge: IBadge;
   earnedAt: Date;
-  progress?: number;
+  criteriaMet: {
+    type: string;
+    value: number;
+  };
 }
 
 export interface BadgeGridProps {
-  badges: UserBadge[];
+  badges: IUserBadge[];
   newBadgeIds: string[];
   className?: string;
 } 

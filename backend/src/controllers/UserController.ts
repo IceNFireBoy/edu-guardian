@@ -4,12 +4,13 @@ import ErrorResponse from '../utils/errorResponse';
 import { CustomRequest } from '../middleware/auth';
 import UserService from '../services/UserService';
 import { IUser } from '../models/User'; // Assuming IUser is in User.ts
+import { LeaderboardQueryOptions } from '../interfaces/User';
 
 export default class UserController {
   // @desc    Get all users
   // @route   GET /api/v1/users
-  // @access  Admin
-  public getUsers = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  // @access  Private/Admin
+  public static getUsers = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const users = await UserService.getUsers();
       res.status(200).json({
@@ -22,10 +23,10 @@ export default class UserController {
     }
   });
 
-  // @desc    Get single user by ID
+  // @desc    Get single user
   // @route   GET /api/v1/users/:id
-  // @access  Admin
-  public getUserById = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  // @access  Private/Admin
+  public static getUserById = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = await UserService.getUserById(req.params.id);
       if (!user) {
@@ -40,10 +41,10 @@ export default class UserController {
     }
   });
 
-  // @desc    Create user (Admin only)
+  // @desc    Create new user
   // @route   POST /api/v1/users
-  // @access  Admin
-  public createUser = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  // @access  Private/Admin
+  public static createUser = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = await UserService.createUser(req.body);
       res.status(201).json({
@@ -55,10 +56,10 @@ export default class UserController {
     }
   });
 
-  // @desc    Update user (Admin only)
+  // @desc    Update user
   // @route   PUT /api/v1/users/:id
-  // @access  Admin
-  public updateUser = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  // @access  Private/Admin
+  public static updateUser = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = await UserService.updateUser(req.params.id, req.body);
       if (!user) {
@@ -73,14 +74,13 @@ export default class UserController {
     }
   });
 
-  // @desc    Delete user (Admin only)
+  // @desc    Delete user
   // @route   DELETE /api/v1/users/:id
-  // @access  Admin
-  public deleteUser = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  // @access  Private/Admin
+  public static deleteUser = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const success = await UserService.deleteUser(req.params.id);
-      if (!success) {
-         // This case might be redundant if service throws error for not found
+      const user = await UserService.deleteUser(req.params.id);
+      if (!user) {
         return next(new ErrorResponse(`User not found with id of ${req.params.id}`, 404));
       }
       res.status(200).json({
@@ -91,16 +91,121 @@ export default class UserController {
       next(error);
     }
   });
-  
-  // @desc    Get current user's profile
-  // @route   GET /api/v1/auth/me (assuming this is handled by AuthController.getProfile)
-  // This can be removed if AuthController.getProfile is sufficient.
-  // If specific user stats are needed beyond Auth, this could be /api/v1/users/me/detailed-profile
-  
+
+  // @desc    Get current logged in user
+  // @route   GET /api/v1/users/me
+  // @access  Private
+  public static getMe = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user?.id) {
+        return next(new ErrorResponse('Not authorized', 401));
+      }
+      const user = await UserService.getUserById(req.user.id);
+      res.status(200).json({
+        success: true,
+        data: user
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // @desc    Update user details
+  // @route   PUT /api/v1/users/updatedetails
+  // @access  Private
+  public static updateDetails = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user?.id) {
+        return next(new ErrorResponse('Not authorized', 401));
+      }
+      const fieldsToUpdate = {
+        name: req.body.name,
+        email: req.body.email
+      };
+
+      const user = await UserService.updateUser(req.user.id, fieldsToUpdate);
+      res.status(200).json({
+        success: true,
+        data: user
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // @desc    Update password
+  // @route   PUT /api/v1/users/updatepassword
+  // @access  Private
+  public static updatePassword = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user?.id) {
+        return next(new ErrorResponse('Not authorized', 401));
+      }
+      const { currentPassword, newPassword } = req.body;
+      await UserService.updateUserPassword(req.user.id, currentPassword, newPassword);
+      res.status(200).json({
+        success: true,
+        message: 'Password updated successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // @desc    Get user profile
+  // @route   GET /api/v1/users/profile
+  // @access  Private
+  public static getUserProfile = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+    if (!req.user || !req.user.id) {
+      return next(new ErrorResponse('Not authorized, user data unavailable', 401));
+    }
+
+    const user = await UserService.getUserById(req.user.id);
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  });
+
+  // @desc    Get user badges
+  // @route   GET /api/v1/users/badges
+  // @access  Private
+  public static getUserBadges = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+    if (!req.user || !req.user.id) {
+      return next(new ErrorResponse('Not authorized, user data unavailable', 401));
+    }
+
+    const user = await UserService.getUserById(req.user.id);
+    res.status(200).json({
+      success: true,
+      data: user?.badges || []
+    });
+  });
+
+  // @desc    Get leaderboard
+  // @route   GET /api/v1/users/leaderboard
+  // @access  Public
+  public static getLeaderboard = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { timeframe = 'allTime', category } = req.query;
+      const options: LeaderboardQueryOptions = {
+        timeframe: timeframe as 'daily' | 'weekly' | 'monthly' | 'allTime',
+        category: category as string | undefined
+      };
+      const leaderboard = await UserService.getLeaderboard(options);
+      res.status(200).json({
+        success: true,
+        data: leaderboard
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // @desc    Get user's public profile (e.g. for viewing other users)
   // @route   GET /api/v1/users/:username/profile
   // @access  Public
-  public getUserPublicProfile = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  public static getUserPublicProfile = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userProfile = await UserService.getUserPublicProfile(req.params.username);
       if (!userProfile) {
@@ -115,11 +220,10 @@ export default class UserController {
     }
   });
 
-
   // @desc    Get user badges for the currently authenticated user
   // @route   GET /api/v1/users/me/badges
   // @access  Private (Authenticated user)
-  public getMyBadges = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+  public static getMyBadges = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     if (!req.user || !req.user.id) {
       return next(new ErrorResponse('Not authorized, user data unavailable', 401));
     }
@@ -138,7 +242,7 @@ export default class UserController {
   // @desc    Get badges for a specific user by their ID (publicly viewable badges)
   // @route   GET /api/v1/users/:userId/badges
   // @access  Public
-  public getUserBadgesById = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  public static getUserBadgesById = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const badges = await UserService.getUserBadges(req.params.userId);
       // No 404 check here, an empty array is a valid response if user has no badges or user not found (service might handle user existence)
@@ -155,7 +259,7 @@ export default class UserController {
   // @desc    Get user activity log for the currently authenticated user
   // @route   GET /api/v1/users/me/activity
   // @access  Private
-  public getMyActivityLog = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+  public static getMyActivityLog = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     if (!req.user || !req.user.id) {
         return next(new ErrorResponse('Not authorized, user data unavailable', 401));
     }
@@ -174,7 +278,7 @@ export default class UserController {
   // @desc    Get user's uploaded notes (for the currently authenticated user)
   // @route   GET /api/v1/users/me/notes
   // @access  Private
-  public getMyUploadedNotes = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+  public static getMyUploadedNotes = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     if (!req.user || !req.user.id) {
         return next(new ErrorResponse('Not authorized, user data unavailable', 401));
     }
@@ -194,7 +298,7 @@ export default class UserController {
   // @desc    Get user's favorite notes (for the currently authenticated user)
   // @route   GET /api/v1/users/me/favorites
   // @access  Private
-  public getMyFavoriteNotes = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+  public static getMyFavoriteNotes = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     if (!req.user || !req.user.id) {
         return next(new ErrorResponse('Not authorized, user data unavailable', 401));
     }
@@ -213,7 +317,7 @@ export default class UserController {
   // @desc    Add a note to user's favorites
   // @route   POST /api/v1/users/me/favorites/:noteId
   // @access  Private
-  public addNoteToFavorites = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+  public static addNoteToFavorites = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     if (!req.user || !req.user.id) {
         return next(new ErrorResponse('Not authorized, user data unavailable', 401));
     }
@@ -232,7 +336,7 @@ export default class UserController {
   // @desc    Remove a note from user's favorites
   // @route   DELETE /api/v1/users/me/favorites/:noteId
   // @access  Private
-  public removeNoteFromFavorites = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+  public static removeNoteFromFavorites = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     if (!req.user || !req.user.id) {
         return next(new ErrorResponse('Not authorized, user data unavailable', 401));
     }
@@ -245,25 +349,6 @@ export default class UserController {
         });
     } catch (error) {
         next(error);
-    }
-  });
-  
-  // @desc    Get user leaderboard
-  // @route   GET /api/v1/users/leaderboard
-  // @access  Public
-  public getLeaderboard = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { limit = 10, sortBy = 'xp' } = req.query; // Default limit to 10, sort by xp
-      const leaderboard = await UserService.getLeaderboard({
-        limit: parseInt(limit as string, 10),
-        sortBy: sortBy as string
-      });
-      res.status(200).json({
-        success: true,
-        data: leaderboard
-      });
-    } catch (error) {
-      next(error);
     }
   });
 } 

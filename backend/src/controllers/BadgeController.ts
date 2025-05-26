@@ -1,30 +1,31 @@
 import { Request, Response, NextFunction } from 'express';
 import asyncHandler from '../middleware/async';
 import ErrorResponse from '../utils/errorResponse';
+import { CustomRequest } from '../middleware/auth';
 import BadgeService from '../services/BadgeService';
-import { CustomRequest } from '../middleware/auth'; // For req.user
+import { IBadge } from '../models/Badge';
 
 export default class BadgeController {
-  // @desc    Get all active badges
+  // @desc    Get all badges
   // @route   GET /api/v1/badges
   // @access  Public
-  public getBadges = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  public static getBadges = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const badges = await BadgeService.getAllActiveBadges(req.query);
+      const badges = await BadgeService.getBadges();
       res.status(200).json({
         success: true,
-        count: badges.length, // Or badges.count if service returns pagination
-        data: badges // Or badges.data
+        count: badges.length,
+        data: badges
       });
     } catch (error) {
       next(error);
     }
   });
 
-  // @desc    Get single badge by ID
+  // @desc    Get single badge
   // @route   GET /api/v1/badges/:id
   // @access  Public
-  public getBadgeById = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  public static getBadgeById = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const badge = await BadgeService.getBadgeById(req.params.id);
       if (!badge) {
@@ -41,8 +42,8 @@ export default class BadgeController {
 
   // @desc    Create new badge
   // @route   POST /api/v1/badges
-  // @access  Admin
-  public createBadge = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  // @access  Private/Admin
+  public static createBadge = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const badge = await BadgeService.createBadge(req.body);
       res.status(201).json({
@@ -56,8 +57,8 @@ export default class BadgeController {
 
   // @desc    Update badge
   // @route   PUT /api/v1/badges/:id
-  // @access  Admin
-  public updateBadge = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  // @access  Private/Admin
+  public static updateBadge = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const badge = await BadgeService.updateBadge(req.params.id, req.body);
       if (!badge) {
@@ -74,12 +75,11 @@ export default class BadgeController {
 
   // @desc    Delete badge
   // @route   DELETE /api/v1/badges/:id
-  // @access  Admin
-  public deleteBadge = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  // @access  Private/Admin
+  public static deleteBadge = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const success = await BadgeService.deleteBadge(req.params.id);
-       if (!success) {
-        // This case might be redundant if service throws error for not found
+      const badge = await BadgeService.deleteBadge(req.params.id);
+      if (!badge) {
         return next(new ErrorResponse(`Badge not found with id of ${req.params.id}`, 404));
       }
       res.status(200).json({
@@ -90,17 +90,19 @@ export default class BadgeController {
       next(error);
     }
   });
-  
-  // @desc    Award badge to a user (manual award by admin)
-  // @route   POST /api/v1/badges/:badgeId/award/:userId
-  // @access  Admin 
-  public awardBadgeToUser = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-    const { badgeId, userId } = req.params;
+
+  // @desc    Award badge to user
+  // @route   POST /api/v1/badges/:id/award
+  // @access  Private/Admin
+  public static awardBadgeToUser = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+    if (!req.user || !req.user.id) {
+      return next(new ErrorResponse('Not authorized, user data unavailable', 401));
+    }
     try {
-      const result = await BadgeService.awardBadgeToUser(userId, badgeId, req.body.criteria); // criteria can be optional
+      await BadgeService.awardBadgeToUser(req.user.id, req.params.id);
       res.status(200).json({
         success: true,
-        data: result
+        message: 'Badge awarded successfully'
       });
     } catch (error) {
       next(error);
@@ -108,15 +110,15 @@ export default class BadgeController {
   });
 
   // @desc    Get badges by category
-  // @route   GET /api/v1/badges/category/:categoryName
+  // @route   GET /api/v1/badges/category/:category
   // @access  Public
-  public getBadgesByCategory = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  public static getBadgesByCategory = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const badges = await BadgeService.getBadgesByCategory(req.params.categoryName, req.query);
+      const badges = await BadgeService.getBadgesByCategory(req.params.category);
       res.status(200).json({
         success: true,
-        count: badges.length, // or badges.count
-        data: badges // or badges.data
+        count: badges.length,
+        data: badges
       });
     } catch (error) {
       next(error);
@@ -124,38 +126,37 @@ export default class BadgeController {
   });
 
   // @desc    Get badges by rarity
-  // @route   GET /api/v1/badges/rarity/:rarityLevel
+  // @route   GET /api/v1/badges/rarity/:rarity
   // @access  Public
-  public getBadgesByRarity = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  public static getBadgesByRarity = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const badges = await BadgeService.getBadgesByRarity(req.params.rarityLevel, req.query);
+      const badges = await BadgeService.getBadgesByRarity(req.params.rarity);
       res.status(200).json({
         success: true,
-        count: badges.length, // or badges.count
-        data: badges // or badges.data
+        count: badges.length,
+        data: badges
       });
     } catch (error) {
       next(error);
     }
   });
 
-  // @desc    Check user eligibility for badges and award if met (called internally or by specific events)
-  // @route   POST /api/v1/badges/check-eligibility
-  // @access  Private (System or specific user actions triggering this)
-  public checkAndAwardBadges = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+  // @desc    Check and award badges based on user activity
+  // @route   POST /api/v1/badges/check
+  // @access  Private
+  public static checkAndAwardBadges = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     if (!req.user || !req.user.id) {
-      return next(new ErrorResponse('User context required for checking badge eligibility', 400));
+      return next(new ErrorResponse('Not authorized, user data unavailable', 401));
+    }
+    const { event, eventData } = req.body;
+    if (!event) {
+      return next(new ErrorResponse('Event type is required', 400));
     }
     try {
-      const event = req.body.event; // e.g., 'note_created', 'user_login_streak_updated'
-      const eventData = req.body.data; // optional data related to the event
-      const awardedBadges = await BadgeService.checkAndAwardBadges(req.user.id, event, eventData);
+      await BadgeService.checkAndAwardBadges(req.user.id, event, eventData);
       res.status(200).json({
         success: true,
-        data: { 
-            message: 'Badge eligibility checked.',
-            awardedBadges 
-        }
+        message: 'Badge check completed'
       });
     } catch (error) {
       next(error);

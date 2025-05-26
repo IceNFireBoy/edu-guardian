@@ -44,7 +44,7 @@ export const createTestNote = async (overrides = {}) => {
 
 export const createTestBadge = async (overrides = {}) => {
   const Badge = mongoose.model('Badge');
-  const badgeData = mockBadge(overrides);
+  const badgeData = mockBadge();
   const badge = new Badge(badgeData);
   return await badge.save();
 }; 

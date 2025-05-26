@@ -5,18 +5,34 @@ import { http, HttpResponse } from 'msw';
 // For tests, it's often simpler to use relative paths if your proxy is set up or absolute if needed.
 
 export const handlers = [
-  // Example: Mocking a GET request to /api/v1/user/profile
-  // http.get(`${API_BASE_URL}/auth/profile`, (resolver) => {
-  //   return HttpResponse.json(
-  //     {
-  //       _id: 'mockUserId',
-  //       name: 'Mock User',
-  //       email: 'mock@example.com',
-  //       // ... other user properties
-  //     },
-  //     { status: 200 }
-  //   );
-  // }),
+  http.get('/api/v1/auth/profile', () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        _id: 'user123',
+        name: 'Test User',
+        email: 'test@example.com',
+        username: 'testuser',
+        role: 'user',
+        xp: 100,
+        level: 2,
+        streak: { current: 3, max: 5, lastUsed: new Date().toISOString() },
+        aiUsage: { summaryUsed: 1, flashcardUsed: 2, lastReset: new Date().toISOString() },
+        profileImage: 'no-photo.jpg',
+        biography: 'Test bio',
+        preferences: { darkMode: false, emailNotifications: true },
+        badges: [],
+        activity: [],
+        subjects: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        emailVerified: true,
+        favoriteNotes: [],
+        totalSummariesGenerated: 1,
+        totalFlashcardsGenerated: 2
+      }
+    });
+  }),
 
   // TODO: Add more handlers here as you test components that make API calls.
   // Example for a POST request
@@ -37,12 +53,7 @@ export const handlers = [
   // Handler to catch unhandled requests during tests to prevent them from going to the actual network
   // This should generally be the last handler.
   http.all('*', ({ request }) => {
-    console.warn(`[MSW] Captured an unhandled ${request.method} request to ${request.url}`);
-    // You can return a standard error response, or let it fall through if your tests expect network errors.
-    // return new HttpResponse(null, { status: 404 }); 
-    // Returning nothing here will let it pass through to the network if not handled above,
-    // which might be desired if you want to see if any real requests are accidentally made.
-    // For strict mocking, always return an error or a mock response.
-    return HttpResponse.json({ error: `Unhandled request to ${request.url}` }, { status: 501 }); // Not Implemented
+    console.warn(`Unhandled request: ${request.method} ${request.url}`);
+    return HttpResponse.json({ success: false, error: 'Not found' }, { status: 404 });
   })
 ]; 

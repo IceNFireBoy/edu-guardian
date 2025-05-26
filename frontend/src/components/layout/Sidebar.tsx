@@ -369,15 +369,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
                               onClick={() => {
                                 /* Implementation for Generate Summary */
                               }}
-                              className={user && user.summaryQuota > 0 ? actionButtonClasses : disabledButtonClasses}
-                              disabled={!user || user.summaryQuota <= 0}
+                              className={user && (user.summaryQuota ?? 0) > 0 ? actionButtonClasses : disabledButtonClasses}
+                              disabled={!user || (user.summaryQuota ?? 0) <= 0}
                             >
                               <FaUniversity size={16} className="text-green-500" />
                               <div className="flex flex-col items-start">
                                 <span>Generate Summary</span>
                                 {user && (
                                   <span className="text-xs text-gray-500 dark:text-gray-400">
-                                    {user.summaryQuota > 0 ? `${user.summaryQuota} uses left` : 'No quota left'}
+                                    {(user.summaryQuota ?? 0) > 0 ? `${user.summaryQuota} uses left` : 'No quota left'}
                                   </span>
                                 )}
                               </div>
@@ -416,15 +416,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
                               onClick={() => {
                                 /* Implementation for Add Flashcard */
                               }}
-                              className={user && user.flashcardQuota > 0 ? actionButtonClasses : disabledButtonClasses}
-                              disabled={!user || user.flashcardQuota <= 0}
+                              className={user && (user.flashcardQuota ?? 0) > 0 ? actionButtonClasses : disabledButtonClasses}
+                              disabled={!user || (user.flashcardQuota ?? 0) <= 0}
                             >
                               <FaPlusSquare size={16} className="text-indigo-500" />
                               <div className="flex flex-col items-start">
                                 <span>Add Flashcard</span>
                                 {user && (
                                   <span className="text-xs text-gray-500 dark:text-gray-400">
-                                    {user.flashcardQuota > 0 ? `${user.flashcardQuota} uses left` : 'No quota left'}
+                                    {(user.flashcardQuota ?? 0) > 0 ? `${user.flashcardQuota} uses left` : 'No quota left'}
                                   </span>
                                 )}
                               </div>

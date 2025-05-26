@@ -122,3 +122,9 @@ export async function callAuthenticatedApi<T = any>(
     }
   }
 } 
+
+// Fetch all notes (for NoteViewer and other consumers)
+export async function fetchNotes() {
+  // Adjust endpoint as needed (e.g., '/api/v1/notes')
+  return callAuthenticatedApi('/api/v1/notes', 'GET');
+} 

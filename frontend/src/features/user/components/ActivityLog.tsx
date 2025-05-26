@@ -1,6 +1,7 @@
 import React from 'react';
 import { UserActivity } from '../userTypes';
 import { FaClock, FaBookOpen, FaUpload, FaComment, FaStar, FaUser, FaSync } from 'react-icons/fa';
+import { getRelativeTime } from '../../utils/dateUtils';
 
 interface ActivityLogProps {
   activities: UserActivity[];
@@ -28,28 +29,6 @@ const getActivityIcon = (action: string) => {
   }
 };
 
-// Helper to format relative time (e.g., "2 hours ago")
-const getRelativeTime = (timestamp: Date) => {
-  const now = new Date();
-  const activityTime = new Date(timestamp);
-  const diffInSeconds = Math.floor((now.getTime() - activityTime.getTime()) / 1000);
-  
-  if (diffInSeconds < 60) {
-    return 'just now';
-  } else if (diffInSeconds < 3600) {
-    const minutes = Math.floor(diffInSeconds / 60);
-    return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
-  } else if (diffInSeconds < 86400) {
-    const hours = Math.floor(diffInSeconds / 3600);
-    return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
-  } else if (diffInSeconds < 604800) { // 7 days
-    const days = Math.floor(diffInSeconds / 86400);
-    return `${days} ${days === 1 ? 'day' : 'days'} ago`;
-  } else {
-    return activityTime.toLocaleDateString();
-  }
-};
-
 const ActivityLog: React.FC<ActivityLogProps> = ({ activities, limit = 10, className = '' }) => {
   if (!activities || activities.length === 0) {
     return (
@@ -70,7 +49,7 @@ const ActivityLog: React.FC<ActivityLogProps> = ({ activities, limit = 10, class
     <div className={`${className}`}>
       <ul className="divide-y divide-gray-200 dark:divide-gray-700">
         {recentActivities.map((activity) => (
-          <li key={activity.id} className="py-3 flex items-start">
+          <li key={activity._id} className="py-3 flex items-start">
             <div className="mr-4 mt-1">
               {getActivityIcon(activity.action)}
             </div>

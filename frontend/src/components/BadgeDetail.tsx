@@ -188,4 +188,6 @@ const BadgeDetail: React.FC<BadgeDetailProps> = ({ badge, onClose, isEarned = fa
   );
 };
 
-export default BadgeDetail; 
+export default BadgeDetail;
+
+export type { Badge, BadgeRarity, BadgeCategory }; 

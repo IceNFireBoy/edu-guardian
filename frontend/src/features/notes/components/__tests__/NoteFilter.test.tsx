@@ -1,7 +1,28 @@
+import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import NoteFilter from '../../NoteFilter';
 import { Note } from '../../noteTypes';
+
+const mockNote: Note = {
+  _id: '1',
+  title: 'Test Note',
+  content: 'Test content',
+  subject: 'Math',
+  grade: '10th',
+  semester: 'Fall',
+  quarter: 'Q1',
+  topic: 'Algebra',
+  isPublic: true,
+  fileUrl: 'test.pdf',
+  fileType: 'pdf',
+  viewCount: 0,
+  rating: 0,
+  ratingCount: 0,
+  createdAt: '2024-01-01T00:00:00.000Z',
+  updatedAt: '2024-01-01T00:00:00.000Z',
+  user: 'user123'
+};
 
 describe('NoteFilter', () => {
   const mockSubjects = ['Mathematics', 'Science', 'English'];

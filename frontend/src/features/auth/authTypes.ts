@@ -4,6 +4,8 @@ export interface User {
   xp: number;
   level: number;
   badges: string[];
+  summaryQuota?: number;
+  flashcardQuota?: number;
 }
 
 export interface LoginCredentials {

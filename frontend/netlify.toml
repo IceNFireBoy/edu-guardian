@@ -22,8 +22,8 @@
 
 # Build environment settings
 [build.environment]
-  NODE_VERSION = "16.14.0"
-  NPM_VERSION = "8.5.0"
+  NODE_VERSION = "20.12.2"
+  NPM_VERSION = "10.5.0"
   NETLIFY_USE_YARN = "false"
 
 # Cache control for static assets

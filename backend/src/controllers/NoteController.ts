@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import asyncHandler from '../middleware/async';
-import { NoteService, NoteQueryFilters } from '../services/NoteService';
+import NoteService, { NoteQueryFilters } from '../services/NoteService';
 import ErrorResponse from '../utils/errorResponse';
 import { CustomRequest } from '../middleware/auth'; // For req.user if needed
 import { INote } from '../models/Note'; // For types
@@ -189,16 +189,12 @@ export default class NoteController {
     }
 
     try {
-      const updatedNote = await noteService.updateNoteById(noteId, userId, noteData);
+      const updatedNote = await noteService.updateNote(noteId, noteData);
       if (!updatedNote) {
-        // This case should ideally be covered by service throwing ErrorResponse for not found
-        // but as a fallback or if service returns null for not found instead of throwing for it.
         return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));
       }
       res.status(200).json({ success: true, data: updatedNote });
     } catch (error) {
-        // ErrorResponse for authorization (401) will be passed directly by asyncHandler
-        // Mongoose validation errors (e.g. enum mismatch) might occur here
         if (error instanceof mongoose.Error.ValidationError) {
             const messages = Object.values(error.errors).map(e => e.message);
             return next(new ErrorResponse(`Validation Error from Mongoose: ${messages.join(', ')}`, 400));
@@ -222,7 +218,7 @@ export default class NoteController {
     const noteId = req.params.id;
 
     try {
-      const deletedNote = await noteService.deleteNoteById(noteId, userId);
+      const deletedNote = await noteService.deleteNote(noteId);
       if (!deletedNote) {
         return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));
       }

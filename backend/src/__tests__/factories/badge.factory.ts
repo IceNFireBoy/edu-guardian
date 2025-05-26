@@ -1,32 +1,30 @@
 // jest-ignore
-import Badge, { IBadge } from '../../models/Badge';
-import mongoose from 'mongoose';
+import { Badge } from '../../models/Badge';
+import { IBadge } from '../../interfaces/Badge';
+import { Types } from 'mongoose';
 
-export const mockBadge = (overrides: Partial<IBadge> = {}): Partial<IBadge> => ({
-  _id: new mongoose.Types.ObjectId(),
+export const mockBadge = (): Partial<IBadge> => ({
   name: 'Test Badge',
-  description: 'Test badge description',
-  imageUrl: 'test-image.jpg',
+  description: 'A test badge',
   category: 'achievement',
-  rarity: 'common',
   criteria: {
-    description: 'Test criteria description',
-    requirements: {
-      count: 1
-    }
+    type: 'note_created',
+    threshold: 1
   },
-  xpAward: 100,
-  isActive: true,
-  slug: 'test-badge',
   xpReward: 100,
-  requirements: {
-    count: 1
-  },
-  ...overrides
+  rarity: 'common',
+  isActive: true,
+  displayOrder: 1,
+  createdAt: new Date(),
+  updatedAt: new Date()
 });
 
-export const mockTestBadge = async (overrides: Partial<IBadge> = {}): Promise<IBadge> => {
-  const badgeData = mockBadge(overrides);
-  const badge = new Badge(badgeData);
-  return badge.save();
+export const mockTestBadge = async (): Promise<IBadge> => {
+  const badge = new Badge(mockBadge());
+  const savedBadge = await badge.save();
+  return {
+    ...savedBadge.toObject(),
+    _id: savedBadge._id as Types.ObjectId,
+    displayOrder: 1
+  };
 }; 
