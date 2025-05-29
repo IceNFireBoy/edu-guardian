@@ -4,14 +4,14 @@ export interface Badge {
   _id: string;
   name: string;
   description: string;
-  category: 'engagement' | 'ai' | 'streak' | 'achievement';
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  icon: string;
+  category: 'achievement' | 'engagement' | 'study' | 'social';
+  level: 'bronze' | 'silver' | 'gold' | 'platinum';
   criteria: {
     type: string;
-    threshold: number;
+    value: number;
   };
   xpReward: number;
-  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -19,13 +19,55 @@ export interface Badge {
 export interface BadgeResponse {
   success: boolean;
   data: Badge;
-  error?: string;
 }
 
 export interface BadgesResponse {
   success: boolean;
-  data: Badge[];
-  error?: string;
+  data: {
+    badges: Badge[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface BadgeGridProps {
+  badges: Badge[];
+  userBadges?: string[];
+  onBadgeClick?: (badge: Badge) => void;
+  className?: string;
+}
+
+export interface BadgeCardProps {
+  badge: Badge;
+  isEarned?: boolean;
+  onClick?: () => void;
+  className?: string;
+}
+
+export interface BadgeProgressProps {
+  badge: Badge;
+  progress: number;
+  className?: string;
+}
+
+export interface BadgeCriteria {
+  type: string;
+  value: number;
+  description: string;
+}
+
+export interface BadgeLevel {
+  level: 'bronze' | 'silver' | 'gold' | 'platinum';
+  xpReward: number;
+  criteria: BadgeCriteria;
+}
+
+export interface BadgeCategory {
+  name: 'achievement' | 'engagement' | 'study' | 'social';
+  description: string;
+  icon: string;
 }
 
 export interface IBadge extends Document {
@@ -51,10 +93,4 @@ export interface IUserBadge {
     type: string;
     value: number;
   };
-}
-
-export interface BadgeGridProps {
-  badges: IUserBadge[];
-  newBadgeIds: string[];
-  className?: string;
 } 

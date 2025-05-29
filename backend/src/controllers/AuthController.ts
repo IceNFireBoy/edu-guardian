@@ -28,17 +28,33 @@ class AuthController {
         message: err.msg 
       }));
       return next(new ErrorResponse(`Validation failed: ${errorMessages.map(e=>e.message).join(', ')}`, 400));
-      // Or simply:
-      // return res.status(400).json({ success: false, errors: errors.array() });
     }
 
   const { name, email, password, username } = req.body;
 
     try {
-      const successMessage = await this.authService.registerUser({ name, email, password, username }, req);
-      res.status(201).json({ // Changed to 201 for resource creation
+      // Generate a username if not provided
+      const usernameToUse = username || email.split('@')[0] + Math.floor(Math.random() * 1000);
+      
+      const userData = { 
+        name, 
+        email, 
+        password, 
+        username: usernameToUse 
+      };
+      
+      const user = await this.authService.registerUser(userData, req);
+      
+      // Return the user without sending a token (email verification required)
+      res.status(201).json({
       success: true,
-        data: successMessage
+        data: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          username: user.username,
+          message: 'Registration successful. Please check your email to verify your account.'
+        }
     });
     } catch (error) {
       // AuthService methods should throw ErrorResponse instances on failure

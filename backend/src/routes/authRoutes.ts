@@ -10,7 +10,7 @@ const authController = new AuthController();
 router.post('/register', [
   check('name', 'Name is required').not().isEmpty(),
   check('email', 'Please include a valid email').isEmail(),
-  check('username', 'Username is required').not().isEmpty(),
+  check('username').optional(),
   check('password', 'Password must be 6 or more characters').isLength({ min: 6 })
 ], authController.register);
 
@@ -23,7 +23,7 @@ router.post(
   authController.login
 );
 
-router.post('/logout', protect, authController.logout);
+router.post('/logout', authController.logout);
 
 router.get('/verify-email/:verificationtoken', authController.verifyEmail);
 router.post(
@@ -37,7 +37,10 @@ router.get('/me', protect, authController.getProfile);
 router.put('/me', protect, [
     body('email').optional().isEmail().withMessage('Please provide a valid email'),
     body('name').optional().notEmpty().withMessage('Name cannot be empty'),
-    body('username').optional().notEmpty().withMessage('Username cannot be empty')
+    body('username').optional().notEmpty().withMessage('Username cannot be empty'),
+    body('profileImage').optional(),
+    body('biography').optional(),
+    body('preferences').optional().isObject().withMessage('Preferences must be an object')
 ], authController.updateProfile);
 
 router.put('/updatepassword', protect, [

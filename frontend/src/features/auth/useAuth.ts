@@ -13,21 +13,50 @@ const setToken = (token: string): void => localStorage.setItem('token', token);
 const removeToken = (): void => localStorage.removeItem('token');
 
 interface ApiResponse<T> {
+  success: boolean;
   data: T;
+  token?: string;
   message?: string;
 }
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start as loading to check for existing token
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  // Check for existing token on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = getToken();
+      if (token) {
+        try {
+          await fetchCurrentUser();
+        } catch (err) {
+          // Token invalid or expired
+          removeToken();
+          setUser(null);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+    
+    checkAuth();
+  }, []);
 
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
       setError(null);
       const response = await callAuthenticatedApi<ApiResponse<User>>('/auth/login', 'POST', { email, password });
+      
+      if (response.token) {
+        setToken(response.token);
+      }
+      
       setUser(response.data);
       return response.data;
     } catch (err: any) {
@@ -43,6 +72,11 @@ export const useAuth = () => {
       setLoading(true);
       setError(null);
       const response = await callAuthenticatedApi<ApiResponse<User>>('/auth/register', 'POST', userData);
+      
+      if (response.token) {
+        setToken(response.token);
+      }
+      
       setUser(response.data);
       return response.data;
     } catch (err: any) {
@@ -57,6 +91,7 @@ export const useAuth = () => {
     try {
       setLoading(true);
       await callAuthenticatedApi('/auth/logout', 'POST');
+      removeToken();
       setUser(null);
       navigate('/login');
     } catch (err: any) {
@@ -87,6 +122,7 @@ export const useAuth = () => {
     login,
     registerUser,
     logout,
-    fetchCurrentUser
+    fetchCurrentUser,
+    isAuthenticated: !!user
   };
 }; 

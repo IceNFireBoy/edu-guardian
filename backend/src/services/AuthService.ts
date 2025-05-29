@@ -53,7 +53,7 @@ export class AuthService {
   public async registerUser(
     userData: Pick<IUser, 'name' | 'email' | 'password' | 'username'>,
     req: Request // Pass request object for constructing verification URL
-  ): Promise<string> { // Returns a success message
+  ): Promise<IUser> { // Returns the user object
     const { name, email, password, username } = userData;
 
     // Check if user already exists (more robust check)
@@ -91,7 +91,7 @@ export class AuthService {
         message
       });
 
-      return 'Registration successful. Please check your email to verify your account.';
+      return user;
     } catch (err: Error | unknown) {
       console.error('[AuthService Register] Email sending error:', err);
       // Clean up token fields if send fails, so user can try to register again or request new token

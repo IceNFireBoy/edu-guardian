@@ -53,28 +53,30 @@ export interface IUserStats {
 export interface UserStreak {
   current: number;
   max: number;
-  lastUsed: Date;
+  lastUsed: string;
 }
 
 export interface AIUsage {
   summaryUsed: number;
   flashcardUsed: number;
-  lastReset: Date;
+  lastReset: string;
 }
 
 export interface UserProfile {
   _id: string;
+  name: string;
   email: string;
   username: string;
+  role: 'user' | 'admin';
   xp: number;
   level: number;
   streak: UserStreak;
   aiUsage: AIUsage;
-  badges: string[];
-  createdAt: Date;
-  updatedAt: Date;
-  summaryQuota?: number;
-  flashcardQuota?: number;
+  badges: UserBadge[];
+  favoriteNotes: string[];
+  createdAt: string;
+  updatedAt: string;
+  stats: UserStats;
 }
 
 export interface UserStatsCardProps {
@@ -93,32 +95,12 @@ export interface User {
   name: string;
   email: string;
   username: string;
-  role: 'user' | 'publisher' | 'admin';
-  profileImage: string;
-  biography?: string;
-  preferences: {
-    darkMode: boolean;
-    emailNotifications: boolean;
-  };
+  role: 'user' | 'admin';
   xp: number;
   level: number;
-  streak: {
-    current: number;
-    max: number;
-    lastUsed: string;
-  };
-  lastActive: string;
+  streak: UserStreak;
+  aiUsage: AIUsage;
   badges: UserBadge[];
-  activity: UserActivity[];
-  subjects: UserSubject[];
-  emailVerified: boolean;
-  aiUsage: {
-    summaryUsed: number;
-    flashcardUsed: number;
-    lastReset: string;
-  };
-  totalSummariesGenerated: number;
-  totalFlashcardsGenerated: number;
   favoriteNotes: string[];
   createdAt: string;
   updatedAt: string;
@@ -128,15 +110,22 @@ export interface UserBadge {
   _id: string;
   badge: string;
   earnedAt: string;
-  criteriaMet: string;
+  level: 'bronze' | 'silver' | 'gold' | 'platinum';
+  xpReward: number;
 }
 
 export interface UserActivity {
   _id: string;
-  action: 'study' | 'comment' | 'upload' | 'download' | 'rate' | 'share' | 'login' | 'earn_badge' | 'earn_xp' | 'ai_summary_generated' | 'ai_flashcards_generated';
+  userId: string;
+  action: string;
   description: string;
-  xpEarned: number;
   timestamp: string;
+  xpEarned: number;
+  metadata: {
+    noteId?: string;
+    noteTitle?: string;
+    streakDays?: number;
+  };
 }
 
 export interface UserSubject {
@@ -164,12 +153,70 @@ export interface UserAchievement {
 }
 
 export interface UserStats {
-  xp: number;
-  level: number;
-  streak: number;
-  badges: number;
-  notes: number;
-  achievements: number;
+  totalNotes: number;
+  totalViews: number;
+  totalDownloads: number;
+  totalRatings: number;
+  averageRating: number;
+  totalFlashcardsGenerated: number;
+  totalStudyTime: number;
+  totalStreakDays: number;
+  totalXPEarned: number;
+  totalBadgesEarned: number;
+}
+
+export interface UserProfileResponse {
+  success: boolean;
+  data: UserProfile;
+}
+
+export interface UserStatsResponse {
+  success: boolean;
+  data: UserStats;
+}
+
+export interface UserActivityResponse {
+  success: boolean;
+  data: {
+    activities: UserActivity[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface UserBadgeResponse {
+  success: boolean;
+  data: {
+    badges: UserBadge[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface UserFavoriteNotesResponse {
+  success: boolean;
+  data: {
+    notes: string[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface UserSearchResponse {
+  success: boolean;
+  data: {
+    users: UserProfile[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 export interface UserResponse {

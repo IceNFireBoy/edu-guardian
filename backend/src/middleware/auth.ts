@@ -29,22 +29,22 @@ export const protect = asyncHandler(async (req: CustomRequest, _res: Response, n
     req.headers.authorization &&
     req.headers.authorization.startsWith('Bearer')
   ) {
+    // Get token from Bearer header
     token = req.headers.authorization.split(' ')[1];
-  } else if (req.cookies?.token) { // Use optional chaining
+  } else if (req.cookies?.token) {
+    // Get token from cookie
     token = req.cookies.token;
   }
 
   // Check if token exists
   if (!token) {
-    next(new ErrorResponse('Not authorized to access this route (no token)', 401));
-    return;
+    return next(new ErrorResponse('Not authorized to access this route (no token)', 401));
   }
 
   // Verify JWT_SECRET exists
   if (!process.env.JWT_SECRET) {
     console.error('[AuthMiddleware] JWT_SECRET is not defined.');
-    next(new ErrorResponse('Server configuration error', 500));
-    return;
+    return next(new ErrorResponse('Server configuration error', 500));
   }
 
   try {
@@ -54,17 +54,22 @@ export const protect = asyncHandler(async (req: CustomRequest, _res: Response, n
     // Find user by ID from token
     const user = await User.findById(decoded.id).select('-password'); // Exclude password explicitly
     if (!user) {
-      next(new ErrorResponse('User not found for token, not authorized', 401));
-      return;
+      return next(new ErrorResponse('User not found for token, not authorized', 401));
     }
     
     // Add user to request object
     req.user = user;
     next();
   } catch (err) {
-    // Handle different JWT errors specifically if needed
+    // Handle different JWT errors specifically
+    if (err instanceof jwt.TokenExpiredError) {
+      return next(new ErrorResponse('Token expired, please log in again', 401));
+    } else if (err instanceof jwt.JsonWebTokenError) {
+      return next(new ErrorResponse('Invalid token, please log in again', 401));
+    }
+    
     console.error('[AuthMiddleware] Token verification failed:', err);
-    next(new ErrorResponse('Not authorized to access this route (token invalid)', 401));
+    return next(new ErrorResponse('Not authorized to access this route (token invalid)', 401));
   }
 });
 
@@ -79,19 +84,17 @@ export const authorize = (...roles: UserRole[]) => {
   return (req: CustomRequest, _res: Response, next: NextFunction): void => {
     // Check if user exists and has a role property
     if (!req.user?.role) {
-      next(new ErrorResponse('User role not found, authorization denied', 403));
-      return;
+      return next(new ErrorResponse('User role not found, authorization denied', 403));
     }
     
     // Check if user's role is in the authorized roles list
     if (!roles.includes(req.user.role as UserRole)) {
-      next(
+      return next(
         new ErrorResponse(
           `User role '${req.user.role}' is not authorized to access this route`, 
           403
         )
       );
-      return;
     }
     
     next();

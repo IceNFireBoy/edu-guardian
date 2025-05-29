@@ -1,1 +1,2 @@
-import { Note, Flashcard as FlashcardType, ManualFlashcardPayload } from '../noteTypes'; 
+import { Note } from 'types/note';
+import { Flashcard as FlashcardType, ManualFlashcardPayload } from '../noteTypes'; 

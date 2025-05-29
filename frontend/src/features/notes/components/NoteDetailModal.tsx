@@ -1,19 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaShare, FaStar, FaRobot, FaLightbulb, FaDownload, FaTrash, FaSpinner } from 'react-icons/fa';
-import { Note } from '../../../types/note';
+import type { Note, NoteRating } from 'types/note';
 import { useNote } from '../useNote'; // For rateNote and deleteNote
 import { subjectColors, getSubjectColor } from '../NoteCard'; // Assuming NoteCard.tsx is in the same directory
 import AISummarizer from './AISummarizer';
 import FlashcardGenerator from './FlashcardGenerator';
 import { toast } from 'react-hot-toast';
+import { formatDate } from 'utils/dateUtils';
 
 interface NoteDetailModalProps {
-  note: Note | null;
+  note: Note;
   isOpen: boolean;
   onClose: () => void;
-  onNoteUpdate: (updatedNote: Note) => void; // Callback when note is rated or otherwise updated client-side
-  onNoteDelete: (noteId: string) => void; // Callback when note is deleted
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onRate?: (rating: number) => void;
+  userRating?: number;
 }
 
 // Helper to get average rating from localStorage (if still needed, or use note.rating)
@@ -27,18 +30,26 @@ const getLocalRating = (noteId: string): number | null => {
   }
 };
 
-const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose, onNoteUpdate, onNoteDelete }) => {
+export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
+  note,
+  isOpen,
+  onClose,
+  onEdit,
+  onDelete,
+  onRate,
+  userRating = 0,
+}) => {
   const [showSummarizer, setShowSummarizer] = useState(false);
   const [showFlashcards, setShowFlashcards] = useState(false);
-  const [currentRating, setCurrentRating] = useState<number>(0);
+  const [rating, setRating] = useState(userRating);
   const { rateNote, deleteNote: deleteNoteHook, loading: noteActionLoading, error: noteActionError } = useNote();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (note) {
       // Use the first rating value if available, else fallback
       const firstRating = note.ratings?.[0]?.value;
       const localRating = getLocalRating(note._id);
-      setCurrentRating(firstRating || localRating || 0);
+      setRating(firstRating || localRating || 0);
     }
     if (noteActionError) {
       toast.error(noteActionError);
@@ -49,38 +60,9 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
 
   const colorTheme = note.subject ? getSubjectColor(note.subject) : subjectColors.default;
 
-  const handleRatingSubmit = async (newRating: number) => {
-    if (!note) return;
-    const ratingResult = await rateNote(note._id, newRating);
-    if (ratingResult) {
-      setCurrentRating(newRating);
-      const updatedRatings: NoteRating[] = [
-        ...(note.ratings || []),
-        {
-          _id: `temp-${Date.now()}`,
-          noteId: note._id,
-          userId: 'current-user',
-          value: newRating,
-          createdAt: new Date().toISOString()
-        }
-      ];
-      const updatedNote: Note = { ...note, ratings: updatedRatings };
-      onNoteUpdate(updatedNote);
-      toast.success('Rating submitted!');
-      try {
-        const ratingsData = localStorage.getItem('note_ratings') || '{}';
-        const ratings = JSON.parse(ratingsData);
-        ratings[note._id] = newRating;
-        localStorage.setItem('note_ratings', JSON.stringify(ratings));
-      } catch (e) {
-        console.error('Error saving rating to localStorage', e);
-      }
-    }
-  };
-
-  const getShareableLink = (): string => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/view-note?id=${note._id}`; // Assuming a route like this exists
+  const handleRate = (value: number) => {
+    setRating(value);
+    onRate?.(value);
   };
 
   const handleShare = () => {
@@ -107,12 +89,17 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
         const success = await deleteNoteHook(note._id);
         if (success) {
             toast.success('Note deleted successfully.');
-            onNoteDelete(note._id);
+            onDelete?.();
             onClose();
         } else {
             // Error is handled by noteActionError effect
         }
     }
+  };
+
+  const getShareableLink = (): string => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/view-note?id=${note._id}`; // Assuming a route like this exists
   };
 
   return (
@@ -143,34 +130,59 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
             {/* Body */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               <div>
-                <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Description</h3>
-                <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{note.description}</p>
+                <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Subject</p>
+                    <p className="text-gray-800 dark:text-gray-100">{note.subject}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Grade</p>
+                    <p className="text-gray-800 dark:text-gray-100">{note.grade}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Semester</p>
+                    <p className="text-gray-800 dark:text-gray-100">{note.semester}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Quarter</p>
+                    <p className="text-gray-800 dark:text-gray-100">{note.quarter}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Topic</p>
+                    <p className="text-gray-800 dark:text-gray-100">{note.topic}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Created</p>
+                    <p className="text-gray-800 dark:text-gray-100">{formatDate(note.createdAt)}</p>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-                <div><strong className="text-gray-600 dark:text-gray-300">Subject:</strong> <span className="text-gray-800 dark:text-gray-100">{note.subject}</span></div>
-                <div><strong className="text-gray-600 dark:text-gray-300">Grade:</strong> <span className="text-gray-800 dark:text-gray-100">{note.grade}</span></div>
-                <div><strong className="text-gray-600 dark:text-gray-300">Semester:</strong> <span className="text-gray-800 dark:text-gray-100">{note.semester}</span></div>
-                <div><strong className="text-gray-600 dark:text-gray-300">Quarter:</strong> <span className="text-gray-800 dark:text-gray-100">{note.quarter}</span></div>
-                <div className="sm:col-span-2"><strong className="text-gray-600 dark:text-gray-300">Topic:</strong> <span className="text-gray-800 dark:text-gray-100">{note.topic}</span></div>
+              <div>
+                <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Content</h3>
+                <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{note.content}</p>
               </div>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <strong className="text-gray-600 dark:text-gray-300">Views:</strong>{' '}
-                  <span className="text-gray-800 dark:text-gray-100">{note.viewCount || 0}</span>
-                </div>
-                <div>
-                  <strong className="text-gray-600 dark:text-gray-300">Rating:</strong>{' '}
-                  <span className="text-gray-800 dark:text-gray-100">
-                    {note.ratings?.length
-                      ? (note.ratings.reduce((sum, r) => sum + r.value, 0) / note.ratings.length).toFixed(1)
-                      : '0.0'} ({note.ratings?.length || 0} votes)
-                  </span>
-                </div>
-                <div>
-                  <strong className="text-gray-600 dark:text-gray-300">Flashcards:</strong>{' '}
-                  <span className="text-gray-800 dark:text-gray-100">{note.flashcards?.length || 0}</span>
+
+              <div>
+                <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Statistics</h3>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <strong className="text-gray-600 dark:text-gray-300">Views:</strong>{' '}
+                    <span className="text-gray-800 dark:text-gray-100">{note.viewCount || 0}</span>
+                  </div>
+                  <div>
+                    <strong className="text-gray-600 dark:text-gray-300">Downloads:</strong>{' '}
+                    <span className="text-gray-800 dark:text-gray-100">{note.downloadCount || 0}</span>
+                  </div>
+                  <div>
+                    <strong className="text-gray-600 dark:text-gray-300">Rating:</strong>{' '}
+                    <span className="text-gray-800 dark:text-gray-100">
+                      {note.ratings?.length
+                        ? (note.ratings.reduce((sum, r) => sum + r.value, 0) / note.ratings.length).toFixed(1)
+                        : '0.0'} ({note.ratings?.length || 0} votes)
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -180,9 +192,9 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button 
                       key={star} 
-                      onClick={() => handleRatingSubmit(star)} 
+                      onClick={() => handleRate(star)} 
                       disabled={noteActionLoading}
-                      className={`text-2xl focus:outline-none ${star <= currentRating ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600 hover:text-yellow-300'}`}
+                      className={`text-2xl focus:outline-none ${star <= rating ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600 hover:text-yellow-300'}`}
                       aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
                     >
                       <FaStar />

@@ -30,6 +30,8 @@ import Header from './components/layout/Header';
 import CookieConsent from './components/ui/CookieConsent';
 import OfflineDetector from './components/ui/OfflineDetector';
 import DebugPanel, { debug } from './components/DebugPanel';
+import NetworkStatusMonitor from './components/ui/NetworkStatusMonitor';
+import { checkApiHealth } from './api/apiClient';
 
 // Make debug function available globally (for console usage)
 if (typeof window !== 'undefined') {
@@ -40,6 +42,7 @@ function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [apiConnected, setApiConnected] = useState<boolean | null>(null);
 
   // Check if localStorage is available
   useEffect(() => {
@@ -124,6 +127,19 @@ function App() {
     }
   };
 
+  // Check API connectivity on app start
+  useEffect(() => {
+    checkApiHealth().then(connected => {
+      setApiConnected(connected);
+      if (!connected) {
+        toast.error('Unable to connect to the server. Some features may be unavailable.', {
+          duration: 5000,
+          id: 'api-connection-initial'
+        });
+      }
+    });
+  }, []);
+
   // If we've encountered a critical error, render the fallback
   if (hasError) {
     console.error('App rendering fallback due to error:', errorMessage);
@@ -156,6 +172,7 @@ function App() {
               },
             },
           }} />
+          <NetworkStatusMonitor />
           <OfflineDetector />
           <Sidebar />
           <div className="flex flex-col min-h-screen md:ml-64">

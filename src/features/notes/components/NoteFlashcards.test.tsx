@@ -1,1 +1,1 @@
-import { Note } from '../noteTypes'; 
+import { Note } from 'types/note'; 

@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import axios from 'axios';
+import { api } from 'utils/api';
 
 // Define types
 interface User {
@@ -47,16 +47,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const token = localStorage.getItem('token');
         
         if (token) {
-          // Set auth token header
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          // No need to set axios.defaults.headers.common['Authorization'] here,
+          // the 'api' instance's request interceptor handles it.
           
-          // Get user data
           const storedUser = localStorage.getItem('user');
           if (storedUser) {
             setUser(JSON.parse(storedUser));
           } else {
-            // If token exists but no user data, fetch user data
-            const res = await axios.get('/api/v1/auth/me');
+            const res = await api.get('/v1/auth/me'); // Use api instance, ensure path is relative to baseURL
             setUser(res.data.data);
             localStorage.setItem('user', JSON.stringify(res.data.data));
           }
@@ -64,7 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (err) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        delete axios.defaults.headers.common['Authorization'];
+        // No need to delete axios.defaults.headers.common['Authorization'] if not set globally
         console.error('Auth check failed:', err);
       } finally {
         setIsLoading(false);
@@ -80,15 +78,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
     
     try {
-      const res = await axios.post('/api/v1/auth/login', { email, password });
+      // Path should be relative to the baseURL in api.ts (e.g., /v1/auth/login if baseURL is /api)
+      const res = await api.post('/v1/auth/login', { email, password }); 
       
-      // Save token and user data to localStorage
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.data));
       
-      // Set axios default header
-      axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-      
+      // No need to set axios.defaults.headers.common['Authorization']
       setUser(res.data.data);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
@@ -103,15 +99,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
     
     try {
-      const res = await axios.post('/api/v1/auth/register', userData);
+      // Path should be relative to the baseURL in api.ts
+      const res = await api.post('/v1/auth/register', userData);
       
-      // Save token and user data to localStorage
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.data));
       
-      // Set axios default header
-      axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-      
+      // No need to set axios.defaults.headers.common['Authorization']
       setUser(res.data.data);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
@@ -124,7 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    delete axios.defaults.headers.common['Authorization'];
+    // No need to delete axios.defaults.headers.common['Authorization']
     setUser(null);
   };
 

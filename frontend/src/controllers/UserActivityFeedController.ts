@@ -2,10 +2,26 @@ import { Request, Response } from 'express';
 import { UserActivityFeedService } from '../services/UserActivityFeedService';
 import { BadgeService } from '../services/BadgeService';
 import { asyncHandler } from '../middleware/asyncHandler';
+import { callAuthenticatedApi } from '../api/apiClient';
+import { handleApiError } from '../utils/errorHandler';
+import { UserActivity } from '../features/user/userTypes';
 
 interface AuthRequest extends Request {
   user?: {
     id: string;
+  };
+}
+
+export interface ActivityFeedResponse {
+  success: boolean;
+  data: {
+    activities: UserActivity[];
+    pagination: {
+      total: number;
+      page: number;
+      limit: number;
+      pages: number;
+    };
   };
 }
 
@@ -80,4 +96,93 @@ export class UserActivityFeedController {
 
     return res.json({ activity, awardedBadges });
   });
+
+  /**
+   * Get user activity feed
+   * @param userId User ID
+   * @param page Page number
+   * @param limit Items per page
+   * @param sort Sort criteria
+   */
+  public static async getUserActivityFeed(
+    userId: string,
+    page: number = 1,
+    limit: number = 10,
+    sort: string = '-timestamp'
+  ): Promise<ActivityFeedResponse> {
+    try {
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        sort
+      }).toString();
+
+      const response = await callAuthenticatedApi<ActivityFeedResponse>(
+        `/users/${userId}/activity?${queryParams}`,
+        'GET'
+      );
+      
+      return response;
+    } catch (error) {
+      const { message } = handleApiError(error, {
+        customMessage: 'Failed to load activity feed'
+      });
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Log a user activity
+   * @param userId User ID
+   * @param action Activity action
+   * @param description Activity description
+   * @param xpEarned XP earned (optional)
+   * @param metadata Additional metadata (optional)
+   */
+  public static async logActivity(
+    userId: string,
+    action: string,
+    description: string,
+    xpEarned: number = 0,
+    metadata: Record<string, any> = {}
+  ): Promise<{ success: boolean; data: UserActivity }> {
+    try {
+      return await callAuthenticatedApi(
+        `/users/${userId}/activity`,
+        'POST',
+        {
+          action,
+          description,
+          xpEarned,
+          metadata
+        }
+      );
+    } catch (error) {
+      const { message } = handleApiError(error, {
+        customMessage: 'Failed to log activity',
+        showToast: false
+      });
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Clear a user's activity log
+   * @param userId User ID
+   */
+  public static async clearActivityLog(
+    userId: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      return await callAuthenticatedApi(
+        `/users/${userId}/activity`,
+        'DELETE'
+      );
+    } catch (error) {
+      const { message } = handleApiError(error, {
+        customMessage: 'Failed to clear activity log'
+      });
+      throw new Error(message);
+    }
+  }
 } 

@@ -35,6 +35,12 @@ api.interceptors.response.use(
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
+    
+    // Log errors in development mode
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('API Error:', error.response?.data || error.message);
+    }
+    
     return Promise.reject(error);
   }
 );

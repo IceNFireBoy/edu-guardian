@@ -27,7 +27,7 @@ import adminRoutes from './routes/adminRoutes';
 const app = express();
 
 // Body parser
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // Cookie parser
 app.use(cookieParser());
@@ -38,10 +38,26 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Set security headers
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP in development
+  crossOriginEmbedderPolicy: false, // Allow embedding
+}));
 
 // Enable CORS
-app.use(cors());
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? [process.env.FRONTEND_URL || 'https://eduguardian-app.netlify.app'] 
+    : true, // Allow all origins in development
+  credentials: true, // Allow cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
+
+// Log cors configuration in development
+if (process.env.NODE_ENV === 'development') {
+  console.log('CORS configured with options:', corsOptions);
+}
 
 // Sanitize data
 app.use(mongoSanitize());

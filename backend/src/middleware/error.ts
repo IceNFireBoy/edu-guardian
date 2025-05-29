@@ -1,64 +1,52 @@
 import { Request, Response, NextFunction } from 'express';
 import ErrorResponse from '../utils/errorResponse';
-import mongoose from 'mongoose';
-import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
-
-// Define interface for error object with statusCode
-interface ExtendedError extends Error {
-  statusCode?: number;
-  code?: number;
-  errors?: Record<string, { message: string }>;
-}
 
 /**
- * Global error handling middleware
- * Formats different types of errors into a consistent response format
+ * Global error handler middleware
  */
-const errorHandler = (err: Error | ErrorResponse | unknown, _req: Request, res: Response, _next: NextFunction): void => {
-  // Initialize error object with defaults
-  let error: ExtendedError = err instanceof Error ? err : new Error('Unknown error');
+const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
+  let error = { ...err };
+  error.message = err.message;
   
-  // If it's not an ErrorResponse instance but has statusCode, preserve it
-  if (!(err instanceof ErrorResponse) && (err as any).statusCode) {
-    error.statusCode = (err as any).statusCode;
-  }
+  // Log error for debugging (with request info)
+  console.error(`[${new Date().toISOString()}] ERROR: ${req.method} ${req.originalUrl}`);
+  console.error('Request body:', req.body);
+  console.error('Error details:', err);
 
-  // Log the original error for debugging
-  console.error(err);
-
-  // Mongoose bad ObjectId
-  if (error.name === 'CastError' || err instanceof mongoose.Error.CastError) {
-    const message = `Resource not found`;
+  // Mongoose bad ObjectId (CastError)
+  if (err.name === 'CastError') {
+    const message = `Resource not found with id of ${err.value}`;
     error = new ErrorResponse(message, 404);
   }
 
   // Mongoose duplicate key
-  if ((err as any).code === 11000 || error.name === 'MongoError') {
-    const message = 'Duplicate field value entered';
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyValue)[0];
+    const value = err.keyValue[field];
+    const message = `${field.charAt(0).toUpperCase() + field.slice(1)} '${value}' already exists. Please use a different value.`;
     error = new ErrorResponse(message, 400);
   }
 
   // Mongoose validation error
-  if (error.name === 'ValidationError' || err instanceof mongoose.Error.ValidationError) {
-    const message = Object.values(error.errors || {}).map(val => val.message);
-    error = new ErrorResponse(message.join(', '), 400);
+  if (err.name === 'ValidationError') {
+    const message = Object.values(err.errors).map((val: any) => val.message).join(', ');
+    error = new ErrorResponse(message, 400);
   }
 
-  // JWT errors
-  if (error.name === 'JsonWebTokenError' || err instanceof JsonWebTokenError) {
-    const message = 'Invalid token';
-    error = new ErrorResponse(message, 401);
+  // JSON Web Token errors
+  if (err.name === 'JsonWebTokenError') {
+    error = new ErrorResponse('Invalid token. Please log in again.', 401);
   }
 
-  if (error.name === 'TokenExpiredError' || err instanceof TokenExpiredError) {
-    const message = 'Token expired';
-    error = new ErrorResponse(message, 401);
+  if (err.name === 'TokenExpiredError') {
+    error = new ErrorResponse('Token expired. Please log in again.', 401);
   }
 
   // Send the error response
-  res.status(error.statusCode ?? 500).json({
+  res.status(error.statusCode || 500).json({
     success: false,
-    error: error.message ?? 'Server Error'
+    error: error.message || 'Server Error',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 };
 

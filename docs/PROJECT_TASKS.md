@@ -474,3 +474,133 @@ Finalize advanced features by refining AI-powered tools, enhancing UI/UX consist
 **This document should be kept up to date as TODOs are resolved or new placeholders are added during the refactoring process.**
 
 - [x] Refactor all NoteService static method calls to use instance methods throughout the backend (controllers, services, and tests). This improves consistency and maintainability. All usages now rely on the noteService instance. 
+
+## Task 12: Frontend-Backend Integration and Authentication Fixes
+**Status: COMPLETED**
+
+**Objective:** Ensure proper connection between frontend and backend, fix authentication flow, and update API configuration for consistent behavior.
+
+**Summary of Implementations:**
+
+**Part 1: API Client Configuration**
+- [x] **Updated API client configuration:**
+  - Fixed `apiClient.ts` to use environment variables for base URL
+  - Added token management directly in the API client
+  - Improved error handling for different types of API errors
+  - Ensured consistent configuration between `api.ts` and `apiClient.ts`
+
+**Part 2: Auth Flow Enhancements**
+- [x] **Authentication hooks and context:**
+  - Refactored `useAuth.ts` hook to properly manage token storage and authentication state
+  - Updated `AuthContext.tsx` to provide consistent authentication context
+  - Added auto-login capability to check for existing tokens on page load
+  - Improved type safety with proper interfaces for API responses
+
+**Part 3: Route Protection**
+- [x] **Routing and protection:**
+  - Enhanced `PrivateRoute.tsx` component to handle loading states
+  - Improved navigation and redirection logic for unauthenticated users
+  - Added better UI feedback during authentication loading
+
+**Part 4: Auth UI Components**
+- [x] **Login and Registration UX:**
+  - Updated `Login.tsx` with better form validation and error handling
+  - Improved `Register.tsx` to handle required and optional fields
+  - Added username generation for registration when not provided
+  - Enhanced UI with better styling and feedback
+
+**Part 5: Backend Auth Improvements**
+- [x] **Backend authentication:**
+  - Fixed CORS configuration in `server.ts` to accept requests from the frontend
+  - Updated `auth.ts` middleware to handle tokens more robustly
+  - Enhanced token verification with specific error handling for different JWT errors
+  - Updated `authRoutes.ts` to make username optional and improve route protection
+
+**Part 6: Configuration Updates**
+- [x] **Environment configuration:**
+  - Created template `.env.example` files for frontend and backend
+  - Documented required environment variables for proper setup
+  - Added better fallbacks for missing configuration
+
+**New TODOs from Task 12:**
+- **Frontend:**
+  - Add toast notifications for authentication events (login success/failure, etc.)
+  - Implement a more robust error handling system for API calls
+  - Consider adding a refresh token mechanism for longer sessions
+- **Backend:**
+  - Add rate limiting specifically for authentication routes to prevent brute force attacks
+  - Implement token blacklisting for truly secure logout functionality
+  - Consider adding more granular user role-based authorization
+
+**Next Steps:**
+The next priority should be implementing proper error handling throughout the application and adding comprehensive toast notifications for better user feedback.
+
+---
+
+**This document should be kept up to date as TODOs are resolved or new placeholders are added during the refactoring process.**
+
+## Task 13: API Connectivity and Error Handling Improvements
+**Status: COMPLETED**
+
+**Objective:** Fix API connectivity issues, improve error handling, and implement robust error recovery mechanisms to ensure reliable frontend-backend communication.
+
+**Summary of Implementations:**
+
+**Part 1: Error Handling Infrastructure**
+- [x] **Created centralized error handling system:**
+  - Implemented `errorHandler.ts` utility with categorized error types (network, authentication, validation, server)
+  - Added centralized API error handling with toast notifications
+  - Created retry mechanism with exponential backoff for transient errors
+  - Added error boundary components with user-friendly fallback UI
+
+**Part 2: API Client Enhancements**
+- [x] **Upgraded API client architecture:**
+  - Improved `apiClient.ts` with better logging, timeout configuration, and error handling
+  - Added request/response interceptors for debugging and authentication
+  - Created `checkApiHealth` function to detect API availability
+  - Implemented session expiration detection and automatic redirection to login
+
+**Part 3: UI Components for Network Status**
+- [x] **Added network monitoring components:**
+  - Created `NetworkStatusMonitor` component to detect and display connection status
+  - Added loading skeletons for better UX during data fetching
+  - Implemented `ErrorFallback` component for consistent error presentation
+  - Enhanced offline detection with browser online/offline event listeners
+
+**Part 4: Backend CORS and Error Handling**
+- [x] **Fixed backend connectivity issues:**
+  - Updated CORS configuration to properly accept requests during development
+  - Fixed body parser limits for larger payloads
+  - Enhanced error middleware with better logging and consistent error responses
+  - Improved JSON Web Token error handling for authentication issues
+
+**Part 5: Data Fetching Abstraction**
+- [x] **Created reusable data fetching hook:**
+  - Implemented `useFetch` hook with loading, error states, and auto-retry
+  - Added support for pagination, filtering, and sorting
+  - Created type-safe interfaces for API responses
+  - Added support for cancellation and cleanup
+
+**Part 6: Component Updates**
+- [x] **Updated components with improved error handling:**
+  - Fixed `ActivityLog` component to handle API errors and display proper fallbacks
+  - Updated controllers to use new error handling utilities
+  - Added progressive loading and "load more" functionality
+  - Improved dark mode support for error and loading states
+
+**New TODOs from Task 13:**
+- **Frontend:**
+  - Add unit tests for the new error handling utilities and hooks
+  - Consider implementing a more robust state management solution (Redux/Context) for global error state
+  - Add offline data synchronization for better offline user experience
+- **Backend:**
+  - Implement more detailed logging with request IDs for better error tracing
+  - Add health check endpoint with more detailed status information
+  - Consider implementing circuit breaker pattern for critical external services
+
+**Next Steps:**
+The next priority should be implementing comprehensive unit and integration tests to ensure the reliability of the new error handling system, followed by optimizing the application performance.
+
+---
+
+**This document should be kept up to date as TODOs are resolved or new placeholders are added during the refactoring process.** 

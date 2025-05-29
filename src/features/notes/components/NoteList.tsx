@@ -1,0 +1,3 @@
+import { Note } from 'types/note';
+
+// ... existing code ... 

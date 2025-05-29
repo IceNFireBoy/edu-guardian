@@ -15,12 +15,27 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
+    "baseUrl": "src",
     "paths": {
-      "@/*": ["src/*"]
-    }
+      "@/*": ["*"],
+      "types/*": ["types/*"],
+      "utils/*": ["utils/*"],
+      "models/*": ["models/*"],
+      "services/*": ["services/*"],
+      "hooks/*": ["hooks/*"],
+      "components/*": ["components/*"],
+      "features/*": ["features/*"],
+      "config/*": ["config/*"]
+    },
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true
   },
-  "include": ["src"],
-  "exclude": ["vite.config.ts", "vite.config.d.ts"],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "vite.config.ts", "vite.config.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 } 
