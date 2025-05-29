@@ -1,6 +1,7 @@
 import React from 'react';
 import { UserActivity } from '../userTypes';
-import { FaClock, FaBookOpen, FaUpload, FaComment, FaStar, FaUser, FaSync, FaAward, FaAi } from 'react-icons/fa';
+import { FaClock, FaBookOpen, FaUpload, FaComment, FaStar, FaUser, FaSync, FaAward } from 'react-icons/fa';
+import { AiOutlineRobot } from 'react-icons/ai';
 import { getRelativeTime } from '../../../utils/dateUtils';
 import ErrorFallback from '../../../components/ui/ErrorFallback';
 import useFetch from '../../../hooks/useFetch';
@@ -35,7 +36,7 @@ const getActivityIcon = (action: string) => {
       return <FaAward className="text-amber-500" />;
     case 'ai_summary_generated':
     case 'ai_flashcards_generated':
-      return <FaAi className="text-teal-500" />;
+      return <AiOutlineRobot className="text-teal-500" />;
     default:
       return <FaClock className="text-gray-500" />;
   }
