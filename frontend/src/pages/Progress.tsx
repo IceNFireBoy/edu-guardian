@@ -1,7 +1,7 @@
 import React, { useState, useEffect, FC, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { FaTrophy, FaFire, FaStar, FaBook, FaCalendarAlt, FaUsers, FaChartBar, FaSpinner } from 'react-icons/fa'; // Added more icons and FaSpinner
-import { useStreak } from '../hooks/useStreak'; // Assuming .ts version or will be created
+import { useUser } from '../features/user/useUser';
 
 import SubjectCard from '../components/progress/SubjectCard'; // Already TSX
 import StudyRecommendation from '../components/progress/StudyRecommendation'; // Already TSX
@@ -115,119 +115,113 @@ const StatsCard: FC<StatsCardProps> = ({ title, value, icon, color }) => (
 );
 
 const Progress: FC = () => {
-  const { streak, getXpForNextLevel } = useStreak() as AssumedUseStreakReturn; // Type assertion for now
+  const { profile, loading } = useUser();
   const [progressData, setProgressData] = useState<ProgressPageData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const loadProgressData = () => {
-      setLoading(true);
-      try {
-        const completedNotes: StoredCompletedNote[] = JSON.parse(localStorage.getItem('completedNotes') || '[]');
-        const allNotes: StoredNote[] = JSON.parse(localStorage.getItem('notes') || '[]');
-        
-        const subjectDataMap: SubjectsData = {};
-        const now = new Date();
-        const validNotesBySubject: { [subject: string]: StoredNote[] } = {};
+    if (!profile) return;
+    try {
+      const completedNotes: StoredCompletedNote[] = JSON.parse(localStorage.getItem('completedNotes') || '[]');
+      const allNotes: StoredNote[] = JSON.parse(localStorage.getItem('notes') || '[]');
+      
+      const subjectDataMap: SubjectsData = {};
+      const now = new Date();
+      const validNotesBySubject: { [subject: string]: StoredNote[] } = {};
 
-        allNotes.forEach(note => {
-          const noteUrl = note.secure_url || note.fileUrl || note.url || '';
-          const hasValidUrl = typeof noteUrl === 'string' && noteUrl.trim() !== '' && (noteUrl.startsWith('http://') || noteUrl.startsWith('https://'));
-          if (!hasValidUrl) return;
+      allNotes.forEach(note => {
+        const noteUrl = note.secure_url || note.fileUrl || note.url || '';
+        const hasValidUrl = typeof noteUrl === 'string' && noteUrl.trim() !== '' && (noteUrl.startsWith('http://') || noteUrl.startsWith('https://'));
+        if (!hasValidUrl) return;
 
-          let subject = note.subject || 'Uncategorized';
-          // Basic subject detection from title (could be improved)
-          if (note.title) {
-            if (note.title.toLowerCase().includes('biology')) subject = 'Biology';
-            else if (note.title.toLowerCase().includes('math')) subject = 'Mathematics'; // Example
+        let subject = note.subject || 'Uncategorized';
+        // Basic subject detection from title (could be improved)
+        if (note.title) {
+          if (note.title.toLowerCase().includes('biology')) subject = 'Biology';
+          else if (note.title.toLowerCase().includes('math')) subject = 'Mathematics'; // Example
+        }
+        if (!validNotesBySubject[subject]) validNotesBySubject[subject] = [];
+        validNotesBySubject[subject].push(note);
+      });
+
+      Object.entries(validNotesBySubject).forEach(([subject, notesInSubject]) => {
+        subjectDataMap[subject] = {
+          completed: 0,
+          total: notesInSubject.length,
+          timeSpent: 0,
+          avgTime: '0 min',
+          emojiStats: { "🤓": 0, "🤔": 0, "❗": 0 },
+          lastStudied: null,
+          percentage: 0,
+        };
+      });
+
+      completedNotes.forEach(completedNote => {
+        let subject = completedNote.subject || 'Uncategorized';
+        if (subject.includes('Biology')) subject = 'Biology'; // Normalize
+
+        if (!subjectDataMap[subject] || !validNotesBySubject[subject]) return;
+
+        const isValidCompletion = validNotesBySubject[subject].some(validNote => 
+          validNote._id === completedNote.id || validNote.asset_id === completedNote.id
+        );
+        if (!isValidCompletion) return;
+
+        subjectDataMap[subject].completed++;
+        subjectDataMap[subject].timeSpent += completedNote.timeSpent || 0;
+        if (completedNote.feedback && subjectDataMap[subject].emojiStats[completedNote.feedback] !== undefined) {
+          subjectDataMap[subject].emojiStats[completedNote.feedback]++;
+        }
+        if (completedNote.completedAt) {
+          const completedDate = new Date(completedNote.completedAt);
+          if (!subjectDataMap[subject].lastStudied || completedDate > (subjectDataMap[subject].lastStudied as Date)) {
+            subjectDataMap[subject].lastStudied = completedDate;
           }
-          if (!validNotesBySubject[subject]) validNotesBySubject[subject] = [];
-          validNotesBySubject[subject].push(note);
-        });
+        }
+      });
 
-        Object.entries(validNotesBySubject).forEach(([subject, notesInSubject]) => {
-          subjectDataMap[subject] = {
-            completed: 0,
-            total: notesInSubject.length,
-            timeSpent: 0,
-            avgTime: '0 min',
-            emojiStats: { "🤓": 0, "🤔": 0, "❗": 0 },
-            lastStudied: null,
-            percentage: 0,
-          };
-        });
+      Object.keys(subjectDataMap).forEach(subject => {
+        const data = subjectDataMap[subject];
+        data.avgTime = data.completed > 0 ? `${Math.round(data.timeSpent / data.completed)} min` : '0 min';
+        if (data.lastStudied) {
+          const diffTime = Math.abs(now.getTime() - (data.lastStudied as Date).getTime());
+          data.daysSinceLastStudy = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+        data.percentage = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
+      });
 
-        completedNotes.forEach(completedNote => {
-          let subject = completedNote.subject || 'Uncategorized';
-          if (subject.includes('Biology')) subject = 'Biology'; // Normalize
+      const inactiveSubjects: InactiveSubjectInfo[] = Object.entries(subjectDataMap)
+        .filter(([_, data]) => data.completed > 0 && (data.daysSinceLastStudy || 0) > 7)
+        .map(([subjectName, data]) => ({ name: subjectName, days: data.daysSinceLastStudy || 0 }))
+        .sort((a, b) => b.days - a.days);
 
-          if (!subjectDataMap[subject] || !validNotesBySubject[subject]) return;
+      const subjectTimeData: SubjectTimeData = {};
+      Object.entries(subjectDataMap).forEach(([subjectName, data]) => {
+        if (data.timeSpent > 0) subjectTimeData[subjectName] = data.timeSpent;
+      });
 
-          const isValidCompletion = validNotesBySubject[subject].some(validNote => 
-            validNote._id === completedNote.id || validNote.asset_id === completedNote.id
-          );
-          if (!isValidCompletion) return;
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      const completedThisWeek = completedNotes.filter(cn => 
+        cn.completedAt && new Date(cn.completedAt) >= oneWeekAgo
+      ).length;
+      
+      setProgressData({
+        subjectsData: subjectDataMap,
+        subjectTimeData,
+        inactiveSubjects,
+        completedThisWeek,
+        totalCompletedNotes: completedNotes.length,
+        currentStreak: profile.streak?.current || 0,
+        xp: profile.xp,
+        xpForNextLevel: getXpForNextLevel(),
+        subjectProgress: subjectDataMap,
+      });
 
-          subjectDataMap[subject].completed++;
-          subjectDataMap[subject].timeSpent += completedNote.timeSpent || 0;
-          if (completedNote.feedback && subjectDataMap[subject].emojiStats[completedNote.feedback] !== undefined) {
-            subjectDataMap[subject].emojiStats[completedNote.feedback]++;
-          }
-          if (completedNote.completedAt) {
-            const completedDate = new Date(completedNote.completedAt);
-            if (!subjectDataMap[subject].lastStudied || completedDate > (subjectDataMap[subject].lastStudied as Date)) {
-              subjectDataMap[subject].lastStudied = completedDate;
-            }
-          }
-        });
-
-        Object.keys(subjectDataMap).forEach(subject => {
-          const data = subjectDataMap[subject];
-          data.avgTime = data.completed > 0 ? `${Math.round(data.timeSpent / data.completed)} min` : '0 min';
-          if (data.lastStudied) {
-            const diffTime = Math.abs(now.getTime() - (data.lastStudied as Date).getTime());
-            data.daysSinceLastStudy = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          }
-          data.percentage = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
-        });
-
-        const inactiveSubjects: InactiveSubjectInfo[] = Object.entries(subjectDataMap)
-          .filter(([_, data]) => data.completed > 0 && (data.daysSinceLastStudy || 0) > 7)
-          .map(([subjectName, data]) => ({ name: subjectName, days: data.daysSinceLastStudy || 0 }))
-          .sort((a, b) => b.days - a.days);
-
-        const subjectTimeData: SubjectTimeData = {};
-        Object.entries(subjectDataMap).forEach(([subjectName, data]) => {
-          if (data.timeSpent > 0) subjectTimeData[subjectName] = data.timeSpent;
-        });
-
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        const completedThisWeek = completedNotes.filter(cn => 
-          cn.completedAt && new Date(cn.completedAt) >= oneWeekAgo
-        ).length;
-        
-        setProgressData({
-          subjectsData: subjectDataMap,
-          subjectTimeData,
-          inactiveSubjects,
-          completedThisWeek,
-          totalCompletedNotes: completedNotes.length,
-          currentStreak: streak.currentStreak,
-          xp: streak.xp,
-          xpForNextLevel: getXpForNextLevel(),
-          subjectProgress: subjectDataMap, // Using the already calculated map
-        });
-
-      } catch (error: any) {
-        console.error('Error loading progress data:', error);
-        setProgressData(getDemoProgressData(streak, getXpForNextLevel)); // Pass streak to demo data
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadProgressData();
-  }, [streak, getXpForNextLevel]); // Add getXpForNextLevel to dependencies if it changes
+    } catch (error: any) {
+      console.error('Error loading progress data:', error);
+      setProgressData(getDemoProgressData(profile, getXpForNextLevel));
+    }
+  }, [profile]);
 
   // Demo data generation needs to accept streak data
   const getDemoProgressData = (currentStreakData: AssumedStreakData, currentGetXpForNextLevel: () => number): ProgressPageData => {

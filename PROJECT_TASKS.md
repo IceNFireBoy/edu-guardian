@@ -1,0 +1,4 @@
+- [x] Unify XP, streak, and level data to use backend user profile as single source of truth
+- [x] Remove localStorage-based calculations for user stats
+- [x] Update Progress page to use backend data
+- [x] Update Dashboard (Home page) to use backend data 
