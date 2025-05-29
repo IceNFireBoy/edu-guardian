@@ -63,55 +63,56 @@ const DashboardFeed: React.FC = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const { success: successToast, error: errorToast } = useToast();
+  const [hasShownError, setHasShownError] = useState(false);
 
   // Fetch feed items
   const fetchFeed = useCallback(async (resetItems: boolean = false) => {
     if (resetItems) {
       setPage(1);
       setFeedItems([]);
+      setHasShownError(false); // Reset error toast throttle on manual retry or filter change
     }
-    
     setLoading(true);
     setError(null);
-    
     try {
       const response = await callAuthenticatedApi<FeedResponse>(
         `/api/v1/user/feed?filter=${filter}&page=${resetItems ? 1 : page}&limit=10`,
         'GET'
       );
-      
       if (response.success && response.data) {
-        // Format dates for all items
         const formattedItems = response.data.map(item => ({
           ...item,
           createdAt: new Date(item.createdAt)
         }));
-        
         if (resetItems) {
           setFeedItems(formattedItems);
         } else {
           setFeedItems(prev => [...prev, ...formattedItems]);
         }
-        
         setHasMore(response.pagination.hasMore);
         if (!resetItems) {
           setPage(prev => prev + 1);
         }
+        setHasShownError(false); // Reset error state on success
       } else {
         throw new Error(response.error || 'Failed to fetch feed items');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred while fetching the feed');
-      errorToast('Failed to load feed items');
+      if (!hasShownError) {
+        errorToast('Failed to load feed items');
+        setHasShownError(true);
+      }
     } finally {
       setLoading(false);
     }
-  }, [filter, page, errorToast]);
+  }, [filter, page, errorToast, hasShownError]);
 
-  // Initial fetch
+  // Initial fetch or filter change
   useEffect(() => {
     fetchFeed(true);
-  }, [filter, fetchFeed]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
 
   // Get appropriate icon for feed item type
   const getItemIcon = (itemType: string) => {
@@ -287,12 +288,11 @@ const DashboardFeed: React.FC = () => {
         )}
         
         {error && (
-          <div className="p-8 text-center">
-            <FaExclamationTriangle className="text-red-500 mx-auto mb-3 text-2xl" />
-            <p className="text-red-500 mb-2">{error}</p>
-            <button 
+          <div className="p-6 text-center text-red-600 dark:text-red-400">
+            <div className="mb-2">{error}</div>
+            <button
+              className="btn btn-primary mt-2"
               onClick={() => fetchFeed(true)}
-              className="text-primary hover:underline"
             >
               Try Again
             </button>
