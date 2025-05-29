@@ -123,6 +123,9 @@ export const useAuth = () => {
     registerUser,
     logout,
     fetchCurrentUser,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    setUser,
+    setLoading,
+    setError
   };
 }; 
