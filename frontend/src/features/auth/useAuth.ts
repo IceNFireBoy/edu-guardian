@@ -58,8 +58,8 @@ export const useAuth = () => {
       }
       
       setUser(response.data);
-      // Automatically refresh the page after successful login
-      window.location.reload();
+      // Automatically navigate to the dashboard after successful login
+      navigate('/dashboard');
       return response.data;
     } catch (err: any) {
       setError(err.message);
