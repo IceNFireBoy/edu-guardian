@@ -79,7 +79,7 @@ const DashboardFeed: React.FC = () => {
         `users/feed?filter=${filter}&page=${resetItems ? 1 : page}&limit=10`,
         'GET'
       );
-      if (response.success && response.data) {
+      if (response.success && Array.isArray(response.data)) {
         const formattedItems = response.data.map(item => ({
           ...item,
           createdAt: new Date(item.createdAt)
@@ -95,7 +95,8 @@ const DashboardFeed: React.FC = () => {
         }
         setHasShownError(false); // Reset error state on success
       } else {
-        throw new Error(response.error || 'Failed to fetch feed items');
+        setFeedItems([]);
+        throw new Error(response.error || 'No activity feed data available');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred while fetching the feed');
