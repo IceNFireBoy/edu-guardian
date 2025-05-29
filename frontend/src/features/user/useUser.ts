@@ -17,7 +17,7 @@ export const useUser = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<{ success: boolean, data: UserProfile }>('/api/v1/auth/me', 'GET');
+      const response = await callAuthenticatedApi<{ success: boolean, data: UserProfile }>('auth/me', 'GET');
       if (response.success && response.data) {
         setProfile(response.data);
         return response.data;
@@ -106,7 +106,7 @@ export const useUser = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<{ success: boolean, data: UserProfile }>('/api/v1/auth/me', 'PUT', updates);
+      const response = await callAuthenticatedApi<{ success: boolean, data: UserProfile }>('auth/me', 'PUT', updates);
       if (response.success && response.data) {
         setProfile(response.data);
         return response.data;

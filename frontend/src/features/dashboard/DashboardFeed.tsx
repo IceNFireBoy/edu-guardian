@@ -76,7 +76,7 @@ const DashboardFeed: React.FC = () => {
     setError(null);
     try {
       const response = await callAuthenticatedApi<FeedResponse>(
-        `/api/v1/users/feed?filter=${filter}&page=${resetItems ? 1 : page}&limit=10`,
+        `users/feed?filter=${filter}&page=${resetItems ? 1 : page}&limit=10`,
         'GET'
       );
       if (response.success && response.data) {
