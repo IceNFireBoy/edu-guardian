@@ -76,28 +76,30 @@ export const callAuthenticatedApi = async <T>(
   retries = 2
 ): Promise<T> => {
   try {
+    // Disable retries for logout requests to prevent rate limiting
+    const shouldRetry = endpoint !== '/auth/logout';
     return await retryWithBackoff(async () => {
-    let response;
-    
-    switch (method) {
-      case 'GET':
+      let response;
+      
+      switch (method) {
+        case 'GET':
           response = await apiClient.get(endpoint, { headers });
-        break;
-      case 'POST':
+          break;
+        case 'POST':
           response = await apiClient.post(endpoint, data, { headers });
-        break;
-      case 'PUT':
+          break;
+        case 'PUT':
           response = await apiClient.put(endpoint, data, { headers });
-        break;
-      case 'DELETE':
+          break;
+        case 'DELETE':
           response = await apiClient.delete(endpoint, { headers });
-        break;
-      default:
-        throw new Error(`Unsupported method: ${method}`);
-    }
+          break;
+        default:
+          throw new Error(`Unsupported method: ${method}`);
+      }
 
-    return response.data;
-    }, retries);
+      return response.data;
+    }, shouldRetry ? retries : 0);
   } catch (error: any) {
     // Use the central error handler
     const { message } = handleApiError(error);
