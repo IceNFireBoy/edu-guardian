@@ -248,7 +248,7 @@ UserSchema.methods.getEmailVerificationToken = function(this: IUser): string {
     .createHash('sha256')
     .update(verificationToken)
     .digest('hex');
-  this.emailVerificationTokenExpire = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  this.emailVerificationTokenExpire = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
   return verificationToken;
 };
 
