@@ -1,6 +1,8 @@
 import React, { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthContext } from './AuthContext';
+import apiClient from '../../api/apiClient';
+import toast from 'react-hot-toast';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -8,6 +10,7 @@ const Login: React.FC = () => {
   const [formError, setFormError] = useState('');
   const { login, loading, error } = useAuthContext();
   const navigate = useNavigate();
+  const [resendLoading, setResendLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -23,6 +26,19 @@ const Login: React.FC = () => {
       navigate('/dashboard');
     } catch (err: any) {
       setFormError(err.message || 'Login failed');
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email) return;
+    setResendLoading(true);
+    try {
+      const response = await apiClient.post('/auth/resend-verification', { email });
+      toast.success(response.data?.data || 'Verification email sent!');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || err.message || 'Failed to resend verification email');
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -83,6 +99,20 @@ const Login: React.FC = () => {
       </button>
           </div>
           
+          {/* Resend Verification Email Button */}
+          {email && (
+            <div className="text-center mt-4">
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resendLoading}
+                className="text-indigo-600 hover:underline text-sm"
+              >
+                {resendLoading ? 'Sending...' : 'Resend Verification Email'}
+              </button>
+            </div>
+          )}
+
           <div className="text-sm text-center">
             <p>
               Don't have an account?{' '}
