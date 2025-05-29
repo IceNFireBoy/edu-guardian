@@ -1,6 +1,7 @@
 import React, { createContext, ReactNode, useContext } from 'react';
 import { useAuth } from './useAuth';
 import { User } from './authTypes';
+import { api } from '../../services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -20,6 +21,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const auth = useAuth();
   
+  const registerUser = async ({ name, username, email, password }: { name: string; username: string; email: string; password: string }) => {
+    auth.setLoading(true);
+    auth.setError(null);
+    try {
+      const response = await api.post('/auth/register', { name, username, email, password });
+      auth.setLoading(false);
+      return response.data;
+    } catch (err: any) {
+      auth.setError(err.response?.data?.error || err.message || 'Registration failed');
+      auth.setLoading(false);
+      throw err;
+    }
+  };
+
   return (
     <AuthContext.Provider value={auth}>
       {children}

@@ -4,6 +4,7 @@ import { useAuthContext } from './AuthContext';
 
 const Register: React.FC = () => {
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,7 +17,7 @@ const Register: React.FC = () => {
     setFormError('');
     
     // Validate form
-    if (!name || !email || !password) {
+    if (!name || !username || !email || !password) {
       setFormError('Please fill in all required fields');
       return;
     }
@@ -32,10 +33,10 @@ const Register: React.FC = () => {
     }
     
     try {
-      await registerUser({ name, email, password });
+      await registerUser({ name, username, email, password });
       navigate('/dashboard');
     } catch (err: any) {
-      setFormError(err.message || 'Registration failed');
+      setFormError(err.response?.data?.error || err.message || 'Registration failed');
     }
   };
 
@@ -68,64 +69,80 @@ const Register: React.FC = () => {
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
-      <div>
+            <div>
+              <label htmlFor="username" className="sr-only">
+                Username
+              </label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div>
               <label htmlFor="email-address" className="sr-only">
                 Email address
               </label>
-        <input
+              <input
                 id="email-address"
                 name="email"
-          type="email"
+                type="email"
                 autoComplete="email"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Email address"
-          value={email}
+                value={email}
                 onChange={(e) => setEmail(e.target.value)}
-        />
-      </div>
-      <div>
+              />
+            </div>
+            <div>
               <label htmlFor="password" className="sr-only">
                 Password
               </label>
-        <input
-          id="password"
+              <input
+                id="password"
                 name="password"
-          type="password"
+                type="password"
                 autoComplete="new-password"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Password"
-          value={password}
+                value={password}
                 onChange={(e) => setPassword(e.target.value)}
-        />
-      </div>
-      <div>
+              />
+            </div>
+            <div>
               <label htmlFor="confirm-password" className="sr-only">
                 Confirm Password
               </label>
-        <input
+              <input
                 id="confirm-password"
                 name="confirm-password"
-          type="password"
+                type="password"
                 autoComplete="new-password"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Confirm Password"
-          value={confirmPassword}
+                value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-        />
-      </div>
+              />
+            </div>
           </div>
 
           <div>
-      <button
-        type="submit"
-        disabled={loading}
+            <button
+              type="submit"
+              disabled={loading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-      >
+            >
               {loading ? 'Creating account...' : 'Sign up'}
-      </button>
+            </button>
           </div>
           
           <div className="text-sm text-center">
@@ -136,7 +153,7 @@ const Register: React.FC = () => {
               </Link>
             </p>
           </div>
-    </form>
+        </form>
       </div>
     </div>
   );
