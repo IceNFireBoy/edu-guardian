@@ -17,7 +17,7 @@ export const useUser = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<{ success: boolean, data: UserProfile }>('/api/v1/auth/profile', 'GET');
+      const response = await callAuthenticatedApi<{ success: boolean, data: UserProfile }>('/api/v1/auth/me', 'GET');
       if (response.success && response.data) {
         setProfile(response.data);
         return response.data;
@@ -102,22 +102,18 @@ export const useUser = () => {
   }, [fetchUserProfile]);
 
   // Update user profile
-  const updateProfile = useCallback(async (updates: Partial<UserProfile>): Promise<UserProfile | null> => {
+  const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<{ success: boolean, data: UserProfile }>(
-        '/api/v1/auth/profile',
-        'PUT',
-        updates
-      );
+      const response = await callAuthenticatedApi<{ success: boolean, data: UserProfile }>('/api/v1/auth/me', 'PUT', updates);
       if (response.success && response.data) {
         setProfile(response.data);
         return response.data;
       }
-      throw new Error(response.error || 'Failed to update user profile');
+      throw new Error(response.error || 'Failed to update profile');
     } catch (err: any) {
-      setError(err.message || 'Failed to update user profile');
+      setError(err.message || 'Failed to update profile');
       return null;
     } finally {
       setLoading(false);
