@@ -76,8 +76,8 @@ export const callAuthenticatedApi = async <T>(
   retries = 2
 ): Promise<T> => {
   try {
-    // Disable retries for logout requests to prevent rate limiting
-    const shouldRetry = endpoint !== '/auth/logout';
+    // Disable retries for logout and login requests to prevent rate limiting
+    const shouldRetry = endpoint !== '/auth/logout' && endpoint !== '/auth/login';
     return await retryWithBackoff(async () => {
       let response;
       
