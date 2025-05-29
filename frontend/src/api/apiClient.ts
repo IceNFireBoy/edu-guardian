@@ -108,7 +108,7 @@ export const callAuthenticatedApi = async <T>(
 // Health check function
 export const checkApiHealth = async (): Promise<boolean> => {
   try {
-    await apiClient.get('/test'); // Endpoint defined in server.ts
+    await apiClient.get('/test'); // Updated endpoint to match backend
     console.log('API health check: Connected successfully');
     return true;
   } catch (error) {
