@@ -1,14 +1,14 @@
 import React, { createContext, ReactNode, useContext } from 'react';
 import { useAuth } from './useAuth';
 import { User } from './authTypes';
-import { api } from '../../services/api';
+import apiClient from '../../api/apiClient';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<User>;
-  registerUser: (userData: { email: string; password: string; name: string }) => Promise<User>;
+  registerUser: (userData: { email: string; password: string; name: string; username: string }) => Promise<User>;
   logout: () => Promise<void>;
   fetchCurrentUser: () => Promise<User>;
   isAuthenticated: boolean;
@@ -25,7 +25,7 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     auth.setLoading(true);
     auth.setError(null);
     try {
-      const response = await api.post('/auth/register', { name, username, email, password });
+      const response = await apiClient.post('/auth/register', { name, username, email, password });
       auth.setLoading(false);
       return response.data;
     } catch (err: any) {
