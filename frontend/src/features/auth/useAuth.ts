@@ -58,8 +58,12 @@ export const useAuth = () => {
       }
       
       setUser(response.data);
-      // Automatically navigate to the dashboard after successful login
+      // Navigate to the dashboard first
       navigate('/dashboard');
+      // Wait 0.3 seconds before refreshing the page
+      setTimeout(() => {
+        window.location.reload();
+      }, 300);
       return response.data;
     } catch (err: any) {
       setError(err.message);
