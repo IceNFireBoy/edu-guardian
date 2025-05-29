@@ -90,7 +90,7 @@ export const useAuth = () => {
   const logout = useCallback(async () => {
     try {
       setLoading(true);
-      await callAuthenticatedApi('/auth/logout', 'POST');
+      await callAuthenticatedApi('/auth/logout', 'POST', {});
       removeToken();
       setUser(null);
       navigate('/login');
