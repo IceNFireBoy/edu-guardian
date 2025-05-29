@@ -80,6 +80,11 @@ app.get('/api/test', (req, res) => {
   res.json({ success: true, message: 'API is running' });
 });
 
+// Add a test endpoint for /api/v1/test to match frontend health check
+app.get('/api/v1/test', (req, res) => {
+  res.json({ success: true, message: 'API is running' });
+});
+
 // Mount routers
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
