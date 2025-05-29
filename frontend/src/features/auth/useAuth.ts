@@ -58,6 +58,8 @@ export const useAuth = () => {
       }
       
       setUser(response.data);
+      // Automatically refresh the page after successful login
+      window.location.reload();
       return response.data;
     } catch (err: any) {
       setError(err.message);
