@@ -60,9 +60,13 @@ export class AuthService {
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
       if (existingUser.email === email) {
-        throw new ErrorResponse('User with this email already exists', 400);
-      }
-      if (existingUser.username === username) {
+        if (existingUser.emailVerified) {
+          throw new ErrorResponse('User with this email already exists', 400);
+        } else {
+          // If not verified, delete the old user and allow re-registration
+          await User.deleteOne({ email });
+        }
+      } else if (existingUser.username === username) {
         throw new ErrorResponse('Username is already taken', 400);
       }
     }
