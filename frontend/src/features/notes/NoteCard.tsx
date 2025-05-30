@@ -284,8 +284,12 @@ const NoteCard: React.FC<NoteCardProps> = ({
             <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">Public</span>
           )}
         </div>
-        <div className="absolute bottom-0 right-0 p-3 z-20 text-xs text-gray-800 dark:text-gray-200 font-medium">
-          {note.createdAt ? new Date(note.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : ''}
+        <div className="absolute bottom-0 right-0 p-3 z-20">
+          {note.createdAt && (
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+              {new Date(note.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+            </span>
+          )}
         </div>
       </div>
 
