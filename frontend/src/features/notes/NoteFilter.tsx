@@ -35,18 +35,11 @@ interface FilterFormProps {
   onSubmit: () => void;
   hasFiltersApplied: boolean;
   clearAllFilters: () => void;
+  subjects: string[];
 }
 
 // Filter Form Component (Typed)
-const FilterForm: React.FC<FilterFormProps> = ({ filters, setFilters, onSubmit, hasFiltersApplied, clearAllFilters }) => {
-  // List of subjects
-  const subjects: string[] = [
-    "Biology", "Business Mathematics", "Calculus", "Chemistry", "Computer", "Creative Writing", 
-    "Disciplines in the Social Sciences", "Drafting", "English", "Filipino", "Fundamentals of Accounting", 
-    "General Mathematics", "Introduction to World Religion", "Organization and Management", "Photography", 
-    "Physics", "Religion", "Research", "Science", "Social Science", "Trends, Networks, and Critical Thinking"
-  ];
-  
+const FilterForm: React.FC<FilterFormProps> = ({ filters, setFilters, onSubmit, hasFiltersApplied, clearAllFilters, subjects }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
@@ -350,7 +343,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
                 </span>
               </div>
               
-              <p className="text-gray-700 dark:text-gray-300 mb-4">{note.description || 'No description provided.'}</p>
+              <p className="text-gray-700 dark:text-gray-300 mb-4">{note.content || 'No description provided.'}</p>
               
               <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
                 <div><strong className="text-gray-600 dark:text-gray-400">Grade:</strong> {note.grade || 'N/A'}</div>
@@ -379,12 +372,12 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
               <AnimatePresence>
                 {showSummarizer && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                    <AISummarizer noteId={note._id} />
+                    <AISummarizer noteId={note._id} isOpen={true} onClose={() => {}} />
                   </motion.div>
                 )}
                 {showFlashcards && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                    <FlashcardGenerator noteId={note._id} />
+                    <FlashcardGenerator noteId={note._id} isOpen={true} onClose={() => {}} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -454,6 +447,8 @@ const NoteFilter: React.FC<NoteFilterProps> = ({ mode = 'all' }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<NoteFilterType>({});
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchNotes = useCallback(async () => {
     setLoading(true);
@@ -494,9 +489,84 @@ const NoteFilter: React.FC<NoteFilterProps> = ({ mode = 'all' }) => {
     setFilters(newFilters);
   };
 
+  const handleViewNote = (note: Note) => {
+    setSelectedNote(note);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedNote(null);
+  };
+
+  // UI/UX rendering
   return (
     <div className="note-filter">
-      {/* ... rest of the component ... */}
+      {/* Filter Form */}
+      <FilterForm
+        filters={filters as any}
+        setFilters={setFilters as any}
+        onSubmit={fetchNotes}
+        hasFiltersApplied={Object.values(filters).some(v => v && v !== '' && (!Array.isArray(v) || v.length > 0))}
+        clearAllFilters={() => setFilters({})}
+        subjects={["Biology", "Business Mathematics", "Calculus", "Chemistry", "Computer", "Creative Writing", "Disciplines in the Social Sciences", "Drafting", "English", "Filipino", "Fundamentals of Accounting", "General Mathematics", "Introduction to World Religion", "Organization and Management", "Photography", "Physics", "Religion", "Research", "Science", "Social Science", "Trends, Networks, and Critical Thinking"]}
+      />
+
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center py-10 text-gray-500 dark:text-gray-400">
+          <FaSpinner className="animate-spin text-4xl mx-auto mb-2" />
+          Loading notes...
+        </div>
+      )}
+
+      {/* Error State */}
+      {!loading && error && (
+        <div className="text-center py-10 text-red-500">
+          <FaExclamationTriangle className="inline mr-2" />
+          Error loading notes: {error}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && !error && notes.length === 0 && (
+        <EmptyState hasFilters={Object.values(filters).some(v => v && v !== '' && (!Array.isArray(v) || v.length > 0))} />
+      )}
+
+      {/* Notes Grid */}
+      {!loading && !error && notes.length > 0 && (
+        <motion.div
+          layout
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6"
+        >
+          <AnimatePresence>
+            {notes.map(note => (
+              <motion.div
+                key={note._id}
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.2 }}
+              >
+                <NoteCard
+                  note={note}
+                  onView={() => handleViewNote(note)}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      )}
+
+      {/* Note Detail Modal */}
+      {selectedNote && (
+        <NoteDetailModal
+          note={selectedNote}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 };
