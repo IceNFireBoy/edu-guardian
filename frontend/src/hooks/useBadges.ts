@@ -43,7 +43,7 @@ export const useBadges = () => {
       debug('[useBadges] Fetching user badges...');
       // The backend returns { success, count, data: Badge[] }
       const response = await callAuthenticatedApi<{ success: boolean, count: number, data: Badge[] }>(
-        '/api/v1/users/me/badges',
+        '/users/me/badges',
         'GET'
       );
 
@@ -76,7 +76,7 @@ export const useBadges = () => {
     // setError(null);
     try {
       debug('[useBadges] Attempting to earn badge:', badgeId);
-      const response = await callAuthenticatedApi<EarnBadgeData>('/api/v1/users/me/badges', 'POST', { badgeId });
+      const response = await callAuthenticatedApi<EarnBadgeData>('/users/me/badges', 'POST', { badgeId });
 
       if (response.success && response.data?.badge) {
         // Refresh badges
@@ -105,7 +105,7 @@ export const useBadges = () => {
     // No loading/error state management here, just return data or empty array
     try {
       debug('[useBadges] Fetching badges by category:', category);
-      const response = await callAuthenticatedApi<Badge[]>(`/api/v1/badges/category/${category}`, 'GET');
+      const response = await callAuthenticatedApi<Badge[]>(`/badges/category/${category}`, 'GET');
       if (response.success && Array.isArray(response.data)) {
         return response.data;
       }
@@ -122,7 +122,7 @@ export const useBadges = () => {
   const getBadgesByRarity = useCallback(async (rarity: string): Promise<Badge[]> => {
     try {
       debug('[useBadges] Fetching badges by rarity:', rarity);
-      const response = await callAuthenticatedApi<Badge[]>(`/api/v1/badges/rarity/${rarity}`, 'GET');
+      const response = await callAuthenticatedApi<Badge[]>(`/badges/rarity/${rarity}`, 'GET');
       if (response.success && Array.isArray(response.data)) {
         return response.data;
       }
