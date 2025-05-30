@@ -272,6 +272,14 @@ const NoteCard: React.FC<NoteCardProps> = ({
       >
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10" />
         {renderThumbnail()}
+        <div className="absolute top-3 left-3 z-20">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorTheme.light} ${colorTheme.text}`}>{note.subject}</span>
+        </div>
+        <div className="absolute bottom-0 left-0 p-3 z-20 flex items-center space-x-2">
+          {note.isPublic && (
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">Public</span>
+          )}
+        </div>
         <div className="absolute bottom-0 right-0 p-3 z-20">
           {note.createdAt && (
             <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
