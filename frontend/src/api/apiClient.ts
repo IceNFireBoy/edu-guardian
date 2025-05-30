@@ -75,6 +75,19 @@ export const callAuthenticatedApi = async <T>(
   headers: any = {},
   retries = 2
 ): Promise<T> => {
+  // Runtime check for double /api/v1 in endpoint
+  if (/\/api\/v1.*\/api\/v1/.test(endpoint)) {
+    const msg = `[API WARNING] Double /api/v1 detected in endpoint: ${endpoint}. This will cause 404 errors.`;
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn(msg);
+      throw new Error(msg);
+    } else {
+      // In production, just log
+      // eslint-disable-next-line no-console
+      console.warn(msg);
+    }
+  }
   try {
     // Disable retries for logout and login requests to prevent rate limiting
     const shouldRetry = endpoint !== '/auth/logout' && endpoint !== '/auth/login';
