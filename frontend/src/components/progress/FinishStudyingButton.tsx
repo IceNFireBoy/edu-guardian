@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FaFlag, FaTimes } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useClickAway } from '@uidotdev/usehooks'; // Hook to close dialog on outside click
+import { useUser } from '../../features/user/useUser';
 
 // --- Types & Interfaces ---
 
@@ -26,39 +27,6 @@ interface FinishStudyingButtonProps {
   subject?: string;
 }
 
-// --- Local Storage Utility (can be moved to a separate file) ---
-
-const LOCAL_STORAGE_KEY = 'completedNotesData_v1';
-
-interface StoredCompletionData extends CompletionData {
-  completedAt: string; // ISO date string
-}
-
-const saveCompletionToLocalStorage = (data: CompletionData) => {
-  try {
-    const storedData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]') as StoredCompletionData[];
-    const existingIndex = storedData.findIndex(item => item.noteId === data.noteId);
-    
-    const newEntry: StoredCompletionData = {
-      ...data,
-      completedAt: new Date().toISOString(),
-    };
-
-    if (existingIndex >= 0) {
-      storedData[existingIndex] = newEntry;
-    } else {
-      storedData.push(newEntry);
-    }
-    
-    // Optional: Limit stored data size if needed
-    // const limitedData = storedData.slice(-100); // Keep latest 100
-
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(storedData));
-  } catch (error) {
-    console.error('Error saving completion data to localStorage:', error);
-  }
-};
-
 // --- Component ---
 
 const FinishStudyingButton: React.FC<FinishStudyingButtonProps> = ({ 
@@ -67,6 +35,7 @@ const FinishStudyingButton: React.FC<FinishStudyingButtonProps> = ({
   initialStartTime, 
   subject = 'Uncategorized' 
 }) => {
+  const { completeStudy } = useUser();
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [startTime] = useState<number>(initialStartTime || Date.now());
   
@@ -91,7 +60,7 @@ const FinishStudyingButton: React.FC<FinishStudyingButtonProps> = ({
     setShowFeedbackDialog(true);
   };
   
-  const handleEmojiSelect = (emoji: FeedbackEmoji) => {
+  const handleEmojiSelect = async (emoji: FeedbackEmoji) => {
     const timeSpentMinutes = calculateTimeSpentMinutes();
     
     // Simple subject standardization example
@@ -99,7 +68,7 @@ const FinishStudyingButton: React.FC<FinishStudyingButtonProps> = ({
     if (subject.toLowerCase().includes('biology')) {
       standardizedSubject = 'Biology';
     } else if (subject.toLowerCase().includes('chemistry')) {
-        standardizedSubject = 'Chemistry';
+      standardizedSubject = 'Chemistry';
     }
     // Add more rules as needed
 
@@ -110,9 +79,10 @@ const FinishStudyingButton: React.FC<FinishStudyingButtonProps> = ({
       subject: standardizedSubject,
     };
     
-    saveCompletionToLocalStorage(completionData);
+    // Call backend endpoint via useUser().completeStudy instead of localStorage
+    const success = await completeStudy(completionData);
     
-    if (typeof onFinish === 'function') {
+    if (success && typeof onFinish === 'function') {
       onFinish(completionData);
     }
     
