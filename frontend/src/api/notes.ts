@@ -41,7 +41,7 @@ export async function callAuthenticatedApi<T = any>(
   body: Record<string, any> | FormData | null = null
 ): Promise<ApiResponse<T>> {
   const apiUrl = getApiUrl();
-  const url = `${apiUrl}${endpoint}`;
+  let url = `${apiUrl}${endpoint}`;
   const token = localStorage.getItem('token');
 
   const headers: Record<string, string> = {};
@@ -55,19 +55,34 @@ export async function callAuthenticatedApi<T = any>(
     headers,
   };
 
-  if (body) {
+  // For GET requests, convert body/filters to query params
+  if (method === 'GET' && body && typeof body === 'object' && !(body instanceof FormData)) {
+    const params = new URLSearchParams();
+    Object.entries(body).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (Array.isArray(value)) {
+          value.forEach(v => params.append(key, v));
+        } else {
+          params.append(key, value as string);
+        }
+      }
+    });
+    if (params.toString()) {
+      url += (url.includes('?') ? '&' : '?') + params.toString();
+    }
+    // Do not set config.body for GET
+  } else if (body) {
     if (body instanceof FormData) {
-      // Don't set Content-Type for FormData; browser does it with boundary
       config.body = body;
     } else {
       headers['Content-Type'] = 'application/json';
-    config.body = JSON.stringify(body);
+      config.body = JSON.stringify(body);
     }
   }
 
   try {
     debug(`[Frontend] Calling authenticated API: ${method} ${url}`);
-    if (body && !(body instanceof FormData)) { // Avoid logging large FormData
+    if (body && !(body instanceof FormData) && method !== 'GET') { // Avoid logging large FormData
       debug("[Frontend] Request body:", body);
     } else if (body instanceof FormData) {
       debug("[Frontend] Request body is FormData (content not logged).");
