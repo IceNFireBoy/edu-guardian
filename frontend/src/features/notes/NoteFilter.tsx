@@ -446,25 +446,56 @@ interface NotesApiResponse {
 }
 
 interface NoteFilterProps {
-  notes: Note[];
-  onFilterChange: (filters: NoteFilterType) => void;
-  className?: string;
+  mode?: 'all' | 'mine'; // Add mode prop
 }
 
-const NoteFilter: React.FC<NoteFilterProps> = ({
-  notes,
-  onFilterChange,
-  className = ''
-}) => {
-  const [filters, setFilters] = React.useState<NoteFilterType>({});
+const NoteFilter: React.FC<NoteFilterProps> = ({ mode = 'all' }) => {
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<NoteFilterType>({});
+
+  const fetchNotes = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      let response;
+      if (mode === 'mine') {
+        response = await callAuthenticatedApi<{ success: boolean; data: Note[]; count?: number }>(
+          '/api/v1/users/me/notes',
+          'GET',
+          filters as any
+        );
+      } else {
+        response = await callAuthenticatedApi<{ success: boolean; data: Note[]; count?: number }>(
+          '/api/v1/notes',
+          'GET',
+          filters as any
+        );
+      }
+      if (response.success && Array.isArray(response.data)) {
+        setNotes(response.data);
+      } else {
+        throw new Error(response.error || response.message || 'Failed to fetch notes');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch notes');
+      setNotes([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [mode, filters]);
+
+  useEffect(() => {
+    fetchNotes();
+  }, [fetchNotes]);
 
   const handleFilterChange = (newFilters: NoteFilterType) => {
     setFilters(newFilters);
-    onFilterChange(newFilters);
   };
 
   return (
-    <div className={`note-filter ${className}`}>
+    <div className="note-filter">
       {/* ... rest of the component ... */}
     </div>
   );
