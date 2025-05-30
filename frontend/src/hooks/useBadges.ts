@@ -31,7 +31,7 @@ export const useBadges = () => {
   const fetchBadges = useCallback(async () => {
     if (!isAuthenticated) {
       setLoading(false);
-      setError(null); // Clear error if not authenticated
+      setError(null);
       setEarnedBadges([]);
       setUnearnedBadges([]);
       return;
@@ -41,21 +41,24 @@ export const useBadges = () => {
     setError(null);
     try {
       debug('[useBadges] Fetching user badges...');
-      // Use ApiResponse<UserBadgeData> to type the expected successful response
-      const response = await callAuthenticatedApi<UserBadgeData>('/api/v1/users/me/badges', 'GET');
+      // The backend returns { success, count, data: Badge[] }
+      const response = await callAuthenticatedApi<{ success: boolean, count: number, data: Badge[] }>(
+        '/api/v1/users/me/badges',
+        'GET'
+      );
 
-      if (response.success && response.data) {
-        setEarnedBadges(response.data.earned || []);
-        setUnearnedBadges(response.data.unearned || []);
-        debug(`[useBadges] Fetched ${response.data.earned?.length || 0} earned, ${response.data.unearned?.length || 0} unearned badges.`);
+      if (response.success && Array.isArray(response.data)) {
+        setEarnedBadges(response.data);
+        setUnearnedBadges([]); // No unearned badges from this endpoint
+        debug(`[useBadges] Fetched ${response.data.length} earned badges.`);
       } else {
         throw new Error(response.error || response.message || 'Failed to fetch badges: API error');
       }
     } catch (err: any) {
       console.error('Error fetching badges:', err);
       setError(err.message || 'An unexpected error occurred');
-      setEarnedBadges([]); // Clear on error
-      setUnearnedBadges([]); // Clear on error
+      setEarnedBadges([]);
+      setUnearnedBadges([]);
     } finally {
       setLoading(false);
     }

@@ -34,15 +34,6 @@ const Badges: React.FC = () => {
           <FaAward className="mr-3 text-yellow-500" />
           Badges & Achievements
         </h1>
-        
-        {user && (
-          <div className="bg-white dark:bg-gray-800 px-4 py-2 rounded-lg shadow-sm flex items-center">
-            <div className="flex flex-col">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Your XP</span>
-              <span className="text-xl font-bold text-gray-800 dark:text-white">{user.xp || 0}</span>
-            </div>
-          </div>
-        )}
       </div>
       
       {/* Info card */}
