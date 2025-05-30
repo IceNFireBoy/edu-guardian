@@ -272,6 +272,13 @@ const NoteCard: React.FC<NoteCardProps> = ({
       >
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10" />
         {renderThumbnail()}
+        <div className="absolute bottom-0 right-0 p-3 z-20">
+          {note.createdAt && (
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+              {new Date(note.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="p-4 flex-grow">
