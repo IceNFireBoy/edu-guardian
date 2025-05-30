@@ -24,31 +24,13 @@ interface SettingsProps {
 }
 
 const Settings: FC<SettingsProps> = ({ toggleDarkMode, darkMode }) => {
-  const [showConfirmClear, setShowConfirmClear] = useState<boolean>(false);
-  const [clearSuccess, setClearSuccess] = useState<boolean>(false);
-  
-  const clearCache = () => {
-    try {
-      localStorage.clear();
-      setClearSuccess(true);
-      setShowConfirmClear(false);
-      
-      setTimeout(() => {
-        setClearSuccess(false);
-      }, 3000);
-    } catch (error) {
-      console.error('Error clearing local storage:', error);
-      // Optionally, show an error toast to the user
-    }
-  };
-  
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
-      className="container mx-auto px-4 py-8" // Added container for better layout
+      className="container mx-auto px-4 py-8"
     >
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-gray-100">Settings</h1>
@@ -75,62 +57,6 @@ const Settings: FC<SettingsProps> = ({ toggleDarkMode, darkMode }) => {
               className={`${darkMode ? 'translate-x-6 bg-primary' : 'translate-x-1 bg-white dark:bg-slate-400'} inline-block h-4 w-4 transform rounded-full transition-transform`}
             />
           </button>
-        </div>
-      </SettingsCard>
-      
-      <SettingsCard title="Data Management" icon={<FaTrash size={20} />}>
-        <div className="space-y-6">
-          <div>
-            <h3 className="font-medium text-gray-800 dark:text-gray-100">Clear Local Cache</h3>
-            <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
-              This will clear all locally stored data including your progress, XP, and streaks.
-            </p>
-            
-            {!showConfirmClear && !clearSuccess && (
-              <button
-                onClick={() => setShowConfirmClear(true)}
-                className="btn btn-danger-outline" // Using a more semantic class if available
-              >
-                Clear Cache
-              </button>
-            )}
-            
-            {showConfirmClear && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-700"
-              >
-                <p className="text-red-700 dark:text-red-300 font-medium mb-3">
-                  Are you sure? This action cannot be undone.
-                </p>
-                <div className="flex space-x-3">
-                  <button
-                    onClick={clearCache}
-                    className="btn btn-danger"
-                  >
-                    Yes, Clear All Data
-                  </button>
-                  <button
-                    onClick={() => setShowConfirmClear(false)}
-                    className="btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </motion.div>
-            )}
-            
-            {clearSuccess && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700"
-              >
-                Cache cleared successfully.
-              </motion.div>
-            )}
-          </div>
         </div>
       </SettingsCard>
       
