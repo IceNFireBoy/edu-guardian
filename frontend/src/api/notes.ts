@@ -42,7 +42,7 @@ export async function callAuthenticatedApi<T = any>(
 ): Promise<ApiResponse<T>> {
   const apiUrl = getApiUrl();
   const url = `${apiUrl}${endpoint}`;
-  const token = localStorage.getItem('userToken');
+  const token = localStorage.getItem('token');
 
   const headers: Record<string, string> = {};
 
