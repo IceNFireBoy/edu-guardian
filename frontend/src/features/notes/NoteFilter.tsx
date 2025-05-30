@@ -457,13 +457,13 @@ const NoteFilter: React.FC<NoteFilterProps> = ({ mode = 'all' }) => {
       let response;
       if (mode === 'mine') {
         response = await callAuthenticatedApi<{ success: boolean; data: Note[]; count?: number }>(
-          '/api/v1/users/me/notes',
+          '/users/me/notes',
           'GET',
           filters as any
         );
       } else {
         response = await callAuthenticatedApi<{ success: boolean; data: Note[]; count?: number }>(
-          '/api/v1/notes',
+          '/notes',
           'GET',
           filters as any
         );
