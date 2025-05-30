@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from './useAuth'; // Assuming useAuth hook provides necessary auth state
+import { useAuthContext } from '../features/auth/AuthContext';
 import { callAuthenticatedApi } from '../api/notes';
 import type { ApiResponse } from '../api/notes';
 import { toast } from 'react-hot-toast';
@@ -25,7 +25,7 @@ export const useBadges = () => {
   const [unearnedBadges, setUnearnedBadges] = useState<Badge[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const { user, isAuthenticated } = useAuth(); // Assuming useAuth returns { user: any, isAuthenticated: boolean }
+  const { user, isAuthenticated } = useAuthContext(); // Use the correct context
 
   // Fetch all badges (earned and unearned)
   const fetchBadges = useCallback(async () => {

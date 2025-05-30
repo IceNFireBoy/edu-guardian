@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FaAward, FaInfoCircle, FaArrowUp } from 'react-icons/fa';
 import BadgeGallery from '../components/BadgeGallery';
-import { useAuth } from '../hooks/useAuth'; // Assuming useAuth.ts will exist or types are compatible
+import { useAuthContext } from '../features/auth/AuthContext';
 
 // Basic User type, adjust if useAuth provides a more specific type
 interface User {
@@ -11,7 +11,7 @@ interface User {
 }
 
 const Badges: React.FC = () => {
-  const { user } = useAuth() as { user: User | null }; // Type assertion for user
+  const { user } = useAuthContext(); // Use the correct context
   
   // Page fade-in animation
   const pageVariants = {
