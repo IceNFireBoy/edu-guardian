@@ -156,19 +156,37 @@ function App() {
             style: {
               background: darkMode ? '#1e293b' : '#fff',
               color: darkMode ? '#fff' : '#334155',
+              border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
             },
             success: {
               duration: 3000,
               iconTheme: {
                 primary: '#10b981',
-                secondary: 'white',
+                secondary: darkMode ? '#1e293b' : '#fff',
+              },
+              style: {
+                background: darkMode ? '#064e3b' : '#ecfdf5',
+                color: darkMode ? '#d1fae5' : '#065f46',
+                border: `1px solid ${darkMode ? '#047857' : '#a7f3d0'}`,
               },
             },
             error: {
               duration: 4000,
               iconTheme: {
                 primary: '#ef4444',
-                secondary: 'white',
+                secondary: darkMode ? '#1e293b' : '#fff',
+              },
+              style: {
+                background: darkMode ? '#7f1d1d' : '#fef2f2',
+                color: darkMode ? '#fecaca' : '#991b1b',
+                border: `1px solid ${darkMode ? '#b91c1c' : '#fecaca'}`,
+              },
+            },
+            loading: {
+              style: {
+                background: darkMode ? '#1e293b' : '#fff',
+                color: darkMode ? '#fff' : '#334155',
               },
             },
           }} />

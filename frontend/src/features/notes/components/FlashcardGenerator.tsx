@@ -126,6 +126,7 @@ interface SavedFlashcardSet {
 const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ isOpen, onClose, noteId, noteTitle }) => {
   const [flashcards, setFlashcards] = useState<Note[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [isMounted, setIsMounted] = useState(true);
   const {
     generateFlashcards: generateFlashcardsFromHook,
     saveFlashcards,
@@ -143,18 +144,29 @@ const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ isOpen, onClose
   const [showBadges, setShowBadges] = useState(false);
 
   useEffect(() => {
-    setInternalError(noteHookError);
-  }, [noteHookError]);
+    setIsMounted(true);
+    return () => {
+      setIsMounted(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isMounted) {
+      setInternalError(noteHookError);
+    }
+  }, [noteHookError, isMounted]);
 
   useEffect(() => {
     if (!isOpen) {
-      setFlashcards([]);
-      setCurrentCardIndex(0);
-      setInternalError(null);
-      setStudyComplete(false);
-      setShowBadges(false);
+      if (isMounted) {
+        setFlashcards([]);
+        setCurrentCardIndex(0);
+        setInternalError(null);
+        setStudyComplete(false);
+        setShowBadges(false);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, isMounted]);
 
   useEffect(() => {
     if (userNewBadgeIds && userNewBadgeIds.length > 0) {

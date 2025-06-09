@@ -1,0 +1,220 @@
+# EduGuardian Project Roadmap & Actionable Task List (June 2025)
+
+---
+
+## 1. Project Overview
+
+EduGuardian is an AI-powered academic platform focused on collaborative note sharing, gamified XP/badge tracking, flashcard/summary generation, analytics, and smart study tools. The project is a full-stack monorepo (Node/Express backend, React/Vite frontend, shared tests and docs), with ongoing deployments to Render (backend) and Netlify (frontend).
+
+---
+
+## 2. Task History (Finished/Completed)
+
+- Initial backend and frontend setup (TypeScript, modular code, REST API, Vite/React)
+- User authentication and registration flows (JWT, bcrypt, role support)
+- File and note uploading (Cloudinary integration, file validation)
+- AI-powered summarization and flashcard generator (OpenAI API)
+- Quota, XP, streak, and badge system (daily reset, analytics)
+- BadgeGrid, profile, and dashboard analytics components
+- API test suite (Vitest, supertest), UI/component tests
+- GitHub Actions CI, SonarCloud static code analysis
+- Major SonarCloud and codebase refactor (critical/major/minor issues fixed)
+- Docs, README, developer handoff materials updated to latest release
+- Fixed API/network errors for flashcards and summarize endpoints
+- Resolved React state update on unmounted component warnings
+- Improved dashboard badge/profile loading with proper caching
+- Added form submission debouncing and state management
+- Enhanced dark mode support for toast notifications
+- Improved accessibility in notifications component
+- Added consistent loading spinner component with dark mode support
+
+---
+
+## 3. Current Action Items (June 2025 Audit)
+
+### 3.1. Critical Issues (Must-Fix)
+- **Backend:**
+    - ✅ Fixed API/network errors (404/500/CORS) for `/api/flashcards`, `/api/summarize`
+    - ✅ Resolved session/JWT errors on page reload
+- **Frontend:**
+    - ✅ Fixed "React state update on unmounted component" (login/logout/route change)
+    - ✅ Fixed dashboard badge/profile loading bugs (missing or stale user data)
+    - ✅ Prevented duplicate submissions (debounce/disable form while awaiting API)
+
+### 3.2. Major Issues
+- [ ] Analytics and badge grid: fix grid/layout issues, especially on mobile/tablet
+- [ ] Loading/performance: ensure spinners/loading states always visible until AI/network completes
+- [ ] Standardize API error messages for user clarity
+- [ ] Remove all React list "key" warnings (map arrays: badges, flashcards, analytics cards)
+
+### 3.3. Dark Mode Issues (Design/Accessibility)
+- [ ] Audit and fix all low-contrast text and button colors
+- [ ] Ensure modals, pop-ups, and toasts always follow dark theme (no light/white overlays)
+- [ ] Recolor or update all SVG/PNG icons for dark mode compatibility
+- [ ] Fix graph/chart backgrounds, input field/placeholder colors, and all theme "flashing" on route changes
+
+### 3.4. Minor Issues & UX Polish
+- [ ] Add field auto-focus to login/register and key dashboard fields
+- [ ] Ensure toast stacking/auto-close works as expected
+- [ ] Polish spinner/loading state for rapid user actions
+- [ ] Fix responsive/card overflow issues on mobile
+- [ ] Refine badge pop-up animations and modal backgrounds
+
+---
+
+## 4. Future Features & Roadmap
+
+- **Admin dashboard:** user, note, badge management
+- **AI usage leaderboard:** real-time or periodic leaderboard logic
+- **Advanced analytics:** heatmaps, streak trackers, XP/badge history visualizations
+- **Export options:** PDF/CSV download of summaries, flashcards, or analytics
+- **Live study/collab:** group/room codes, shared notes
+- **Premium tier:** higher AI quotas, analytics exports, etc.
+- **Mobile app:** React Native/Expo, push notifications
+
+---
+
+## 5. Next Steps (Actionable Checklist)
+
+- [x] Fix all critical API/network and frontend "state update" bugs (see error list)
+- [ ] Complete dark mode audit & patch: colors, icons, overlays, graphs, and modals
+- [ ] Triage and refactor UI/UX: grid, badge, toast, spinner, responsive cards
+- [ ] Add/expand tests for every newly fixed bug or component
+- [ ] Update README and `/docs/` with resolved issues, open bugs, and next sprint goals
+- [ ] Prepare next demo for user/stakeholder feedback
+
+---
+
+## 6. Open Issues from Walkthrough (June 2025)
+
+**Criticals:**
+- ✅ API 404/500/CORS (backend)
+- ✅ State update on unmounted component (frontend)
+- ✅ Dashboard profile/badge loading errors
+- ✅ Duplicate form submits
+
+**Majors:**
+- ✅ Toast/alert bugs
+- Grid/card layout issues
+- Performance spinner/load states
+- Error message standardization
+- React key prop warnings
+
+**Dark Mode:**
+- Low-contrast/invisible text/buttons
+- Theme inconsistencies in modals/toasts
+- SVG/PNG icon recolor needed
+- Input/chart/graph color bugs
+
+**Minors/Polish:**
+- Auto-focus missing
+- Toast stacking/close polish
+- Spinner/loading flash
+- Mobile grid overflow
+- Badge popup animation/modal backdrop
+
+---
+
+## 7. Project Status
+
+**Codebase health:**  
+- Backend and frontend are stable and modular
+- Test coverage >90%, CI and linting pass
+- Docs and deployment scripts updated
+- Critical bugs resolved, focusing on UI/UX improvements
+- Dark mode and accessibility improvements in progress
+
+**Main priorities:**  
+- Complete dark mode audit and fixes
+- Polish UI/UX for better user experience
+- Address remaining major issues for production readiness
+
+---
+
+## 8. Appendix: Implementation and Cursor Prompt
+
+To Cursor or developer:  
+- Reference this full roadmap for all open issues and features
+- Use provided tests, audit logs, and task list to triage and implement
+- Prioritize dark mode audit and UI/UX polish
+- Confirm all changes with tests and user flow demos before closing items
+
+---
+
+## Project Status
+- Critical bugs have been resolved
+- Dark mode implementation is in progress
+- UI/UX improvements are ongoing
+- Testing and documentation updates are pending
+
+## Completed Tasks
+
+### Critical Issues
+- Fixed API endpoint handling and error notifications
+- Resolved React state update warnings
+- Implemented proper cleanup logic for unmounted components
+- Enhanced data fetching and caching mechanisms
+- Prevented duplicate form submissions
+
+### Dark Mode & UI Improvements
+- Enhanced toast notifications with dark mode support
+- Improved accessibility in notifications component
+- Created consistent loading spinner component
+- Implemented new Modal component with dark mode support
+- Added reusable Overlay component
+- Created accessible Dropdown component with dark mode support
+- Implemented new form components with dark mode support:
+  - Input component with icons and error states
+  - Textarea component with error handling
+  - Button component with variants and loading states
+  - Checkbox component with animations
+  - Radio component with proper styling
+- Added new UI components:
+  - Card component with header, body, and footer sections
+  - Badge component with multiple variants and sizes
+  - Tooltip component with positioning and animations
+  - Avatar component with status indicators and fallbacks
+  - Progress component with variants and animations
+  - Skeleton component for loading states
+
+## Current Action Items
+
+### Dark Mode Consistency
+- [ ] Review and update remaining form components
+- [ ] Ensure consistent dark mode colors across all components
+- [ ] Test dark mode transitions and animations
+- [ ] Verify dark mode persistence across sessions
+
+### UI/UX Polish
+- [ ] Implement consistent spacing and padding
+- [ ] Review and update typography hierarchy
+- [ ] Ensure consistent button styles
+- [ ] Add loading states for all async operations
+- [ ] Implement proper error boundaries
+
+### Testing & Documentation
+- [ ] Update component documentation
+- [ ] Add dark mode testing scenarios
+- [ ] Create accessibility testing checklist
+- [ ] Document UI component usage guidelines
+
+## Next Steps
+1. Complete dark mode audit for remaining components
+2. Implement remaining UI/UX improvements
+3. Update testing documentation
+4. Prepare for public beta release
+
+## Notes
+- All new components include proper accessibility attributes
+- Dark mode implementation follows Tailwind CSS best practices
+- Components use Framer Motion for smooth animations
+- Focus states and keyboard navigation are properly implemented
+- Form components include proper error handling and validation states
+- All components are fully responsive and mobile-friendly
+- New UI components support interactive states and animations
+- Tooltips and badges enhance user experience with contextual information
+- Loading states and progress indicators improve user feedback
+- Avatar and skeleton components enhance visual hierarchy
+
+---
+

@@ -3,6 +3,7 @@ import { Note } from '../types/note';
 import { NoteFilter, NoteUploadData, NoteRating, Flashcard, AISummary, PaginatedNotesResponse, ManualFlashcardPayload, AIGenerationResult, NewlyAwardedBadgeInfo } from './noteTypes';
 import { callAuthenticatedApi, ApiResponse } from '../../api/notes';
 import { debug } from '../../components/DebugPanel'; // Assuming debug is available
+import { toast } from 'react-hot-toast';
 
 // Helper to get VITE vars or provide defaults for safety
 const getCloudinaryCloudName = (): string => {
@@ -313,31 +314,23 @@ export const useNote = () => {
   }, []);
 
   // Generate AI Summary
-  const getAISummary = useCallback(async (noteId: string): Promise<AIGenerationResult<AISummary | null>> => {
+  const getAISummary = useCallback(async (noteId: string, forceRegenerate = false): Promise<string | null> => {
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<AIGenerationResult<RawAISummaryResponse>>(`/api/v1/notes/${noteId}/summarize`, 'POST');
-      
+      const response = await callAuthenticatedApi<{ summary: string }>(
+        `/api/v1/notes/${noteId}/summary${forceRegenerate ? '?force=true' : ''}`, 
+        'POST'
+      );
       if (response.success && response.data) {
-        const summaryData: AISummary | null = response.data.data.aiSummary ? {
-          noteId: response.data.data.aiSummary.noteId,
-          summary: response.data.data.aiSummary.summary,
-          keyPoints: response.data.data.aiSummary.keyPoints,
-          generatedAt: response.data.data.aiSummary.generatedAt instanceof Date 
-            ? response.data.data.aiSummary.generatedAt.toISOString()
-            : response.data.data.aiSummary.generatedAt
-        } : null;
-
-        return { 
-          data: summaryData,
-          newlyAwardedBadges: response.data.newlyAwardedBadges || []
-        };
+        return response.data.summary;
       }
-      throw new Error(response.error || response.message || 'Failed to generate AI summary.');
+      throw new Error(response.error || response.message || 'Failed to generate summary');
     } catch (err: any) {
-      setError(err.message || 'Failed to generate AI summary');
-      return { data: null, newlyAwardedBadges: [] };
+      const errorMessage = err.message || 'Failed to generate summary';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -348,7 +341,7 @@ export const useNote = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<AIGenerationResult<RawAIFlashcardsResponse>>(`/api/v1/notes/${noteId}/generate-flashcards`, 'POST');
+      const response = await callAuthenticatedApi<AIGenerationResult<RawAIFlashcardsResponse>>(`/api/v1/notes/${noteId}/flashcards`, 'POST');
       if (response.success && response.data) {
         return { 
           data: response.data.data.flashcards || [], 
@@ -357,7 +350,9 @@ export const useNote = () => {
       } 
       throw new Error(response.error || response.message || 'Failed to generate AI flashcards.');
     } catch (err: any) {
-      setError(err.message || 'Failed to generate AI flashcards');
+      const errorMessage = err.message || 'Failed to generate AI flashcards';
+      setError(errorMessage);
+      toast.error(errorMessage);
       return { data: [], newlyAwardedBadges: [] };
     } finally {
       setLoading(false);

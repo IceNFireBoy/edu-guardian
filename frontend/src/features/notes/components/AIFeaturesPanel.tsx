@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Note } from '../../types/note';
 import AISummarizer from './AISummarizer';
 import FlashcardGenerator from './FlashcardGenerator';
 import { toast } from 'react-hot-toast';
-import { FaRobot, FaLightbulb, FaSpinner } from 'react-icons/fa';
+import { FaRobot, FaLightbulb, FaSpinner, FaBook, FaPlus } from 'react-icons/fa';
 import { useNote } from '../useNote'; // Import the useNote hook
 
 interface AIFeaturesPanelProps {
@@ -15,111 +15,145 @@ interface AIFeaturesPanelProps {
 const AIFeaturesPanel: React.FC<AIFeaturesPanelProps> = ({ note, showManualFlashcard = false, className = '' }) => {
   const [showSummarizerModal, setShowSummarizerModal] = useState(false);
   const [showFlashcardGeneratorModal, setShowFlashcardGeneratorModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Manual flashcard creation state
   const [manualFlashcardData, setManualFlashcardData] = useState<ManualFlashcardPayload>({ question: '', answer: '' });
   const [showManualFlashcardForm, setShowManualFlashcardForm] = useState<boolean>(false);
 
-  const { addManualFlashcard, loading: noteHookLoading, error: noteHookError } = useNote(); // Get function and states from hook
+  const { addManualFlashcard, loading: noteHookLoading, error: noteHookError } = useNote();
 
   const handleManualFlashcardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent duplicate submissions
+    if (isSubmitting) {
+      return;
+    }
+
     if (!manualFlashcardData.question || !manualFlashcardData.answer) {
       toast.error('Question and Answer cannot be empty for manual flashcards.');
       return;
     }
 
-    const createdFlashcard = await addManualFlashcard(note._id, manualFlashcardData);
+    setIsSubmitting(true);
+    
+    try {
+      const createdFlashcard = await addManualFlashcard(note._id, manualFlashcardData);
 
-    if (createdFlashcard) {
-      toast.success('Manual flashcard added!');
-      setManualFlashcardData({ question: '', answer: '' });
-      setShowManualFlashcardForm(false);
-      // Optionally, trigger a parent callback to refetch note data if flashcardCount needs update
-      // Or, if useNote manages a local list of flashcards for the note, it could be updated there.
-    } else {
-      // Error toast will be handled by useNote or a global error handler for noteHookError
-      // However, we can still show a specific toast here if needed, or rely on a global one.
-      toast.error(noteHookError || 'Failed to add manual flashcard.');
+      if (createdFlashcard) {
+        toast.success('Manual flashcard added!');
+        setManualFlashcardData({ question: '', answer: '' });
+        setShowManualFlashcardForm(false);
+      } else {
+        toast.error(noteHookError || 'Failed to add manual flashcard.');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to add manual flashcard.');
+    } finally {
+      // Add a small delay before allowing another submission
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+      }
+      submitTimeoutRef.current = setTimeout(() => {
+        setIsSubmitting(false);
+      }, 1000);
     }
   };
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className={`ai-features-panel ${className}`}>
-      {/* Manual Flashcard Maker Section (Optional) */}
-      {showManualFlashcard && (
-        <div className="mb-6 p-4 border border-gray-200 dark:border-slate-700 rounded-lg bg-gray-50 dark:bg-slate-800/50">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">Manual Flashcard</h3>
-            <button
-              onClick={() => setShowManualFlashcardForm(!showManualFlashcardForm)}
-              className="btn btn-secondary btn-sm"
-            >
-              {showManualFlashcardForm ? 'Cancel' : 'Add New'}
-            </button>
-          </div>
-          {showManualFlashcardForm && (
-            <form onSubmit={handleManualFlashcardSubmit} className="space-y-3">
-              <div>
-                <label htmlFor={`manual-q-${note._id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Question
-                </label>
-                <input
-                  id={`manual-q-${note._id}`}
-                  type="text"
-                  value={manualFlashcardData.question}
-                  onChange={(e) => setManualFlashcardData(prev => ({ ...prev, question: e.target.value }))}
-                  required
-                  className="w-full input input-bordered dark:bg-slate-700"
-                />
-              </div>
-              <div>
-                <label htmlFor={`manual-a-${note._id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Answer
-                </label>
-                <textarea
-                  id={`manual-a-${note._id}`}
-                  value={manualFlashcardData.answer}
-                  onChange={(e) => setManualFlashcardData(prev => ({ ...prev, answer: e.target.value }))}
-                  required
-                  rows={2}
-                  className="w-full textarea textarea-bordered dark:bg-slate-700"
-                />
-              </div>
+      <div className="flex flex-wrap gap-4">
+        <button
+          onClick={() => setShowSummarizerModal(true)}
+          disabled={isSubmitting || noteHookLoading}
+          className="btn btn-primary flex items-center gap-2"
+        >
+          <FaLightbulb className="text-yellow-400" />
+          Generate Summary
+        </button>
+
+        <button
+          onClick={() => setShowFlashcardGeneratorModal(true)}
+          disabled={isSubmitting || noteHookLoading}
+          className="btn btn-secondary flex items-center gap-2"
+        >
+          <FaBook className="text-blue-400" />
+          Generate Flashcards
+        </button>
+
+        {showManualFlashcard && (
+          <button
+            onClick={() => setShowManualFlashcardForm(true)}
+            disabled={isSubmitting || noteHookLoading}
+            className="btn btn-outline flex items-center gap-2"
+          >
+            <FaPlus className="text-green-400" />
+            Add Manual Flashcard
+          </button>
+        )}
+      </div>
+
+      {showManualFlashcardForm && (
+        <form onSubmit={handleManualFlashcardSubmit} className="mt-4 p-4 border rounded-lg">
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="question" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Question
+              </label>
+              <input
+                type="text"
+                id="question"
+                value={manualFlashcardData.question}
+                onChange={(e) => setManualFlashcardData(prev => ({ ...prev, question: e.target.value }))}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                disabled={isSubmitting}
+              />
+            </div>
+            <div>
+              <label htmlFor="answer" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Answer
+              </label>
+              <textarea
+                id="answer"
+                value={manualFlashcardData.answer}
+                onChange={(e) => setManualFlashcardData(prev => ({ ...prev, answer: e.target.value }))}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                rows={3}
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowManualFlashcardForm(false)}
+                disabled={isSubmitting}
+                className="btn btn-outline"
+              >
+                Cancel
+              </button>
               <button
                 type="submit"
-                className="btn btn-primary btn-sm w-full"
-                disabled={noteHookLoading}
+                disabled={isSubmitting || !manualFlashcardData.question || !manualFlashcardData.answer}
+                className="btn btn-primary"
               >
-                {noteHookLoading ? <FaSpinner className="animate-spin mr-2" /> : null}
-                {noteHookLoading ? 'Adding...' : 'Add Flashcard'}
+                {isSubmitting ? 'Adding...' : 'Add Flashcard'}
               </button>
-            </form>
-          )}
-        </div>
+            </div>
+          </div>
+        </form>
       )}
 
-      {/* AI Summarizer Trigger */}
-      <div className="mb-4">
-        <button 
-          onClick={() => setShowSummarizerModal(true)} 
-          className="btn btn-outline btn-primary w-full flex items-center justify-center gap-2"
-        >
-          <FaRobot /> AI Summary
-        </button>
-      </div>
-
-      {/* AI Flashcard Generator Trigger */}
-      <div>
-        <button 
-          onClick={() => setShowFlashcardGeneratorModal(true)} 
-          className="btn btn-outline btn-secondary w-full flex items-center justify-center gap-2"
-        >
-          <FaLightbulb /> AI Flashcards
-        </button>
-      </div>
-
-      {/* Modals (Portal here if needed, but typically modals handle their own portal/fixed positioning) */}
       {note && (
         <>
           <AISummarizer 

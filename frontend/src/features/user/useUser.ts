@@ -1,35 +1,76 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { callAuthenticatedApi } from '../../api/apiClient';
 import { UserProfile, CompleteStudyPayload } from './userTypes';
+import { toast } from 'react-hot-toast';
 
 export const useUser = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newXp, setNewXp] = useState(0); // Track newly earned XP for animations
-  const [newBadgeIds, setNewBadgeIds] = useState<string[]>([]); // Track newly earned badges
+  const [newBadgeIds, setNewBadgeIds] = useState<string[]>([]);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
   
   // Refs for debouncing study completion
   const studyCompletionTimers = useRef<Record<string, number>>({});
 
-  // Fetch user profile
-  const fetchUserProfile = useCallback(async (): Promise<UserProfile | null> => {
+  const fetchUserProfile = useCallback(async (force = false) => {
+    const now = Date.now();
+    if (!force && profile && now - lastFetchTime < CACHE_DURATION) {
+      return profile;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<{ success: boolean, data: UserProfile }>('auth/me', 'GET');
+      const response = await callAuthenticatedApi<UserProfile>('/api/v1/users/profile', 'GET');
       if (response.success && response.data) {
         setProfile(response.data);
+        setLastFetchTime(now);
         return response.data;
       }
-      throw new Error(response.error || 'Failed to fetch user profile');
+      throw new Error(response.error || response.message || 'Failed to fetch user profile');
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch user profile');
+      const errorMessage = err.message || 'Failed to fetch user profile';
+      setError(errorMessage);
+      toast.error(errorMessage);
       return null;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [profile, lastFetchTime]);
+
+  const fetchUserBadges = useCallback(async (force = false) => {
+    const now = Date.now();
+    if (!force && profile?.badges && now - lastFetchTime < CACHE_DURATION) {
+      return profile.badges;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await callAuthenticatedApi<{ badges: Badge[] }>('/api/v1/users/badges', 'GET');
+      if (response.success && response.data) {
+        const newBadges = response.data.badges.filter(badge => 
+          !profile?.badges?.some(existingBadge => existingBadge._id === badge._id)
+        );
+        if (newBadges.length > 0) {
+          setNewBadgeIds(newBadges.map(badge => badge._id));
+          toast.success(`Earned ${newBadges.length} new badge${newBadges.length > 1 ? 's' : ''}!`);
+        }
+        return response.data.badges;
+      }
+      throw new Error(response.error || response.message || 'Failed to fetch user badges');
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to fetch user badges';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [profile?.badges, lastFetchTime]);
 
   // Log note study completion
   const completeStudy = useCallback(async (payload: CompleteStudyPayload): Promise<boolean> => {
@@ -120,10 +161,10 @@ export const useUser = () => {
     }
   }, []);
 
-  // Auto-fetch the profile when hook is first used
   useEffect(() => {
     fetchUserProfile();
-  }, [fetchUserProfile]);
+    fetchUserBadges();
+  }, []);
 
   return {
     profile,
@@ -132,7 +173,9 @@ export const useUser = () => {
     newXp,
     newBadgeIds,
     fetchUserProfile,
+    fetchUserBadges,
     completeStudy,
-    updateProfile
+    updateProfile,
+    setNewBadgeIds
   };
 }; 

@@ -141,14 +141,14 @@ const Notifications: React.FC = () => {
   const renderContent = () => {
     if (loading) {
       return (
-        <div className="space-y-3 pt-4 px-4">
+        <div className="space-y-3 pt-4 px-4" role="status" aria-label="Loading notifications">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="animate-pulse flex items-start gap-3 p-3">
-              <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded-full mt-1"></div>
+              <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded-full mt-1" aria-hidden="true"></div>
               <div className="flex-1 space-y-2">
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" aria-hidden="true"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full" aria-hidden="true"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3" aria-hidden="true"></div>
               </div>
             </div>
           ))}
@@ -158,8 +158,8 @@ const Notifications: React.FC = () => {
 
     if (error) {
       return (
-        <div className="text-center text-red-500 dark:text-red-400 p-6 bg-red-50 dark:bg-red-900/30 rounded-lg mx-4 my-4">
-          <FaExclamationCircle className="mx-auto text-2xl mb-2" />
+        <div className="text-center text-red-500 dark:text-red-400 p-6 bg-red-50 dark:bg-red-900/30 rounded-lg mx-4 my-4" role="alert">
+          <FaExclamationCircle className="mx-auto text-2xl mb-2" aria-hidden="true" />
           {error}
         </div>
       );
@@ -184,18 +184,30 @@ const Notifications: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
-              className={`p-3 rounded-lg border transition-colors ${notification.read
-                ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-                : 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700'
+              className={`p-3 rounded-lg border transition-colors ${
+                notification.read
+                  ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                  : 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700'
               }`}
+              role="article"
+              aria-labelledby={`notification-title-${notification._id}`}
             >
               <div className="flex items-start gap-3">
-                <div className="text-xl mt-1">
+                <div className="text-xl mt-1" aria-hidden="true">
                   {getNotificationIcon(notification.type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`font-medium text-sm ${notification.read ? 'text-gray-700 dark:text-gray-300' : 'text-gray-900 dark:text-white'}`}>{notification.title}</p>
-                  <p className={`text-xs mt-0.5 ${notification.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-200'}`}>
+                  <p 
+                    id={`notification-title-${notification._id}`}
+                    className={`font-medium text-sm ${
+                      notification.read ? 'text-gray-700 dark:text-gray-300' : 'text-gray-900 dark:text-white'
+                    }`}
+                  >
+                    {notification.title}
+                  </p>
+                  <p className={`text-xs mt-0.5 ${
+                    notification.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-200'
+                  }`}>
                     {notification.message}
                   </p>
                   <div className="flex flex-wrap justify-between items-center mt-1.5 gap-x-4 gap-y-1">
@@ -205,21 +217,30 @@ const Notifications: React.FC = () => {
                     {!notification.read && (
                       <button
                         onClick={(e) => { e.stopPropagation(); markAsRead(notification._id); }}
-                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 rounded"
+                        aria-label={`Mark notification "${notification.title}" as read`}
                       >
                         Mark as read
                       </button>
                     )}
                     {notification.link && (
-                        <Link to={notification.link} className="text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium">
-                          View Details
-                        </Link>
+                      <Link 
+                        to={notification.link} 
+                        className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 rounded"
+                        aria-label={`View details for notification "${notification.title}"`}
+                      >
+                        View Details
+                      </Link>
                     )}
                   </div>
                 </div>
-                 {!notification.read && (
-                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1" title="Unread"></div>
-                 )}
+                {!notification.read && (
+                  <div 
+                    className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1" 
+                    title="Unread"
+                    aria-hidden="true"
+                  />
+                )}
               </div>
             </motion.div>
           ))}
@@ -234,14 +255,15 @@ const Notifications: React.FC = () => {
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 flex flex-col">
       <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center">
-          <FaBell className="mr-2 text-purple-500" />
+          <FaBell className="mr-2 text-purple-500" aria-hidden="true" />
           Notifications
         </h2>
         {hasUnread && (
           <button
             onClick={markAllAsRead}
-            className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading} // Disable while initial load is happening
+            className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 rounded"
+            disabled={loading}
+            aria-label="Mark all notifications as read"
           >
             Mark all as read
           </button>
