@@ -24,7 +24,7 @@ export const useUser = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<UserProfile>('/api/v1/users/profile', 'GET');
+      const response = await callAuthenticatedApi<UserProfile>('/api/v1/auth/profile', 'GET');
       if (response.success && response.data) {
         setProfile(response.data);
         setLastFetchTime(now);
