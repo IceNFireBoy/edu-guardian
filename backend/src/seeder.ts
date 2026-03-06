@@ -32,18 +32,32 @@ const connectDB = async () => {
 };
 
 // Read JSON files
-// These will throw if files are not found or JSON is invalid. Consider try-catch for robustness.
-const badges: BadgeSeed[] = JSON.parse(
-  fs.readFileSync(`${__dirname}/_data/badges.json`, 'utf-8')
-);
+let badges: BadgeSeed[];
+let users: UserSeed[];
+let notes: NoteSeed[];
 
-const users: UserSeed[] = JSON.parse(
-  fs.readFileSync(`${__dirname}/_data/users.json`, 'utf-8')
-);
+try {
+  badges = JSON.parse(
+    fs.readFileSync(`${__dirname}/_data/badges.json`, 'utf-8')
+  );
+  
+  users = JSON.parse(
+    fs.readFileSync(`${__dirname}/_data/users.json`, 'utf-8')
+  );
+  
+  notes = JSON.parse(
+    fs.readFileSync(`${__dirname}/_data/notes.json`, 'utf-8')
+  );
+} catch (err: any) {
+  if (err.code === 'ENOENT') {
+    console.error(colors.red(`Error: Data file not found at ${err.path}`));
+  } else {
+    console.error(colors.red(`Error reading or parsing a data file: ${err.message}`));
+  }
+  process.exit(1);
+}
 
-const notes: NoteSeed[] = JSON.parse(
-  fs.readFileSync(`${__dirname}/_data/notes.json`, 'utf-8')
-);
+
 
 // Import into DB
 const importData = async () => {
