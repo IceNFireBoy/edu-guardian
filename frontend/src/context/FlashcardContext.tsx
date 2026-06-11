@@ -186,15 +186,18 @@ export const FlashcardProvider: React.FC<FlashcardProviderProps> = ({ children, 
     }
     dispatch({ type: ActionType.FETCH_START });
     try {
-      const data = await callAuthenticatedApi<GenerateFlashcardsResponse>(
-        `/api/v1/notes/${noteId}/generate-flashcards`, 
+      // Backend: POST /notes/:id/generate-flashcards
+      // -> { success, data: { flashcards }, newlyAwardedBadges }
+      const data = await callAuthenticatedApi<{ flashcards?: Flashcard[] }>(
+        `/notes/${noteId}/generate-flashcards`,
         'POST'
       );
+      const flashcards = data.data?.flashcards;
 
-      if (data.success && data.flashcards) {
-        if (data.flashcards.length > 0) {
+      if (data.success && flashcards) {
+        if (flashcards.length > 0) {
            // Add a unique _id to each card for keying and response tracking
-          const processedFlashcards: Flashcard[] = data.flashcards.map((card: Flashcard, index: number) => ({
+          const processedFlashcards: Flashcard[] = flashcards.map((card: Flashcard, index: number) => ({
              ...card,
              _id: `card-${noteId}-${index}-${Date.now()}` // Generate a more robust unique ID
             }));

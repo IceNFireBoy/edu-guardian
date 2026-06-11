@@ -6,8 +6,6 @@ import { useUser } from '../../user/useUser';
 import AIQuotaDisplay from '../../user/components/AIQuotaDisplay';
 import BadgeGrid from '../../user/components/BadgeGrid';
 import { toast } from 'react-hot-toast';
-import { callAuthenticatedApi } from '../../../api/apiClient';
-import { Note } from '../../types/note';
 
 interface AISummary {
   noteId: string;

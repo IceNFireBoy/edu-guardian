@@ -67,9 +67,10 @@ const ActivityLog: React.FC<ActivityLogProps> = ({
 }) => {
   const [viewLimit, setViewLimit] = React.useState(limit);
   
-  // Only fetch if userId is provided and no activities are passed directly
+  // Only fetch if userId is provided and no activities are passed directly.
+  // The backend only exposes the current user's log, at /users/me/activity.
   const { data, loading, error, errorType, fetch } = useFetch<{ activities: UserActivity[] }>({
-    url: userId ? `/users/${userId}/activity` : '',
+    url: userId ? '/users/me/activity' : '',
     autoFetch: Boolean(userId && !propActivities),
     dependencies: [userId, viewLimit],
     method: 'GET',

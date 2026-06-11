@@ -16,10 +16,6 @@ import { useNote } from './useNote'; // Corrected import path
 // Development mode for debugging
 const DEV_MODE = import.meta.env.DEV;
 
-// Get API base URL from environment variable or use fallback
-const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
-console.log('Using API base URL:', API_BASE || '(none - using relative URL)');
-
 // Define Filter types
 interface Filters {
   grade: string;

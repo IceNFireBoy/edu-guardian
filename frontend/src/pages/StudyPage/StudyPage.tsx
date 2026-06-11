@@ -12,10 +12,9 @@ interface StudyPageParams extends Record<string, string | undefined> {
   noteId: string;
 }
 
-interface SummaryResponse extends ApiResponse {
-  summary?: string | null;
+// Backend: POST /notes/:id/summarize -> { success, data: { aiSummary }, newlyAwardedBadges }
+interface SummaryResponse extends ApiResponse<{ aiSummary?: string | null }> {
   message?: string;
-  // Add any other fields expected in the summary API response
 }
 
 const StudyPage: React.FC = () => {
@@ -38,24 +37,20 @@ const StudyPage: React.FC = () => {
     setSummaryError(null);
     try {
       const payload = forceRegenerate ? { regenerate: true } : {};
-      // Make sure callAuthenticatedApi is correctly typed to handle SummaryResponse
-      const data = await callAuthenticatedApi<SummaryResponse>(
-        `/api/v1/notes/${noteId}/summarize`,
+      const data = await callAuthenticatedApi<{ aiSummary?: string | null }>(
+        `/notes/${noteId}/summarize`,
         'POST',
         payload
       );
-      
+
       if (data.success) {
-        if (data.summary) {
-          setSummary(data.summary);
+        const aiSummary = data.data?.aiSummary ?? null;
+        if (aiSummary) {
+          setSummary(aiSummary);
           toast.success(data.message || 'Summary generated successfully!');
-        } else if (data.summary === null) { // Explicitly null summary is a valid state
+        } else {
           setSummary(null);
           toast(data.message || 'Summary processed, but no content was generated this time.');
-        } else {
-          // If success is true but summary is undefined (not null)
-          setSummary(null); // Default to null
-          toast.error('Summary data not found in response, though request succeeded.');
         }
       } else {
         throw new Error(data.error || 'Failed to fetch summary due to an unknown API error.');

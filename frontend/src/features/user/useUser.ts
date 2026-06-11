@@ -24,7 +24,7 @@ export const useUser = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<UserProfile>('/api/v1/auth/profile', 'GET');
+      const response = await callAuthenticatedApi<UserProfile>('/auth/me', 'GET');
       if (response.success && response.data) {
         setProfile(response.data);
         setLastFetchTime(now);
@@ -50,16 +50,18 @@ export const useUser = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<{ badges: Badge[] }>('/api/v1/users/badges', 'GET');
-      if (response.success && response.data) {
-        const newBadges = response.data.badges.filter(badge => 
+      // Backend: GET /users/me/badges -> { success, count, data: Badge[] }
+      const response = await callAuthenticatedApi<any[]>('/users/me/badges', 'GET');
+      if (response.success && Array.isArray(response.data)) {
+        const badges = response.data;
+        const newBadges = badges.filter(badge =>
           !profile?.badges?.some(existingBadge => existingBadge._id === badge._id)
         );
         if (newBadges.length > 0) {
           setNewBadgeIds(newBadges.map(badge => badge._id));
           toast.success(`Earned ${newBadges.length} new badge${newBadges.length > 1 ? 's' : ''}!`);
         }
-        return response.data.badges;
+        return badges;
       }
       throw new Error(response.error || response.message || 'Failed to fetch user badges');
     } catch (err: any) {
@@ -94,45 +96,43 @@ export const useUser = () => {
     setError(null);
     
     try {
-      // Call API to log completion
-      const response = await callAuthenticatedApi<{ 
-        success: boolean;
-        message: string;
-        data: { 
-          xpEarned: number;
-          currentStreak: number;
-          level: number;
-          awardedBadges: any[];
-          newBadgeCount: number;
-        };
+      // Backend: POST /users/study-complete
+      // -> { success, data: { message, user: { streak, lastActive } } }
+      const response = await callAuthenticatedApi<{
+        message?: string;
+        user?: { streak?: any; lastActive?: string };
+        xpEarned?: number;
+        awardedBadges?: any[];
       }>(
-        `/api/v1/user/study-complete`,
+        '/users/study-complete',
         'POST',
         payload
       );
-      
+
       if (response.success) {
         // Set cooldown timer for this note
         studyCompletionTimers.current[noteId] = now;
-        
-        // Track new XP for animations
-        if (response.data.xpEarned > 0) {
-          setNewXp(response.data.xpEarned);
+
+        // Track new XP for animations (when provided by the backend)
+        const xpEarned = response.data?.xpEarned ?? 0;
+        if (xpEarned > 0) {
+          setNewXp(xpEarned);
           setTimeout(() => setNewXp(0), 5000); // Reset after animation completes
         }
-        
-        // Track newly awarded badges
-        if (response.data.awardedBadges && response.data.awardedBadges.length > 0) {
-          const badgeIds = response.data.awardedBadges.map((badge: any) => badge.badge);
+
+        // Track newly awarded badges (when provided by the backend)
+        const awardedBadges = response.data?.awardedBadges ?? [];
+        if (awardedBadges.length > 0) {
+          const badgeIds = awardedBadges.map((badge: any) => badge.badge);
           setNewBadgeIds(badgeIds);
           setTimeout(() => setNewBadgeIds([]), 10000); // Reset after animation completes
         }
-        
-        // Refresh user profile to get updated XP, badges, etc.
-        await fetchUserProfile();
+
+        // Refresh user profile to get updated XP, badges, streak, etc.
+        await fetchUserProfile(true);
         return true;
       }
-      
+
       throw new Error(response.error || 'Failed to log study completion');
     } catch (err: any) {
       setError(err.message || 'Failed to log study completion');
@@ -147,7 +147,7 @@ export const useUser = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<{ success: boolean, data: UserProfile }>('auth/me', 'PUT', updates);
+      const response = await callAuthenticatedApi<UserProfile>('/auth/me', 'PUT', updates);
       if (response.success && response.data) {
         setProfile(response.data);
         return response.data;
@@ -162,6 +162,10 @@ export const useUser = () => {
   }, []);
 
   useEffect(() => {
+    // Don't fire authenticated requests when nobody is logged in
+    if (!localStorage.getItem('token')) {
+      return;
+    }
     fetchUserProfile();
     fetchUserBadges();
   }, []);
