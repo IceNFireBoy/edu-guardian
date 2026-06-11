@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Viewer } from '@react-pdf-viewer/core';
+import { Viewer, Worker } from '@react-pdf-viewer/core';
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
+// Bundle the worker that ships with the installed pdfjs-dist so the API and
+// worker versions always match; without a worker the viewer crashes with
+// 'No "GlobalWorkerOptions.workerSrc" specified'.
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
 // Import styles
 import '@react-pdf-viewer/core/lib/styles/index.css';
@@ -54,10 +58,12 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, noteTitle, noteId, onLoa
 
   return (
     <div className="h-full w-full">
-      <Viewer 
-        fileUrl={internalFileUrl} 
-        plugins={[defaultLayoutPluginInstance]}
-      />
+      <Worker workerUrl={pdfWorkerUrl}>
+        <Viewer
+          fileUrl={internalFileUrl}
+          plugins={[defaultLayoutPluginInstance]}
+        />
+      </Worker>
     </div>
   );
 };

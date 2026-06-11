@@ -1,6 +1,10 @@
 export const getRelativeTime = (date: string | Date): string => {
   const now = new Date();
   const past = new Date(date);
+  // Guard against missing/invalid dates, which otherwise render 'NaN years ago'
+  if (!date || Number.isNaN(past.getTime())) {
+    return '';
+  }
   const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
 
   if (diffInSeconds < 60) {
@@ -109,6 +113,10 @@ export const subtractDays = (date: string | Date, days: number): Date => {
 export const formatRelativeTime = (dateString: string | Date): string => {
   const date = new Date(dateString);
   const now = new Date();
+  // Guard against missing/invalid dates, which otherwise render 'NaN years ago'
+  if (!dateString || Number.isNaN(date.getTime())) {
+    return '';
+  }
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
   if (diffInSeconds < 60) {

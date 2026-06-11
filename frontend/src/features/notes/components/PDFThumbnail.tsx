@@ -1,8 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+// Bundle the worker from the installed pdfjs-dist (react-pdf pins the same
+// version) instead of relying on a CDN at runtime.
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
-// Set up the worker for PDF.js
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 interface PDFThumbnailProps {
   fileUrl: string;
