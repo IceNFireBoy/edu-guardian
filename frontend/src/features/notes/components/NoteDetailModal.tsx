@@ -134,15 +134,15 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Grade</p>
-                    <p className="text-gray-800 dark:text-gray-100">{note.grade}</p>
+                    <p className="text-gray-800 dark:text-gray-100">Grade {note.grade}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Semester</p>
-                    <p className="text-gray-800 dark:text-gray-100">{note.semester}</p>
+                    <p className="text-gray-800 dark:text-gray-100">Semester {note.semester}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Quarter</p>
-                    <p className="text-gray-800 dark:text-gray-100">{note.quarter}</p>
+                    <p className="text-gray-800 dark:text-gray-100">Quarter {note.quarter}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Topic</p>
