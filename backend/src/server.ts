@@ -8,6 +8,7 @@ import mongoSanitize from 'express-mongo-sanitize';
 import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import mongoose from 'mongoose';
 import { connectDB } from './config/db';
 import errorHandler from './middleware/error';
 
@@ -81,15 +82,23 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Add a test endpoint
-app.get('/api/test', (req, res) => {
-  res.json({ success: true, message: 'API is running' });
-});
+// Health check used by the frontend and for production diagnosis: reports
+// whether the DB is reachable and whether required env vars are present
+// (booleans only - never the values).
+const healthCheck = (req: express.Request, res: express.Response) => {
+  res.json({
+    success: true,
+    message: 'API is running',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    mongoUriConfigured: Boolean(process.env.MONGO_URI),
+    jwtSecretConfigured: Boolean(process.env.JWT_SECRET)
+  });
+};
 
-// Add a test endpoint for /api/v1/test to match frontend health check
-app.get('/api/v1/test', (req, res) => {
-  res.json({ success: true, message: 'API is running' });
-});
+app.get('/api/test', healthCheck);
+
+// Same health check on /api/v1/test to match frontend health check
+app.get('/api/v1/test', healthCheck);
 
 // Mount routers
 app.use('/api/v1/auth', authRoutes);

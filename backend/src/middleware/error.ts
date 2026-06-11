@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import ErrorResponse from '../utils/errorResponse';
 
 /**
@@ -40,6 +41,16 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
 
   if (err.name === 'TokenExpiredError') {
     error = new ErrorResponse('Token expired. Please log in again.', 401);
+  }
+
+  // An unexplained 500 while Mongo is unreachable is a database outage
+  // (e.g. mongoose buffering timeouts), not a generic server error. Say so,
+  // so the frontend and logs point straight at the real problem.
+  if (!error.statusCode && mongoose.connection.readyState !== 1) {
+    error = new ErrorResponse(
+      'Database unavailable: the server cannot reach MongoDB. Admin: check that the Atlas cluster is running and MONGO_URI on Render is current.',
+      503
+    );
   }
 
   // Send the error response
