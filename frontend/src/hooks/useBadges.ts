@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuthContext } from '../features/auth/AuthContext';
+import { flattenUserBadges } from '../features/user/badgeUtils';
 import { callAuthenticatedApi } from '../api/notes';
 import type { ApiResponse } from '../api/notes';
 import { toast } from 'react-hot-toast';
@@ -48,9 +49,12 @@ export const useBadges = () => {
       );
 
       if (response.success && Array.isArray(response.data)) {
-        setEarnedBadges(response.data);
+        // The endpoint returns nested { badge: {...}, earnedAt } records;
+        // flatten them so consumers can read name/rarity/etc. directly.
+        const flat = flattenUserBadges(response.data);
+        setEarnedBadges(flat as unknown as Badge[]);
         setUnearnedBadges([]); // No unearned badges from this endpoint
-        debug(`[useBadges] Fetched ${response.data.length} earned badges.`);
+        debug(`[useBadges] Fetched ${flat.length} earned badges.`);
       } else {
         throw new Error(response.error || response.message || 'Failed to fetch badges: API error');
       }

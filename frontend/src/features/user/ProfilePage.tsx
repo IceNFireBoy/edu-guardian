@@ -5,6 +5,7 @@ import UserStatsCard from './components/UserStatsCard';
 import BadgeGrid from './components/BadgeGrid';
 import ActivityLog from './components/ActivityLog';
 import { UserBadge } from './userTypes';
+import { flattenUserBadges } from './badgeUtils';
 
 // Simple Analytics Card sub-component
 interface AnalyticsItemProps {
@@ -171,9 +172,7 @@ const ProfilePage: React.FC = () => {
               </button>
             </div>
             { profile &&
-              <BadgeGrid badges={[
-                ...(profile.badges || []),
-              ]} />
+              <BadgeGrid badges={flattenUserBadges(profile.badges)} />
             }
           </div>
           )}

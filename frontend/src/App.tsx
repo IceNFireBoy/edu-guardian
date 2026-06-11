@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
@@ -39,25 +39,33 @@ if (typeof window !== 'undefined') {
 
 // Standard chrome: padded, width-capped content column for regular pages.
 // The app shell is h-screen, so this main is the scroll container.
-const StandardLayout: React.FC = () => (
-  <main className="flex-grow min-h-0 overflow-y-auto">
-    <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">
-      <ErrorBoundary>
-        <Outlet />
-      </ErrorBoundary>
-    </div>
-  </main>
-);
+// ErrorBoundary is keyed by route so a crash on one page resets when you
+// navigate away instead of bricking every tab.
+const StandardLayout: React.FC = () => {
+  const location = useLocation();
+  return (
+    <main className="flex-grow min-h-0 overflow-y-auto">
+      <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">
+        <ErrorBoundary key={location.pathname}>
+          <Outlet />
+        </ErrorBoundary>
+      </div>
+    </main>
+  );
+};
 
 // Full-bleed chrome for immersive views (the PDF study page): the page owns
 // the whole area below the header, with no padding or width cap
-const FullBleedLayout: React.FC = () => (
-  <main className="flex-grow w-full min-h-0 flex flex-col overflow-hidden">
-    <ErrorBoundary>
-      <Outlet />
-    </ErrorBoundary>
-  </main>
-);
+const FullBleedLayout: React.FC = () => {
+  const location = useLocation();
+  return (
+    <main className="flex-grow w-full min-h-0 flex flex-col overflow-hidden">
+      <ErrorBoundary key={location.pathname}>
+        <Outlet />
+      </ErrorBoundary>
+    </main>
+  );
+};
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
