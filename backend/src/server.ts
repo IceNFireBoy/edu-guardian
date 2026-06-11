@@ -109,11 +109,11 @@ if (require.main === module) {
   });
 }
 
-// Handle unhandled promise rejections
+// Handle unhandled promise rejections. Log loudly but keep the process
+// alive: exiting here turned any stray rejection (e.g. DB hiccups) into a
+// full-site outage via a Render crash loop.
 process.on('unhandledRejection', (err: Error) => {
   console.error('Unhandled Rejection:', err);
-  // Close server & exit process
-  process.exit(1);
 });
 
 export default app; 
