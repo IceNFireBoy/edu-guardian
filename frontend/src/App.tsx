@@ -9,6 +9,7 @@ import { AuthProvider } from './features/auth/AuthContext';
 import PrivateRoute from './features/auth/PrivateRoute';
 import Login from './features/auth/Login';
 import Register from './features/auth/Register';
+import { FEATURES } from './config/featureFlags';
 
 // Pages
 import HomePage from './pages/Home';
@@ -193,15 +194,15 @@ function App() {
                     <Route path="/dashboard" element={<Navigate to="/" replace />} />
                     <Route path="/my-notes" element={<MyNotes />} />
                     <Route path="/donate" element={<Donate />} />
-                    <Route path="/progress" element={<Progress />} />
+                    {FEATURES.gamification && <Route path="/progress" element={<Progress />} />}
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
-                    <Route path="/badges" element={<Badges />} />
+                    {FEATURES.gamification && <Route path="/badges" element={<Badges />} />}
                     <Route path="/view-note" element={<NoteViewer />} />
                     <Route path="/view-note/:noteId" element={<NoteViewer />} />
                     <Route path="/notes" element={<NoteFilterPage />} />
                     <Route path="/notes/upload" element={<NoteUploader />} />
-                    <Route path="/study/:noteId" element={<StudyPage />} />
+                    {FEATURES.ai && <Route path="/study/:noteId" element={<StudyPage />} />}
                   </Route>
 
                   {/* Debug routes */}

@@ -4,6 +4,7 @@ import { FaMoon, FaSun, FaBell, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
 import { useStreak } from '../../hooks/useStreak';
 import { useAuthContext } from '../../features/auth/AuthContext';
 import { Link } from 'react-router-dom';
+import { FEATURES } from '../../config/featureFlags';
 
 interface Notification {
   id: number;
@@ -38,10 +39,16 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
 
   // Sample notifications (using current streak)
   const sampleNotifications: Notification[] = [
-    { id: 1, title: "🎉 You gained 15 XP for uploading notes!", time: "Just now", read: false },
-    { id: 2, title: `🔥 You're on a ${currentStreak}-day streak!`, time: "Today", read: false },
+    ...(FEATURES.gamification
+      ? [
+          { id: 1, title: "🎉 You gained 15 XP for uploading notes!", time: "Just now", read: false },
+          { id: 2, title: `🔥 You're on a ${currentStreak}-day streak!`, time: "Today", read: false },
+        ]
+      : []),
     { id: 3, title: "📚 New notes added to Grade 12 > Science!", time: "Yesterday", read: true },
-    { id: 4, title: "⭐ You've earned the 'Note Scholar' badge!", time: "2 days ago", read: true },
+    ...(FEATURES.gamification
+      ? [{ id: 4, title: "⭐ You've earned the 'Note Scholar' badge!", time: "2 days ago", read: true }]
+      : []),
   ];
 
   // Close notifications when clicking outside
@@ -73,16 +80,17 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
         <div className="flex justify-between items-center">
           <div className="flex items-center">
             {isAuthenticated ? (
+              FEATURES.gamification && (
               <>
-                <motion.div 
+                <motion.div
                   className="bg-primary/10 px-3 py-1 rounded-full flex items-center mr-4"
                   whileHover={{ scale: 1.05 }}
                   aria-label={`Current streak: ${currentStreak} days`}
                 >
                   <span className="font-medium text-primary dark:text-primary-light">Streak: {currentStreak} 🔥</span>
                 </motion.div>
-                
-                <motion.div 
+
+                <motion.div
                   className="bg-secondary/10 px-3 py-1 rounded-full flex items-center"
                   whileHover={{ scale: 1.05 }}
                   aria-label={`Experience points: ${xp}`}
@@ -90,6 +98,7 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
                   <span className="font-medium text-secondary dark:text-secondary-light">XP: {xp} ⭐</span>
                 </motion.div>
               </>
+              )
             ) : (
               <div className="flex space-x-2">
                 <Link 

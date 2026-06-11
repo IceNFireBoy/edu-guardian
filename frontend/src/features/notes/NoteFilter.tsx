@@ -4,6 +4,7 @@ import { FaFilter, FaSearch, FaBookOpen, FaDownload, FaShare, FaExclamationTrian
 import { useStreak } from '../../hooks/useStreak';
 import AISummarizer from '../../features/notes/components/AISummarizer'; // Updated path
 import FlashcardGenerator from '../../features/notes/components/FlashcardGenerator'; // Updated path
+import { FEATURES } from '../../config/featureFlags';
 import FilterTags from '../../components/ui/FilterTags'; // Ensure this doesn't have .jsx
 import NoteCard, { subjectColors, getSubjectColor } from '../../features/notes/NoteCard'; // Import TSX version
 import StarRating from '../../components/notes/StarRating'; // Import StarRating component
@@ -349,6 +350,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
               </div>
               
               {/* AI Features Toggle Buttons */}
+              {FEATURES.ai && (
               <div className="flex space-x-4 mb-4 border-t pt-4 dark:border-slate-700">
                 <button 
                   onClick={() => { setShowSummarizer(!showSummarizer); setShowFlashcards(false); }}
@@ -363,6 +365,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
                   <FaLightbulb className="mr-2" /> AI Flashcards
                 </button>
               </div>
+              )}
 
               {/* AI Features Content Area */}
               <AnimatePresence>
