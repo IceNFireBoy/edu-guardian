@@ -1,0 +1,24 @@
+# Pings the Render backend every 10 minutes so the free-tier instance does
+# not spin down (cold starts take 30-60s and degrade the first visit).
+#
+# Notes:
+# - Render's free plan includes 750 instance-hours/month; keeping one
+#   service warm 24/7 uses ~720, which fits.
+# - GitHub disables scheduled workflows after ~60 days without repo
+#   activity; re-enable it from the Actions tab if that happens.
+name: Keep backend awake
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health check endpoint
+        run: |
+          curl -fsS --max-time 70 --retry 2 --retry-delay 5 \
+            https://edu-guardian-backend.onrender.com/api/test \
+            && echo "Backend is awake"
