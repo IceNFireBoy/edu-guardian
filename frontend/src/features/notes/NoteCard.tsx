@@ -1,12 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { FaBookOpen, FaFilePdf, FaImage, FaFileAlt, FaExclamationCircle, FaEye, FaDownload, FaStar, FaFileWord, FaFilePowerpoint, FaFileExcel } from 'react-icons/fa';
+import { FaFilePdf, FaFileAlt, FaExclamationCircle, FaEye, FaDownload, FaStar, FaFileWord, FaFilePowerpoint, FaFileExcel } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import type { Note } from 'types/note';
-import { getRelativeTime } from 'utils/dateUtils';
 import { useStreak } from '../../hooks/useStreak';
-import PDFThumbnail from './PDFThumbnail';
-import EnhancedPDFIcon from './EnhancedPDFIcon';
 
 interface SubjectColor {
   bg: string;
@@ -50,9 +47,6 @@ export const subjectColors: SubjectColors = {
 export const getSubjectColor = (subject: string): SubjectColor => {
   return subjectColors[subject] || subjectColors.default;
 };
-
-// Determine if we're in production mode
-const isProduction = import.meta.env.PROD || window.location.hostname === 'eduguardian.netlify.app';
 
 interface InvalidNoteCardProps {
   error?: string;
@@ -145,23 +139,11 @@ const NoteCard: React.FC<NoteCardProps> = ({
   const { avg: averageRating, count: ratingCount } = getRatingStats(noteId);
   
   const colorTheme = getSubjectColor(note.subject);
-  const fileIcon = getIcon(note.fileType);
 
-  const renderThumbnail = () => {
-    // If fileType is an image, use fileUrl directly
-    if (note.fileType && (note.fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'svg'].includes(note.fileType.toLowerCase()))) {
-      return note.fileUrl ? <img src={note.fileUrl} alt={note.title} className="w-full h-full object-cover" /> : null;
-    }
-    // If PDF, use only EnhancedPDFIcon
-    if (note.fileType === 'pdf' || (note.fileUrl && note.fileUrl.toLowerCase().endsWith('.pdf'))) {
-      return <EnhancedPDFIcon note={note} className="w-16 h-16" />;
-    }
-    // Fallback to generic file icon based on fileType or default
-    if (note.fileType) {
-      return <FaFileAlt className={`text-4xl ${colorTheme.text} ${colorTheme.darkText}`} />;
-    }
-    return <FaBookOpen className={`text-4xl ${colorTheme.text} ${colorTheme.darkText}`} />;
-  };
+  const isImage = Boolean(
+    note.fileType &&
+    (note.fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'svg'].includes(note.fileType.toLowerCase()))
+  );
 
   const handleView = () => {
     try {
@@ -192,148 +174,80 @@ const NoteCard: React.FC<NoteCardProps> = ({
     }
   };
   
-  // Get description from note
-  const getDescription = (): string => {
-    try {
-      return note.content || 'No description available';
-    } catch (err) {
-      console.error("Error getting note description:", err);
-      return 'No description available';
-    }
-  };
-  
-  // Get image url
-  const getImageUrl = (): string => {
-    try {
-      return note.fileUrl || 
-        (note.fileType === 'image' ? 'https://via.placeholder.com/400x300?text=Image+Not+Available' : '');
-    } catch (err) {
-      console.error("Error getting image URL:", err);
-      return 'https://via.placeholder.com/400x300?text=Error+Loading+Image';
-    }
-  };
-  
-  // Extract and format tags
-  const getTags = (): string[] => {
-    try {
-      const tags = note.tags || [];
-      if (!Array.isArray(tags)) return [];
-      
-      return tags.map(tag => {
-        if (!tag) return '';
-        return String(tag);
-      }).filter(tag => tag);
-    } catch (err) {
-      console.error("Error processing note tags:", err);
-      return [];
-    }
-  };
+  // Description is optional; placeholder text just adds noise on the card
+  const description = (note.content || '').trim();
 
-  // Check if the note is a PDF
-  const isPDF = (): boolean => {
-    return note.fileType === 'pdf';
-  };
-
-  // For PDF thumbnails with a fallback to icon
-  const [pdfThumbnailFailed, setPdfThumbnailFailed] = useState<boolean>(isProduction);
-  
-  // Set pdfThumbnailFailed to false initially in development environment
-  useEffect(() => {
-    if (!isProduction) {
-      setPdfThumbnailFailed(false);
-    }
-  }, []);
-  
-  const renderPDFThumbnail = () => {
-    if (isProduction || pdfThumbnailFailed) {
-      return (
-        <EnhancedPDFIcon note={note} className="w-full h-full" />
-      );
-    }
-    
-    return (
-      <PDFThumbnail
-        fileUrl={note.fileUrl || ''}
-        onError={() => setPdfThumbnailFailed(true)}
-      />
-    );
-  };
+  const formattedDate = note.createdAt && !Number.isNaN(new Date(note.createdAt).getTime())
+    ? new Date(note.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+    : '';
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className={`bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-slate-700 ${compact ? 'h-full flex flex-col' : ''} ${className}`}
+      className={`group bg-white dark:bg-slate-800 rounded-xl shadow-sm hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200 dark:border-slate-700 flex flex-col ${compact ? 'h-full' : ''} ${className}`}
     >
-      <div 
-        className={`${compact ? 'h-32' : 'h-40'} relative cursor-pointer`}
+      {/* Header: subject-tinted banner with a single pill and one file icon */}
+      <div
+        className={`${compact ? 'h-28' : 'h-36'} relative cursor-pointer flex items-center justify-center ${colorTheme.light} ${colorTheme.dark}`}
         onClick={handleView}
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10" />
-        {renderThumbnail()}
-        <div className="absolute top-3 left-3 z-20">
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorTheme.light} ${colorTheme.text}`}>{note.subject}</span>
-        </div>
-        <div className="absolute bottom-0 left-0 p-3 z-20 flex items-center space-x-2">
-          {note.isPublic && (
-            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">Public</span>
-          )}
-        </div>
-        <div className="absolute bottom-0 right-0 p-3 z-20">
-          {note.createdAt && (
-            <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
-              {new Date(note.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-            </span>
-          )}
-        </div>
+        {isImage && note.fileUrl ? (
+          <>
+            <img src={note.fileUrl} alt={note.title} className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/40" />
+          </>
+        ) : (
+          <span className="text-5xl opacity-90 transition-transform duration-200 group-hover:scale-110">
+            {getIcon(note.fileType)}
+          </span>
+        )}
+        <span className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-medium shadow-sm bg-white/95 dark:bg-slate-900/80 ${colorTheme.text} ${colorTheme.darkText}`}>
+          {note.subject}
+        </span>
       </div>
 
+      {/* Body: title once, one quiet meta line, description only if present */}
       <div className="p-4 flex-grow">
-        <h3 className="font-semibold text-lg mb-1 text-gray-900 dark:text-white line-clamp-2">
+        <h3 className="font-semibold text-lg text-gray-900 dark:text-white line-clamp-2">
           {getTitle()}
         </h3>
-        <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mb-2">
-          {getDescription()}
-        </p>
-        
-        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-          <div className="flex items-center space-x-2">
-            <span className="flex items-center">
-              <FaEye className="mr-1" /> {note.viewCount}
-            </span>
-            <span className="flex items-center">
-              <FaDownload className="mr-1" /> {note.downloadCount}
-            </span>
-          </div>
-          <span>{getRelativeTime(note.updatedAt)}</span>
+        <div className="mt-1 flex items-center flex-wrap gap-x-1.5 text-xs text-gray-500 dark:text-gray-400">
+          {formattedDate && <span>{formattedDate}</span>}
+          {formattedDate && note.isPublic && <span aria-hidden="true">&middot;</span>}
+          {note.isPublic && <span className="text-green-600 dark:text-green-400 font-medium">Public</span>}
         </div>
+        {description && (
+          <p className="mt-2 text-gray-600 dark:text-gray-300 text-sm line-clamp-2">
+            {description}
+          </p>
+        )}
       </div>
 
-      <div className="px-4 py-3 bg-gray-50 dark:bg-slate-700/50 border-t border-gray-200 dark:border-slate-600">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="flex text-yellow-400">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <FaStar
-                  key={star}
-                  className={`w-4 h-4 ${
-                    star <= averageRating ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'
-                  }`}
-                />
-              ))}
-            </div>
-            <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
-              ({ratingCount})
+      {/* Footer: stats and rating on the left, action on the right */}
+      <div className="px-4 py-3 bg-gray-50 dark:bg-slate-700/50 border-t border-gray-200 dark:border-slate-600 flex items-center justify-between text-sm">
+        <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
+          <span className="flex items-center" title="Views">
+            <FaEye className="mr-1" /> {note.viewCount ?? 0}
+          </span>
+          <span className="flex items-center" title="Downloads">
+            <FaDownload className="mr-1" /> {note.downloadCount ?? 0}
+          </span>
+          {ratingCount > 0 && (
+            <span className="flex items-center" title={`${ratingCount} rating${ratingCount === 1 ? '' : 's'}`}>
+              <FaStar className="mr-1 text-yellow-400" />
+              {averageRating.toFixed(1)}
+              <span className="ml-1 text-gray-400 dark:text-gray-500">({ratingCount})</span>
             </span>
-          </div>
-          <button
-            onClick={handleView}
-            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
-          >
-            View Details
-          </button>
+          )}
         </div>
+        <button
+          onClick={handleView}
+          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
+        >
+          View Details
+        </button>
       </div>
     </motion.div>
   );
