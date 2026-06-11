@@ -1,3 +1,0 @@
-import { Note } from '@/features/notes/noteTypes';
-
-// ... existing code ... 
