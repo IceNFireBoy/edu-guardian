@@ -26,7 +26,7 @@ const BadgeGrid: React.FC<BadgeGridProps> = ({ badges, newBadgeIds = [], showToa
   useEffect(() => {
     // Show toast notifications for new badges
     newBadgeIds.forEach(badgeId => {
-        const badge = badges.find(b => b.id === badgeId);
+        const badge = badges.find(b => b._id === badgeId);
         if (badge) {
         showToastFn({
             title: 'New Badge Unlocked!',
@@ -96,48 +96,57 @@ const BadgeGrid: React.FC<BadgeGridProps> = ({ badges, newBadgeIds = [], showToa
          </div>
       ) : (
         <div data-testid="badge-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredBadges.map((badge) => (
+          {filteredBadges.map((badge) => {
+            const badgeId = badge._id;
+            const level = badge.level && badge.level in levelColorMap ? badge.level : 'bronze';
+            return (
             <motion.div
-              key={badge.id}
-              data-testid={`badge-item-${badge.id}`}
-              data-badge-level={badge.level}
+              key={badgeId}
+              data-testid={`badge-item-${badgeId}`}
+              data-badge-level={level}
               data-badge-category={badge.category}
-              data-badge-highlighted={highlightedBadges.has(badge.id)}
+              data-badge-highlighted={highlightedBadges.has(badgeId)}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`relative p-4 rounded-lg border-2 ${levelColorMap[badge.level]} 
-                ${highlightedBadges.has(badge.id) ? 'ring-2 ring-yellow-400' : ''}`}
+              className={`relative p-4 rounded-lg border-2 ${levelColorMap[level]} 
+                ${highlightedBadges.has(badgeId) ? 'ring-2 ring-yellow-400' : ''}`}
             >
-              {highlightedBadges.has(badge.id) && (
+              {highlightedBadges.has(badgeId) && (
                 <span
-                  data-testid={`badge-new-tag-${badge.id}`}
+                  data-testid={`badge-new-tag-${badgeId}`}
                   className="absolute top-2 right-2 bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded"
                 >
                   New!
                 </span>
               )}
               <div className="flex items-center gap-3">
-                <img
-                  src={badge.icon}
-                  alt={badge.name}
-                  className="w-12 h-12 object-contain"
-                />
+                {/* icon may be a URL or an emoji string */}
+                {badge.icon && /^https?:\/\//.test(badge.icon) ? (
+                  <img src={badge.icon} alt={badge.name} className="w-12 h-12 object-contain" />
+                ) : (
+                  <span className="w-12 h-12 flex items-center justify-center text-3xl" aria-hidden="true">
+                    {badge.icon || '🏅'}
+                  </span>
+                )}
                 <div>
                   <h3 className="font-semibold">{badge.name}</h3>
                   <p className="text-sm text-gray-600">{badge.description}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span data-testid={`badge-level-${badge.id}`} className="text-xs font-medium">
-                      {badge.level.charAt(0).toUpperCase() + badge.level.slice(1)}
+                    <span data-testid={`badge-level-${badgeId}`} className="text-xs font-medium">
+                      {level.charAt(0).toUpperCase() + level.slice(1)}
                     </span>
-                    <span className="text-xs text-green-600">+{badge.xpReward} XP</span>
+                    <span className="text-xs text-green-600">+{badge.xpReward ?? 0} XP</span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Earned {new Date(badge.earnedAt).toLocaleDateString()}
-                  </p>
+                  {badge.earnedAt && !Number.isNaN(new Date(badge.earnedAt).getTime()) && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Earned {new Date(badge.earnedAt).toLocaleDateString()}
+                    </p>
+                  )}
                 </div>
               </div>
             </motion.div>
-          ))}
+            );
+          })}
       </div>
       )}
     </div>

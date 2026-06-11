@@ -3,8 +3,11 @@ export interface UserBadge {
   name: string;
   description: string;
   icon: string;
+  /** UI tier derived from the backend's rarity */
   level: 'bronze' | 'silver' | 'gold' | 'platinum';
-  category: 'upload' | 'ai' | 'streak' | 'achievement';
+  /** Original backend rarity (common..legendary), kept for galleries/filters */
+  rarity?: string;
+  category: string;
   xpReward: number;
   earnedAt: string;
 }

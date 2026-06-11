@@ -141,7 +141,7 @@ export class AuthService {
   public async getAuthenticatedUserProfile(userId: string): Promise<Partial<IUser>> {
     const user = await User.findById(userId)
       .select('-password -resetPasswordToken -resetPasswordExpire -emailVerificationToken -emailVerificationTokenExpire')
-      .populate({ path: 'badges.badge', select: 'name description icon rarity' }) // Keep badge population
+      .populate({ path: 'badges.badge', select: 'name description icon rarity category xpReward' }) // Badge fields the UI renders
       .lean(); // Using lean as it is for profile display, not direct update here
 
     if (!user) {
