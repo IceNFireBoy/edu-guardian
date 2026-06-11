@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { callAuthenticatedApi } from '../../api/apiClient';
-import { UserProfile, CompleteStudyPayload } from './userTypes';
+import { UserProfile, CompleteStudyPayload, StudyCompletionResult } from './userTypes';
+
+export type { StudyCompletionResult };
 import { toast } from 'react-hot-toast';
 
 export const useUser = () => {
@@ -75,34 +77,35 @@ export const useUser = () => {
   }, [profile?.badges, lastFetchTime]);
 
   // Log note study completion
-  const completeStudy = useCallback(async (payload: CompleteStudyPayload): Promise<boolean> => {
+  const completeStudy = useCallback(async (payload: CompleteStudyPayload): Promise<StudyCompletionResult | null> => {
     // Prevent XP farming by checking if study was already completed recently
     const noteId = payload.noteId;
     const now = Date.now();
-    
+
     // Check if there's a cooldown timer for this note
     if (studyCompletionTimers.current[noteId]) {
       const timeSinceLastCompletion = now - studyCompletionTimers.current[noteId];
-      
+
       // If less than 5 minutes (300000ms) have passed, prevent completion
       if (timeSinceLastCompletion < 300000) {
         console.log(`Study completion for note ${noteId} throttled. Try again later.`);
-        return false;
+        return null;
       }
     }
-    
+
     // Set loading state
     setLoading(true);
     setError(null);
-    
+
     try {
-      // Backend: POST /users/study-complete
-      // -> { success, data: { message, user: { streak, lastActive } } }
+      // Backend: POST /users/study-complete -> { success, data: { message,
+      // xpEarned, user: { streak, xp, level }, studiedNote, newBadges } }
       const response = await callAuthenticatedApi<{
         message?: string;
-        user?: { streak?: any; lastActive?: string };
+        user?: { streak?: any; xp?: number; level?: number; lastActive?: string };
         xpEarned?: number;
-        awardedBadges?: any[];
+        studiedNote?: StudyCompletionResult['studiedNote'];
+        newBadges?: unknown[];
       }>(
         '/users/study-complete',
         'POST',
@@ -120,23 +123,27 @@ export const useUser = () => {
           setTimeout(() => setNewXp(0), 5000); // Reset after animation completes
         }
 
-        // Track newly awarded badges (when provided by the backend)
-        const awardedBadges = response.data?.awardedBadges ?? [];
-        if (awardedBadges.length > 0) {
-          const badgeIds = awardedBadges.map((badge: any) => badge.badge);
-          setNewBadgeIds(badgeIds);
+        const newBadges = response.data?.newBadges ?? [];
+        if (newBadges.length > 0) {
+          setNewBadgeIds(newBadges.map((b: any) => (typeof b === 'string' ? b : b?.badge)));
           setTimeout(() => setNewBadgeIds([]), 10000); // Reset after animation completes
         }
 
-        // Refresh user profile to get updated XP, badges, streak, etc.
+        // Refresh user profile to get updated XP, badges, streak and the
+        // studiedNotes list (which marks cards as studied).
         await fetchUserProfile(true);
-        return true;
+        return {
+          xpEarned,
+          streak: response.data?.user?.streak ?? null,
+          newBadges,
+          studiedNote: response.data?.studiedNote ?? null
+        };
       }
 
       throw new Error(response.error || 'Failed to log study completion');
     } catch (err: any) {
       setError(err.message || 'Failed to log study completion');
-      return false;
+      return null;
     } finally {
       setLoading(false);
     }

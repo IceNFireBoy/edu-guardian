@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { describe, it, expect, beforeEach } from 'vitest';
 import User from '../../models/User';
+import Note from '../../models/Note';
 import app from '../../server';
 
 // End-to-end smoke of the auth flow against the in-memory MongoDB from
@@ -144,12 +145,90 @@ describe('Auth Routes', () => {
         .send({ email: credentials.email, password: credentials.password });
 
       const res = await request(app)
-        .get('/api/v1/users/feed?type=ai_summary_generated,ai_flashcards_generated')
+        .get('/api/v1/users/feed?type=study,earn_badge')
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
-      // No AI activity yet - the filter should simply return an empty list
+      // No study/badge activity yet - the filter should simply return an empty list
       expect(res.body.data.activities).toEqual([]);
+    });
+  });
+
+  describe('POST /api/v1/users/study-complete', () => {
+    let token: string;
+    let noteId: string;
+
+    beforeEach(async () => {
+      const res = await request(app).post('/api/v1/auth/register').send(credentials);
+      token = res.body.token;
+      const note = await Note.create({
+        title: 'Logarithmic Functions',
+        fileUrl: 'https://example.com/note.pdf',
+        fileType: 'pdf',
+        fileSize: 1024,
+        subject: 'General Mathematics',
+        grade: '12',
+        semester: '1',
+        quarter: '2',
+        topic: 'Logarithms',
+        user: res.body.user._id ?? res.body.user.id
+      });
+      noteId = note._id.toString();
+    });
+
+    it('records the studied note, awards XP, and updates the streak', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/study-complete')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ noteId, duration: 300 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.studiedNote).toMatchObject({
+        noteId,
+        timesStudied: 1,
+        totalSeconds: 300
+      });
+      expect(res.body.data.xpEarned).toBeGreaterThan(0);
+      expect(res.body.data.user.streak.current).toBeGreaterThanOrEqual(1);
+
+      // The profile now carries the studied record for the notes grid
+      const me = await request(app)
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+      expect(me.body.data.studiedNotes).toHaveLength(1);
+      expect(me.body.data.studiedNotes[0].note.toString()).toBe(noteId);
+    });
+
+    it('accumulates time and count on repeat sessions for the same note', async () => {
+      await request(app)
+        .post('/api/v1/users/study-complete')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ noteId, duration: 300 });
+      const res = await request(app)
+        .post('/api/v1/users/study-complete')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ noteId, duration: 200 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.studiedNote).toMatchObject({
+        timesStudied: 2,
+        totalSeconds: 500
+      });
+    });
+
+    it('rejects an unknown note id with 404 and a missing duration with 400', async () => {
+      const missing = await request(app)
+        .post('/api/v1/users/study-complete')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ noteId: '64b5f9d2f1a2c34d56789012', duration: 60 });
+      expect(missing.status).toBe(404);
+
+      const badDuration = await request(app)
+        .post('/api/v1/users/study-complete')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ noteId });
+      expect(badDuration.status).toBe(400);
     });
   });
 

@@ -47,14 +47,31 @@ export interface UserProfile {
   updatedAt: string;
   emailVerified: boolean;
   favoriteNotes: string[];
-  totalSummariesGenerated: number;
-  totalFlashcardsGenerated: number;
-  summaryQuota?: number;
-  flashcardQuota?: number;
+  studiedNotes?: UserStudiedNote[];
+}
+
+/** Per-note study record carried on the profile */
+export interface UserStudiedNote {
+  note: string;
+  lastStudiedAt: string;
+  totalSeconds: number;
+  timesStudied: number;
 }
 
 export interface CompleteStudyPayload {
   noteId: string;
+  /** Seconds spent studying in this session */
   duration: number;
-  pointsEarned: number;
+}
+
+/** What the backend reports after logging a study session */
+export interface StudyCompletionResult {
+  xpEarned: number;
+  streak: { current: number; max: number } | null;
+  newBadges: unknown[];
+  studiedNote: {
+    noteId: string;
+    timesStudied: number;
+    totalSeconds: number;
+  } | null;
 }

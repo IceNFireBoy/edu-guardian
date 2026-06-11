@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
@@ -35,6 +35,28 @@ import NetworkStatusMonitor from './components/ui/NetworkStatusMonitor';
 if (typeof window !== 'undefined') {
   (window as any).debug = debug;
 }
+
+// Standard chrome: padded, width-capped content column for regular pages.
+// The app shell is h-screen, so this main is the scroll container.
+const StandardLayout: React.FC = () => (
+  <main className="flex-grow min-h-0 overflow-y-auto">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">
+      <ErrorBoundary>
+        <Outlet />
+      </ErrorBoundary>
+    </div>
+  </main>
+);
+
+// Full-bleed chrome for immersive views (the PDF study page): the page owns
+// the whole area below the header, with no padding or width cap
+const FullBleedLayout: React.FC = () => (
+  <main className="flex-grow w-full min-h-0 flex flex-col overflow-hidden">
+    <ErrorBoundary>
+      <Outlet />
+    </ErrorBoundary>
+  </main>
+);
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -177,39 +199,43 @@ function App() {
           <NetworkStatusMonitor />
           <OfflineDetector />
           <Sidebar />
-          <div className="flex flex-col min-h-screen md:ml-64">
+          <div className="flex flex-col h-screen md:ml-64">
             <Header toggleDarkMode={toggleDarkMode} />
-            <main className="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full">
-              <ErrorBoundary>
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
+            <Routes>
+              <Route element={<StandardLayout />}>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
-                  {/* Protected routes - unauthenticated visitors are sent to /login */}
-                  <Route element={<PrivateRoute />}>
-                    <Route path="/" element={<HomePage />} />
-                    {/* Legacy alias: older code navigated to /dashboard */}
-                    <Route path="/dashboard" element={<Navigate to="/" replace />} />
-                    <Route path="/my-notes" element={<MyNotes />} />
-                    <Route path="/donate" element={<Donate />} />
-                    <Route path="/progress" element={<Progress />} />
-                    <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
-                    <Route path="/badges" element={<Badges />} />
-                    <Route path="/view-note" element={<NoteViewer />} />
-                    <Route path="/view-note/:noteId" element={<NoteViewer />} />
-                    <Route path="/notes" element={<NoteFilterPage />} />
-                    <Route path="/notes/upload" element={<NoteUploader />} />
-                  </Route>
+                {/* Protected routes - unauthenticated visitors are sent to /login */}
+                <Route element={<PrivateRoute />}>
+                  <Route path="/" element={<HomePage />} />
+                  {/* Legacy alias: older code navigated to /dashboard */}
+                  <Route path="/dashboard" element={<Navigate to="/" replace />} />
+                  <Route path="/my-notes" element={<MyNotes />} />
+                  <Route path="/donate" element={<Donate />} />
+                  <Route path="/progress" element={<Progress />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
+                  <Route path="/badges" element={<Badges />} />
+                  <Route path="/notes" element={<NoteFilterPage />} />
+                  <Route path="/notes/upload" element={<NoteUploader />} />
+                </Route>
 
-                  {/* Debug routes */}
-                  <Route path="/debug/test-pdf/*" element={<TestPDFDebug />} />
+                {/* Debug routes */}
+                <Route path="/debug/test-pdf/*" element={<TestPDFDebug />} />
 
-                  {/* Unknown URLs fall back to the dashboard (or /login when logged out) */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </ErrorBoundary>
-            </main>
+                {/* Unknown URLs fall back to the dashboard (or /login when logged out) */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+
+              {/* Immersive study view: full-bleed below the shared header */}
+              <Route element={<FullBleedLayout />}>
+                <Route element={<PrivateRoute />}>
+                  <Route path="/view-note" element={<NoteViewer />} />
+                  <Route path="/view-note/:noteId" element={<NoteViewer />} />
+                </Route>
+              </Route>
+            </Routes>
           </div>
           <CookieConsent />
           <DebugPanel />
