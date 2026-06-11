@@ -15,13 +15,6 @@ export type {
   CompleteStudyPayload
 } from '../../types/note';
 
-export interface AISummary {
-  noteId: string;
-  summary: string | null;
-  keyPoints: string[];
-  generatedAt: string;
-}
-
 export interface NewlyAwardedBadgeInfo {
   name: string;
   level: string;
@@ -29,7 +22,3 @@ export interface NewlyAwardedBadgeInfo {
   [key: string]: any;
 }
 
-export interface AIGenerationResult<T> {
-  data: T | null;
-  newlyAwardedBadges: NewlyAwardedBadgeInfo[];
-}

@@ -15,13 +15,6 @@ export interface User {
     max: number;
     lastUsed: Date;
   };
-  aiUsage?: {
-    summaryUsed: number;
-    flashcardUsed: number;
-    lastReset: Date;
-    totalSummariesGenerated?: number;
-    totalFlashcardsGenerated?: number;
-  };
   preferences?: {
     darkMode?: boolean;
     emailNotifications?: boolean;

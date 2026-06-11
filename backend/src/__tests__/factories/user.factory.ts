@@ -26,13 +26,6 @@ export const mockUser = (overrides: Partial<IUser> = {}): Partial<IUser> => ({
   activity: [],
   subjects: [],
   emailVerified: false,
-  aiUsage: {
-    summaryUsed: 0,
-    flashcardUsed: 0,
-    lastReset: new Date()
-  },
-  totalSummariesGenerated: 0,
-  totalFlashcardsGenerated: 0,
   favoriteNotes: [],
   ...overrides
 });

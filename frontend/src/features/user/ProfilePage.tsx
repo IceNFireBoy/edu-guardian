@@ -2,11 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { FaUser, FaSpinner, FaCog, FaChevronRight, FaExclamationTriangle, FaBrain, FaChartLine, FaFire, FaTrophy, FaStar, FaLightbulb, FaAward } from 'react-icons/fa';
 import { useUser } from './useUser';
 import UserStatsCard from './components/UserStatsCard';
-import AIQuotaDisplay from './components/AIQuotaDisplay';
 import BadgeGrid from './components/BadgeGrid';
 import ActivityLog from './components/ActivityLog';
 import { UserBadge } from './userTypes';
-import { FEATURES } from '../../config/featureFlags';
 
 // Simple Analytics Card sub-component
 interface AnalyticsItemProps {
@@ -121,7 +119,7 @@ const ProfilePage: React.FC = () => {
       </div>
 
       {/* User Stats Card */}
-      {FEATURES.gamification && profile && (
+      {profile && (
         <UserStatsCard
           xp={profile.xp}
           level={profile.level}
@@ -135,35 +133,8 @@ const ProfilePage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column */}
         <div className="lg:col-span-2 space-y-8">
-          {/* AI Analytics Section */}
-          {FEATURES.ai && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center mb-4">
-                <FaChartLine className="text-xl text-primary mr-2" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">AI Engagement</h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <AnalyticsItem 
-                    icon={<FaFire />} 
-                    label="AI Usage Streak" 
-                    value={`${profile?.streak?.current ?? 0} day(s)`}
-                />
-                 <AnalyticsItem 
-                    icon={<FaBrain />} 
-                    label="AI Summaries Today" 
-                    value={`${profile?.aiUsage?.summaryUsed ?? 0}`}
-                />
-                <AnalyticsItem 
-                    icon={<FaLightbulb />}
-                    label="AI Flashcards Today"
-                    value={`${profile?.aiUsage?.flashcardUsed ?? 0}`}
-                />
-            </div>
-          </div>
-          )}
-
           {/* Gamification Analytics Section */}
-          {FEATURES.gamification && profile && (
+          {profile && (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700 mt-8">
               <div className="flex items-center mb-4">
                   <FaTrophy className="text-xl text-amber-500 mr-2" />
@@ -189,16 +160,9 @@ const ProfilePage: React.FC = () => {
             </div>
           )}
 
-          {/* AI Quota */}
-          {FEATURES.ai && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">AI Feature Usage</h2>
-            <AIQuotaDisplay aiUsage={profile?.aiUsage} />
-          </div>
-          )}
 
           {/* Badges */}
-          {FEATURES.gamification && (
+          {(
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Earned Badges</h2>

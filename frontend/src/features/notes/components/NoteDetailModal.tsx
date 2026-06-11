@@ -4,9 +4,6 @@ import { FaTimes, FaShare, FaStar, FaRobot, FaLightbulb, FaDownload, FaTrash, Fa
 import type { Note, NoteRating } from 'types/note';
 import { useNote } from '../useNote'; // For rateNote and deleteNote
 import { subjectColors, getSubjectColor } from '../NoteCard'; // Assuming NoteCard.tsx is in the same directory
-import AISummarizer from './AISummarizer';
-import FlashcardGenerator from './FlashcardGenerator';
-import { FEATURES } from '../../../config/featureFlags';
 import { toast } from 'react-hot-toast';
 import { formatDate } from 'utils/dateUtils';
 
@@ -40,8 +37,6 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   onRate,
   userRating = 0,
 }) => {
-  const [showSummarizer, setShowSummarizer] = useState(false);
-  const [showFlashcards, setShowFlashcards] = useState(false);
   const [rating, setRating] = useState(userRating);
   const { rateNote, deleteNote: deleteNoteHook, loading: noteActionLoading, error: noteActionError } = useNote();
 
@@ -208,16 +203,6 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
               <div className="border-t border-gray-200 dark:border-slate-700 pt-6 space-y-3">
                 <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Actions & Tools</h3>
                 <div className="flex flex-wrap gap-3">
-                  {FEATURES.ai && (
-                    <>
-                      <button onClick={() => setShowSummarizer(true)} className="btn btn-secondary btn-sm flex items-center">
-                        <FaRobot className="mr-2" /> AI Summary
-                      </button>
-                      <button onClick={() => setShowFlashcards(true)} className="btn btn-secondary btn-sm flex items-center">
-                        <FaLightbulb className="mr-2" /> Generate Flashcards
-                      </button>
-                    </>
-                  )}
                   <button onClick={handleShare} className="btn btn-secondary btn-sm flex items-center">
                     <FaShare className="mr-2" /> Share Link
                   </button>
@@ -241,23 +226,6 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                 </button>
             </div>
 
-            {/* Modals for AI Tools */}
-            {FEATURES.ai && note && (
-              <>
-                <AISummarizer 
-                  isOpen={showSummarizer} 
-                  onClose={() => setShowSummarizer(false)} 
-                  noteId={note._id} 
-                  noteTitle={note.title} 
-                />
-                <FlashcardGenerator 
-                  isOpen={showFlashcards} 
-                  onClose={() => setShowFlashcards(false)} 
-                  noteId={note._id} 
-                  noteTitle={note.title} 
-                />
-              </>
-            )}
           </motion.div>
         </motion.div>
       )}

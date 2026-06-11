@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import User, { IUser } from '../models/User'; // Assuming IUser has the updated streak and aiUsage
+import User, { IUser } from '../models/User';
 import ErrorResponse from '../utils/errorResponse';
 import sendEmailUtil from '../utils/sendEmail'; // Will need sendEmail.ts
 import { Request, Response } from 'express'; // For req.protocol and req.get('host'), and res for sendTokenResponse
@@ -148,7 +148,6 @@ export class AuthService {
       throw new NotFoundError('User not found');
     }
 
-    // Ensure IUser on the backend now has streak: { current, max, lastUsed } and aiUsage: { summaryUsed, flashcardUsed, lastReset }
     // The toObject() or lean() should include these as per schema.
     return {
       _id: user._id,
@@ -159,7 +158,6 @@ export class AuthService {
       xp: user.xp,
       level: user.level,
       streak: user.streak, // NEW - should be the object { current, max, lastUsed }
-      aiUsage: user.aiUsage, // NEW - should be the object { summaryUsed, flashcardUsed, lastReset }
       profileImage: user.profileImage,
       biography: user.biography,
       preferences: user.preferences,
@@ -233,7 +231,6 @@ export class AuthService {
       xp: updatedUser.xp,
       level: updatedUser.level,
       streak: updatedUser.streak,
-      aiUsage: updatedUser.aiUsage,
       profileImage: updatedUser.profileImage,
       biography: updatedUser.biography,
       preferences: updatedUser.preferences,

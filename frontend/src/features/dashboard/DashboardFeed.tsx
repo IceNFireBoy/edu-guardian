@@ -10,7 +10,7 @@ import { useToast } from '../../hooks/useToast';
 
 interface FeedItem {
   _id: string;
-  itemType: 'activity' | 'badge' | 'note' | 'study' | 'ai';
+  itemType: 'activity' | 'badge' | 'note' | 'study';
   action: string;
   description: string;
   xpEarned: number;
@@ -40,26 +40,19 @@ interface FeedApiResponse {
   message?: string;
 }
 
-type FeedFilter = 'my' | 'ai';
-
 // Map backend activity actions to a display category
 const ACTION_TO_ITEM_TYPE: Record<string, FeedItem['itemType']> = {
   earn_badge: 'badge',
   upload: 'note',
   download: 'note',
-  study: 'study',
-  ai_summary_generated: 'ai',
-  ai_flashcards_generated: 'ai'
+  study: 'study'
 };
-
-const AI_ACTIONS = 'ai_summary_generated,ai_flashcards_generated';
 
 const DashboardFeed: React.FC = () => {
   const { profile } = useUser();
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<FeedFilter>('my');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const { success: successToast, error: errorToast } = useToast();
@@ -70,15 +63,14 @@ const DashboardFeed: React.FC = () => {
     if (resetItems) {
       setPage(1);
       setFeedItems([]);
-      setHasShownError(false); // Reset error toast throttle on manual retry or filter change
+      setHasShownError(false); // Reset error toast throttle on manual retry
     }
     setLoading(true);
     setError(null);
     try {
       const currentPage = resetItems ? 1 : page;
-      const typeParam = filter === 'ai' ? `&type=${AI_ACTIONS}` : '';
       const response = await callAuthenticatedApi<FeedApiResponse>(
-        `/users/feed?page=${currentPage}&limit=10${typeParam}`,
+        `/users/feed?page=${currentPage}&limit=10`,
         'GET'
       );
       const payload = response?.data;
@@ -114,13 +106,13 @@ const DashboardFeed: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [filter, page, errorToast, hasShownError]);
+  }, [page, errorToast, hasShownError]);
 
-  // Initial fetch or filter change
+  // Initial fetch
   useEffect(() => {
     fetchFeed(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, []);
 
   // Get appropriate icon for feed item type
   const getItemIcon = (itemType: string) => {
@@ -131,8 +123,6 @@ const DashboardFeed: React.FC = () => {
         return <FaBook className="text-blue-500" />;
       case 'study':
         return <FaCalendarCheck className="text-green-500" />;
-      case 'ai':
-        return <FaLightbulb className="text-purple-500" />;
       default:
         return <FaUser className="text-gray-500" />;
     }
@@ -165,28 +155,6 @@ const DashboardFeed: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-0">Activity Feed</h2>
           
-          <div className="flex space-x-2 overflow-x-auto pb-2 sm:pb-0 w-full sm:w-auto">
-            <button
-              onClick={() => setFilter('my')}
-              className={`px-3 py-1 rounded-full text-sm font-medium flex items-center whitespace-nowrap
-                ${filter === 'my'
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-            >
-              <FaUser className="mr-2" size={12} />
-              My Activity
-            </button>
-            <button
-              onClick={() => setFilter('ai')}
-              className={`px-3 py-1 rounded-full text-sm font-medium flex items-center whitespace-nowrap
-                ${filter === 'ai'
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-            >
-              <FaLightbulb className="mr-2" size={12} />
-              AI Usage
-            </button>
-          </div>
         </div>
       </div>
       
@@ -251,7 +219,7 @@ const DashboardFeed: React.FC = () => {
             <div className="p-12 text-center">
               <FaFilter className="mx-auto mb-4 text-gray-400 text-4xl" />
               <p className="text-gray-500 dark:text-gray-400">
-                No activity to display for the selected filter.
+                No activity yet — study or upload a note to get started.
               </p>
             </div>
           ) : null}

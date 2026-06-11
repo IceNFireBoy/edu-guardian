@@ -160,7 +160,7 @@ describe('UserService', () => {
   });
 
   describe('Streak Logic', () => {
-    describe('updateUserAIStreak', () => {
+    describe('updateStudyStreak', () => {
       it('should initialize streak to 1 if no previous streak and lastUsed is null', async () => {
         mockDate('2023-01-05T10:00:00.000Z');
         testUser.streak.current = 0;
@@ -168,7 +168,7 @@ describe('UserService', () => {
         testUser.streak.lastUsed = null as any; // Simulate first ever usage
         await testUser.save();
 
-        await userService.updateUserAIStreak(testUser._id.toString());
+        await userService.updateStudyStreak(testUser._id.toString());
         const updatedUser = await User.findById(testUser._id);
         expect(updatedUser?.streak.current).toBe(1);
         expect(updatedUser?.streak.max).toBe(1);
@@ -181,7 +181,7 @@ describe('UserService', () => {
         testUser.streak.lastUsed = new RealDate('2023-01-01T14:00:00.000Z');
         await testUser.save();
 
-        await userService.updateUserAIStreak(testUser._id.toString());
+        await userService.updateStudyStreak(testUser._id.toString());
         const updatedUser = await User.findById(testUser._id);
         expect(updatedUser?.streak.current).toBe(2);
         expect(updatedUser?.streak.lastUsed.toISOString()).toBe('2023-01-02T10:00:00.000Z');
@@ -194,7 +194,7 @@ describe('UserService', () => {
         testUser.streak.lastUsed = new RealDate('2023-01-01T12:00:00.000Z');
         await testUser.save();
 
-        await userService.updateUserAIStreak(testUser._id.toString());
+        await userService.updateStudyStreak(testUser._id.toString());
         const updatedUser = await User.findById(testUser._id);
         expect(updatedUser?.streak.current).toBe(2);
         expect(updatedUser?.streak.max).toBe(2);
@@ -206,7 +206,7 @@ describe('UserService', () => {
         testUser.streak.lastUsed = new RealDate('2023-01-01T18:00:00.000Z');
         await testUser.save();
 
-        await userService.updateUserAIStreak(testUser._id.toString());
+        await userService.updateStudyStreak(testUser._id.toString());
         const updatedUser = await User.findById(testUser._id);
         expect(updatedUser?.streak.current).toBe(1);
         expect(updatedUser?.streak.lastUsed.toISOString()).toBe('2023-01-04T10:00:00.000Z');
@@ -218,7 +218,7 @@ describe('UserService', () => {
         testUser.streak.lastUsed = new RealDate('2023-01-01T10:00:00.000Z');
         await testUser.save();
 
-        await userService.updateUserAIStreak(testUser._id.toString());
+        await userService.updateStudyStreak(testUser._id.toString());
         const updatedUser = await User.findById(testUser._id);
         expect(updatedUser?.streak.current).toBe(2);
         expect(updatedUser?.streak.lastUsed.toISOString()).toBe('2023-01-01T18:00:00.000Z');
@@ -232,7 +232,7 @@ describe('UserService', () => {
 
         // User uses again early on Jan 2nd (less than 24 hours, but next calendar day)
         mockDate('2023-01-02T01:00:00.000Z'); 
-        await userService.updateUserAIStreak(testUser._id.toString());
+        await userService.updateStudyStreak(testUser._id.toString());
         
         const updatedUser = await User.findById(testUser._id);
         expect(updatedUser?.streak.current).toBe(2);
@@ -241,7 +241,7 @@ describe('UserService', () => {
       });
 
       it('should throw NotFoundError if user not found', async () => {
-        await expect(userService.updateUserAIStreak(new mongoose.Types.ObjectId().toString())).rejects.toThrow(NotFoundError);
+        await expect(userService.updateStudyStreak(new mongoose.Types.ObjectId().toString())).rejects.toThrow(NotFoundError);
       });
     });
   });

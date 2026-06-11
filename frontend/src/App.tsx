@@ -9,7 +9,6 @@ import { AuthProvider } from './features/auth/AuthContext';
 import PrivateRoute from './features/auth/PrivateRoute';
 import Login from './features/auth/Login';
 import Register from './features/auth/Register';
-import { FEATURES } from './config/featureFlags';
 
 // Pages
 import HomePage from './pages/Home';
@@ -22,7 +21,6 @@ import NoteViewer from './pages/NoteViewer';
 import TestPDFDebug from './debug/TestPDFDebug';
 import NoteFilterPage from './features/notes/NoteFilterPage';
 import NoteUploader from './features/notes/NoteUploader';
-import StudyPage from './pages/StudyPage/StudyPage';
 import ProfilePage from './features/user/ProfilePage';
 
 // Layout components
@@ -194,15 +192,14 @@ function App() {
                     <Route path="/dashboard" element={<Navigate to="/" replace />} />
                     <Route path="/my-notes" element={<MyNotes />} />
                     <Route path="/donate" element={<Donate />} />
-                    {FEATURES.gamification && <Route path="/progress" element={<Progress />} />}
+                    <Route path="/progress" element={<Progress />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
-                    {FEATURES.gamification && <Route path="/badges" element={<Badges />} />}
+                    <Route path="/badges" element={<Badges />} />
                     <Route path="/view-note" element={<NoteViewer />} />
                     <Route path="/view-note/:noteId" element={<NoteViewer />} />
                     <Route path="/notes" element={<NoteFilterPage />} />
                     <Route path="/notes/upload" element={<NoteUploader />} />
-                    {FEATURES.ai && <Route path="/study/:noteId" element={<StudyPage />} />}
                   </Route>
 
                   {/* Debug routes */}

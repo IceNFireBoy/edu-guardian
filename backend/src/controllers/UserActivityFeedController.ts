@@ -81,7 +81,7 @@ export default class UserActivityFeedController {
         }
 
         try {
-            const user = await UserService.updateUserAIStreak(req.user.id);
+            const user = await UserService.updateStudyStreak(req.user.id);
             await BadgeService.checkAndAwardBadges(req.user.id, 'study_complete', { noteId, duration });
 
             res.status(200).json({
