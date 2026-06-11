@@ -7,6 +7,18 @@ import { CustomRequest } from '../middleware/auth'; // For req.user if needed
 import { INote } from '../models/Note'; // For types
 import mongoose from 'mongoose'; 
 
+// One entry per field: chained validators (notEmpty + isIn, ...) emit
+// multiple errors for a single bad input; keep the first message per field.
+const formatValidationErrors = (errors: ReturnType<typeof validationResult>): string => {
+  const seen = new Map<string, string>();
+  for (const e of errors.array()) {
+    const field = 'path' in e ? String((e as { path: unknown }).path) : 'field';
+    if (!seen.has(field)) seen.set(field, String(e.msg));
+  }
+  return [...seen.entries()].map(([field, msg]) => `${field}: ${msg}`).join(', ');
+};
+
+
 // Create a singleton instance of the NoteService
 const noteService = new NoteService();
 
@@ -18,7 +30,7 @@ export default class NoteController {
   public getNotes = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     const { grade, subject, semester, quarter, topic, page, limit, sortBy, sortOrder } = req.query;
@@ -60,7 +72,7 @@ export default class NoteController {
   public getNoteById = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
     const noteId = req.params.id;
     try {
@@ -80,7 +92,7 @@ export default class NoteController {
   public createNote = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     if (!req.user) {
@@ -142,7 +154,7 @@ export default class NoteController {
   public updateNoteById = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     if (!req.user) {
@@ -208,7 +220,7 @@ export default class NoteController {
   public deleteNoteById = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     if (!req.user) {
@@ -234,7 +246,7 @@ export default class NoteController {
   public getUserNotes = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     if (!req.user) {
@@ -256,7 +268,7 @@ export default class NoteController {
   public getMyNotes = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     if (!req.user) {
@@ -278,7 +290,7 @@ export default class NoteController {
   public getTopRatedNotes = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     try {
@@ -295,7 +307,7 @@ export default class NoteController {
   public getNotesBySubject = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     const subject = req.params.subject;
@@ -314,7 +326,7 @@ export default class NoteController {
   public addFlashcardsToNote = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     if (!req.user) {
@@ -344,7 +356,7 @@ export default class NoteController {
   public searchNotes = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     const { query } = req.query;
@@ -363,7 +375,7 @@ export default class NoteController {
   public uploadNoteFile = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     if (!req.user) {
@@ -395,7 +407,7 @@ export default class NoteController {
   public getNotesByFilters = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     const { filters } = req.query;
@@ -414,7 +426,7 @@ export default class NoteController {
   public rateNote = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     if (!req.user) {
@@ -442,7 +454,7 @@ export default class NoteController {
   public incrementDownloads = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     if (!req.user) {
@@ -468,7 +480,7 @@ export default class NoteController {
   public createFlashcardForNote = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return next(new ErrorResponse(`Validation Error: ${errors.array().map(e => `${'path' in e ? e.path : 'field'}: ${e.msg}`).join(', ')}`, 400));
+      return next(new ErrorResponse(`Validation Error: ${formatValidationErrors(errors)}`, 400));
     }
 
     if (!req.user) {
