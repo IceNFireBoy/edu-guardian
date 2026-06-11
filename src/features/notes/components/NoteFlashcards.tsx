@@ -1,6 +1,0 @@
-import { Note, Flashcard } from 'types/note';
-
-// ... existing code ... 
-
-{note.flashcards.map((card: Flashcard) => (
-// ... existing code ... 

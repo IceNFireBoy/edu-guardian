@@ -25,13 +25,6 @@ router.post(
 
 router.post('/logout', authController.logout);
 
-router.get('/verify-email/:verificationtoken', authController.verifyEmail);
-router.post(
-  '/resend-verification',
-  [check('email', 'Please provide a valid email').isEmail()],
-  authController.resendVerificationEmail
-);
-
 // Protected routes
 router.get('/me', protect, authController.getProfile);
 router.put('/me', protect, [

@@ -509,11 +509,16 @@ export default class NoteController {
     const noteId = req.params.id;
 
     try {
-      const summary = await noteService.generateAISummaryForNote(noteId, userId);
-      if (!summary) {
+      const result = await noteService.generateAISummaryForNote(noteId, userId);
+      if (!result) {
         return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));
       }
-      res.status(200).json({ success: true, data: summary });
+      // Flatten: { success, data: { aiSummary }, newlyAwardedBadges }
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        newlyAwardedBadges: result.newlyAwardedBadges
+      });
     } catch (error) {
       next(error);
     }
@@ -535,11 +540,16 @@ export default class NoteController {
     const noteId = req.params.id;
 
     try {
-      const flashcards = await noteService.generateAIFlashcardsForNote(noteId, userId);
-      if (!flashcards) {
-    return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));
-  }
-      res.status(200).json({ success: true, data: flashcards });
+      const result = await noteService.generateAIFlashcardsForNote(noteId, userId);
+      if (!result) {
+        return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));
+      }
+      // Flatten: { success, data: { flashcards }, newlyAwardedBadges }
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        newlyAwardedBadges: result.newlyAwardedBadges
+      });
     } catch (error) {
       next(error);
     }

@@ -44,12 +44,18 @@ app.use(helmet({
 }));
 
 // Enable CORS
+// FRONTEND_URL may be a single origin or a comma-separated list
+const allowedOrigins = (process.env.FRONTEND_URL || 'https://eduguardian.netlify.app')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL || 'https://eduguardian-app.netlify.app'] 
+  origin: process.env.NODE_ENV === 'production'
+    ? allowedOrigins
     : true, // Allow all origins in development
   credentials: true, // Allow cookies
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 app.use(cors(corsOptions));
@@ -103,11 +109,11 @@ if (require.main === module) {
   });
 }
 
-// Handle unhandled promise rejections
+// Handle unhandled promise rejections. Log loudly but keep the process
+// alive: exiting here turned any stray rejection (e.g. DB hiccups) into a
+// full-site outage via a Render crash loop.
 process.on('unhandledRejection', (err: Error) => {
   console.error('Unhandled Rejection:', err);
-  // Close server & exit process
-  process.exit(1);
 });
 
 export default app; 

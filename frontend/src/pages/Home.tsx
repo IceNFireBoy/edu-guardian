@@ -9,6 +9,7 @@ import { useUser } from '../features/user/useUser';
 import UserStatsCard from '../features/user/components/UserStatsCard';
 // Import the extracted FeatureCard component
 import FeatureCard from '../components/ui/FeatureCard';
+import { FEATURES } from '../config/featureFlags';
 
 // Define the structure for a Feature if not defined elsewhere
 interface Feature {
@@ -49,20 +50,22 @@ const HomePage: React.FC = () => {
       to: "/my-notes",
       color: "border-green-500"
     },
-    {
-      icon: <FaChartLine className="text-purple-500" size={24} />,
-      title: "Track Progress",
-      description: "Monitor your learning journey with XP points and day streaks.",
-      to: "/progress",
-      color: "border-purple-500"
-    }
+    ...(FEATURES.gamification
+      ? [{
+          icon: <FaChartLine className="text-purple-500" size={24} />,
+          title: "Track Progress",
+          description: "Monitor your learning journey with XP points and day streaks.",
+          to: "/progress",
+          color: "border-purple-500"
+        }]
+      : [])
   ];
 
   return (
     <div className="space-y-8">
       {/* User Stats (only when logged in and profile loaded) */}
       {/* Add explicit checks for profile properties if needed by UserStatsCard */}
-      {profile && (
+      {FEATURES.gamification && profile && (
         <UserStatsCard xp={profile.xp} level={profile.level} streak={profile.streak} />
       )}
       
@@ -128,12 +131,14 @@ const HomePage: React.FC = () => {
           ))}
           
           {/* Did You Know Card */}
+          {FEATURES.gamification && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800/50 dark:to-gray-900/30 p-4 rounded-lg border border-blue-200 dark:border-gray-700 shadow-sm">
             <h3 className="font-medium text-lg mb-2 text-blue-800 dark:text-blue-300">Did You Know?</h3>
             <p className="text-sm text-blue-700 dark:text-blue-200">
               You can earn XP and badges by uploading notes, studying regularly, and helping others. Check your <Link to="/badges" className="font-semibold underline hover:text-blue-600 dark:hover:text-blue-100">Badges</Link>!
             </p>
           </div>
+          )}
         </div>
       </div>
     </div>

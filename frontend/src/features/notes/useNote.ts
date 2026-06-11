@@ -72,23 +72,6 @@ interface BackendNoteUploadPayload {
   isPublic: boolean;
 }
 
-// Define a type for the raw response from the backend for AI Summary
-// This mirrors what NoteService.generateAISummaryForNote actually returns (Partial<INote>)
-interface RawAISummaryResponse {
-  _id: string; // noteId
-  aiSummary?: { // Matching new backend structure in NoteService where data is { _id, aiSummary: { content, generatedAt, modelUsed } }
-    content: string | null;
-    keyPoints?: string[]; // Assuming keyPoints might still be part of aiSummary object or directly under data
-    generatedAt: string | Date;
-    modelUsed: string;
-  };
-}
-
-// Type for backend response of AI Flashcard generation
-interface RawAIFlashcardsResponse {
-  flashcards: Flashcard[];
-}
-
 export const useNote = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +102,7 @@ export const useNote = () => {
     try {
       debug('[useNote] Fetching notes from API for filter:', filter);
       // Adjust callAuthenticatedApi to expect PaginatedNotesResponse for this endpoint
-      const response = await callAuthenticatedApi<PaginatedNotesResponse>('/api/v1/notes', 'GET', filter as any);
+      const response = await callAuthenticatedApi<PaginatedNotesResponse>('/notes', 'GET', filter as any);
       
       if (response.success && response.data) {
         const notesData = response.data;
@@ -164,7 +147,7 @@ export const useNote = () => {
     setError(null);
     try {
       // Assuming the single note response is wrapped in ApiResponse { success: true, data: Note }
-      const response = await callAuthenticatedApi<Note>(`/api/v1/notes/${noteId}`, 'GET');
+      const response = await callAuthenticatedApi<Note>(`/notes/${noteId}`, 'GET');
       if (response.success && response.data) {
         return response.data;
       }
@@ -232,7 +215,7 @@ export const useNote = () => {
         isPublic: metadata.isPublic,
       };
 
-      const response = await callAuthenticatedApi<Note>('/api/v1/notes', 'POST', backendPayload);
+      const response = await callAuthenticatedApi<Note>('/notes', 'POST', backendPayload);
       
       if (response.success && response.data) {
         clearAllNotesCaches();
@@ -256,7 +239,7 @@ export const useNote = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<NoteRating>(`/api/v1/notes/${noteId}/ratings`, 'POST', { value });
+      const response = await callAuthenticatedApi<NoteRating>(`/notes/${noteId}/ratings`, 'POST', { value });
       if (response.success && response.data) {
         // Potentially invalidate cache for this specific note if it's cached, or list view if rating changes display
         // For now, not clearing list view cache on rating.
@@ -278,7 +261,7 @@ export const useNote = () => {
     try {
       // Backend DELETE for notes might return the deleted note or just success
       // Assuming ApiResponse<{ _id: string } | null> or similar for the data part if needed
-      const response = await callAuthenticatedApi(`/api/v1/notes/${noteId}`, 'DELETE');
+      const response = await callAuthenticatedApi(`/notes/${noteId}`, 'DELETE');
       if (response.success) {
         clearAllNotesCaches(); // Invalidate cache on successful delete
         debug('[useNote] All notes caches cleared after successful delete.');
@@ -299,7 +282,7 @@ export const useNote = () => {
     setError(null);
     try {
       // Backend PUT for download count might return updated note or just success
-      const response = await callAuthenticatedApi(`/api/v1/notes/${noteId}/download`, 'PUT');
+      const response = await callAuthenticatedApi(`/notes/${noteId}/download`, 'PUT');
        if (response.success) {
         // Consider if this needs to invalidate any cache (e.g., if downloadCount is displayed in lists)
         return true;
@@ -314,16 +297,25 @@ export const useNote = () => {
   }, []);
 
   // Generate AI Summary
-  const getAISummary = useCallback(async (noteId: string, forceRegenerate = false): Promise<string | null> => {
+  // Backend: POST /notes/:id/summarize -> { success, data: { aiSummary }, newlyAwardedBadges }
+  const getAISummary = useCallback(async (noteId: string): Promise<AIGenerationResult<AISummary> | null> => {
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<{ summary: string }>(
-        `/api/v1/notes/${noteId}/summary${forceRegenerate ? '?force=true' : ''}`, 
+      const response = await callAuthenticatedApi<{ aiSummary?: string }>(
+        `/notes/${noteId}/summarize`,
         'POST'
       );
-      if (response.success && response.data) {
-        return response.data.summary;
+      if (response.success) {
+        return {
+          data: {
+            noteId,
+            summary: response.data?.aiSummary ?? null,
+            keyPoints: [],
+            generatedAt: new Date().toISOString()
+          },
+          newlyAwardedBadges: response.newlyAwardedBadges || []
+        };
       }
       throw new Error(response.error || response.message || 'Failed to generate summary');
     } catch (err: any) {
@@ -337,17 +329,18 @@ export const useNote = () => {
   }, []);
 
   // Generate AI Flashcards
+  // Backend: POST /notes/:id/generate-flashcards -> { success, data: { flashcards }, newlyAwardedBadges }
   const generateFlashcards = useCallback(async (noteId: string): Promise<AIGenerationResult<Flashcard[]>> => {
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<AIGenerationResult<RawAIFlashcardsResponse>>(`/api/v1/notes/${noteId}/flashcards`, 'POST');
-      if (response.success && response.data) {
-        return { 
-          data: response.data.data.flashcards || [], 
-          newlyAwardedBadges: response.data.newlyAwardedBadges || [] 
+      const response = await callAuthenticatedApi<{ flashcards?: Flashcard[] }>(`/notes/${noteId}/generate-flashcards`, 'POST');
+      if (response.success) {
+        return {
+          data: response.data?.flashcards || [],
+          newlyAwardedBadges: response.newlyAwardedBadges || []
         };
-      } 
+      }
       throw new Error(response.error || response.message || 'Failed to generate AI flashcards.');
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to generate AI flashcards';
@@ -364,7 +357,7 @@ export const useNote = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await callAuthenticatedApi<Flashcard>(`/api/v1/notes/${noteId}/flashcards`, 'POST', payload);
+      const response = await callAuthenticatedApi<Flashcard>(`/notes/${noteId}/flashcards`, 'POST', payload);
       if (response.success && response.data) {
         // Optionally, could invalidate a cache related to this note's flashcard count or specific flashcard list if managed here.
         // For now, FlashcardContext handles fetching its own flashcards.
@@ -397,7 +390,7 @@ export const useNote = () => {
       // For now, using a direct call that aligns with the NoteService method name
       // The backend controller for this needs to be created.
       // Let's assume the NoteController will have a PUT or POST route like /:noteId/flashcards/save-generated
-      const response = await callAuthenticatedApi<{ flashcards: Flashcard[] }>(`/api/v1/notes/${noteId}/save-ai-flashcards`, 'POST', { flashcards: payload });
+      const response = await callAuthenticatedApi<{ flashcards: Flashcard[] }>(`/notes/${noteId}/save-ai-flashcards`, 'POST', { flashcards: payload });
 
       if (response.success && response.data && response.data.flashcards) {
         clearAllNotesCaches(); // Invalidate cache as note content (flashcards) has changed

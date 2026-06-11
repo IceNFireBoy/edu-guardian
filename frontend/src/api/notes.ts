@@ -1,5 +1,6 @@
 // API client for notes
 import { debug } from '../components/DebugPanel';
+import { API_BASE_URL } from './apiClient';
 
 // Define common API response structure
 export interface ApiResponse<T = any> {
@@ -14,34 +15,17 @@ export interface ApiResponse<T = any> {
   [key: string]: any;
 }
 
-// Get API base from environment or use a relative URL
-const API_BASE_FROM_ENV: string = import.meta.env.VITE_API_URL || '';
-
-export const getApiUrl = (): string => {
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    debug('[Frontend] Forcing API URL to http://localhost:5000 for local development');
-    return 'http://localhost:5000';
-  }
-  if (API_BASE_FROM_ENV) {
-    debug(`[Frontend] Using VITE_API_URL: ${API_BASE_FROM_ENV}`);
-    return API_BASE_FROM_ENV;
-  }
-  debug('[Frontend] Using relative API URL for production/deployment');
-  return ''; 
-};
-
-debug(`Using API base URL: ${getApiUrl()}`);
-
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
-// Generic authenticated API call function
+// Generic authenticated API call function (fetch-based; supports FormData and
+// PATCH, unlike the axios client). Endpoints are relative to the /api/v1 base,
+// e.g. '/notes' or '/users/me/badges'.
 export async function callAuthenticatedApi<T = any>(
   endpoint: string,
   method: HttpMethod = 'GET',
   body: Record<string, any> | FormData | null = null
 ): Promise<ApiResponse<T>> {
-  const apiUrl = getApiUrl();
-  let url = `${apiUrl}${endpoint}`;
+  let url = `${API_BASE_URL}${endpoint}`;
   const token = localStorage.getItem('token');
 
   const headers: Record<string, string> = {};
@@ -140,6 +124,5 @@ export async function callAuthenticatedApi<T = any>(
 
 // Fetch all notes (for NoteViewer and other consumers)
 export async function fetchNotes() {
-  // Adjust endpoint as needed (e.g., '/api/v1/notes')
-  return callAuthenticatedApi('/api/v1/notes', 'GET');
+  return callAuthenticatedApi('/notes', 'GET');
 } 

@@ -7,7 +7,6 @@ import { toast } from 'react-hot-toast';
 import { useUser } from '../../user/useUser';
 import AIQuotaDisplay from '../../user/components/AIQuotaDisplay';
 import BadgeGrid from '../../user/components/BadgeGrid';
-import { callAuthenticatedApi } from '../../../api/apiClient';
 
 interface IndividualFlashcardProps {
   flashcard: Note;

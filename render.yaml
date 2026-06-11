@@ -7,12 +7,14 @@ services:
     buildCommand: npm i && npm run build
     startCommand: node dist/index.js
     healthCheckPath: /api/test
-    repo: https://github.com/YourGitHubUsername/edu-guardian.git
+    repo: https://github.com/IceNFireBoy/edu-guardian.git
     branch: main
     rootDir: backend
     envVars:
       - key: NODE_ENV
         value: production
+      - key: FRONTEND_URL
+        value: https://eduguardian.netlify.app
       - key: PORT
         value: 10000
       - key: MONGO_URI

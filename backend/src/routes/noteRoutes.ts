@@ -51,6 +51,9 @@ router.get('/user/:userId', [
     param('userId').isMongoId().withMessage('Invalid user ID')
 ], noteController.getUserNotes);
 
+// NOTE: must be declared before '/:id' or Express matches 'my-notes' as an id
+router.get('/my-notes', protect, noteController.getMyNotes);
+
 router.get('/:id', [
     param('id').isMongoId().withMessage('Invalid note ID')
 ], noteController.getNoteById);
@@ -74,8 +77,6 @@ router.post('/', protect, [
 // Assuming uploadNoteFile is a distinct action, perhaps for pre-signed URLs or direct uploads handling.
 // If it's part of createNote or updateNote, it might be handled differently.
 router.post('/upload', protect, noteController.uploadNoteFile);
-
-router.get('/my-notes', protect, noteController.getMyNotes);
 
 router.put('/:id', protect, [
     param('id').isMongoId().withMessage('Invalid note ID'),

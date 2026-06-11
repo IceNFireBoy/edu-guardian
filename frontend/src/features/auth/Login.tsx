@@ -1,44 +1,33 @@
 import React, { useState, FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { useAuthContext } from './AuthContext';
-import apiClient from '../../api/apiClient';
-import toast from 'react-hot-toast';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState('');
-  const { login, loading, error } = useAuthContext();
+  const { login, loading, isAuthenticated } = useAuthContext();
   const navigate = useNavigate();
-  const [resendLoading, setResendLoading] = useState(false);
+
+  // Already logged in - go straight to the dashboard
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFormError('');
-    
+
     if (!email || !password) {
       setFormError('Please enter both email and password');
       return;
     }
-    
+
     try {
       await login(email, password);
-      navigate('/dashboard');
+      navigate('/');
     } catch (err: any) {
       setFormError(err.message || 'Login failed');
-    }
-  };
-
-  const handleResendVerification = async () => {
-    if (!email) return;
-    setResendLoading(true);
-    try {
-      const response = await apiClient.post('/auth/resend-verification', { email });
-      toast.success(response.data?.data || 'Verification email sent!');
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || err.message || 'Failed to resend verification email');
-    } finally {
-      setResendLoading(false);
     }
   };
 
@@ -98,20 +87,6 @@ const Login: React.FC = () => {
               {loading ? 'Signing in...' : 'Sign in'}
       </button>
           </div>
-          
-          {/* Resend Verification Email Button */}
-          {email && (
-            <div className="text-center mt-4">
-              <button
-                type="button"
-                onClick={handleResendVerification}
-                disabled={resendLoading}
-                className="text-indigo-600 hover:underline text-sm"
-              >
-                {resendLoading ? 'Sending...' : 'Resend Verification Email'}
-              </button>
-            </div>
-          )}
 
           <div className="text-sm text-center">
             <p>

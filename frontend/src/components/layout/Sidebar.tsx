@@ -8,6 +8,7 @@ import {
   FaUniversity, FaUser, FaSignOutAlt, FaSignInAlt, FaUserPlus
 } from 'react-icons/fa';
 import { useAuthContext } from '../../features/auth/AuthContext';
+import { FEATURES } from '../../config/featureFlags';
 
 // Define types for menu items
 interface MenuItem {
@@ -97,8 +98,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
     { path: '/profile', icon: <FaUser size={20} />, label: 'Profile', requiresAuth: true },
     { path: '/my-notes', icon: <FaBook size={20} />, label: 'My Notes', requiresAuth: true },
     { path: '/notes/upload', icon: <FaUpload size={20} />, label: 'Upload Notes', requiresAuth: true },
-    { path: '/badges', icon: <FaAward size={20} />, label: 'Badges', requiresAuth: true },
-    { path: '/progress', icon: <FaChartLine size={20} />, label: 'Progress', requiresAuth: true },
+    ...(FEATURES.gamification
+      ? [
+          { path: '/badges', icon: <FaAward size={20} />, label: 'Badges', requiresAuth: true },
+          { path: '/progress', icon: <FaChartLine size={20} />, label: 'Progress', requiresAuth: true }
+        ]
+      : []),
     { path: '/settings', icon: <FaCog size={20} />, label: 'Settings', requiresAuth: true }
   ];
 
@@ -336,7 +341,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
                       </AnimatePresence>
                     </div>
 
-                    {/* Study Tools Section */}
+                    {/* Study Tools + Flashcards: AI-quota tools */}
+                    {FEATURES.ai && (
+                    <>
                     <div className="bg-gray-50 dark:bg-slate-750 rounded-lg shadow">
                       <button
                         onClick={() => toggleSection('studyTools')}
@@ -433,6 +440,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
                         )}
                       </AnimatePresence>
                     </div>
+                    </>
+                    )}
                   </>
                 )}
               </div>

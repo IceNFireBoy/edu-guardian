@@ -274,7 +274,13 @@ UserSchema.methods.updateStreak = async function(this: IUser): Promise<void> {
 
   // Same day login, no streak change
   if (diffDays === 0) {
-    // No change needed
+    // A freshly-created account has lastUsed defaulted to creation time with
+    // current 0 - being active today should still count as a 1-day streak.
+    if (this.streak.current === 0) {
+      this.streak.current = 1;
+      this.streak.max = Math.max(1, this.streak.max || 0);
+      await this.save();
+    }
     return;
   }
   

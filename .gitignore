@@ -77,10 +77,10 @@ Thumbs.db
 .DS_Store
 
 # Environment variables
+# (.env.development is tracked: it only sets a localhost API URL for dev)
 .env
 .env.local
-.env.development
 .env.production
 .env.test
 .env.test.local
-.env.test.local
+config.env

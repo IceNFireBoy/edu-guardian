@@ -15,8 +15,8 @@ type BadgeSeed = Partial<IBadge>;
 type UserSeed = Partial<IUser>;
 type NoteSeed = Partial<INote>;
 
-// Load env vars
-dotenv.config({ path: './config/config.env' }); // Check/adjust path for script execution context
+// Load env vars from backend/.env (or the process environment)
+dotenv.config();
 
 // Connect to DB
 const connectDB = async () => {

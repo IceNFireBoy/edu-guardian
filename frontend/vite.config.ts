@@ -35,23 +35,6 @@ export default defineConfig({
       },
     },
   },
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: './src/setupTests.ts',
-    css: true,
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'src/main.tsx', 
-        'src/vite-env.d.ts',
-        'src/setupTests.ts',
-        'src/**/types.ts',
-        'src/**/constants.ts',
-        'src/App.tsx',
-        'src/router/',
-      ],
-    },
-  },
+  // Test configuration lives in vitest.config.ts (which vitest prefers over
+  // this file) - keep a single source of truth.
 }); 

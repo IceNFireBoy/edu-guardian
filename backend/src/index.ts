@@ -18,13 +18,11 @@ const server = app.listen(PORT, () => {
   console.log(colors.yellow.bold(`[Backend] Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`));
 });
 
-// Handle unhandled promise rejections
+// Handle unhandled promise rejections. Log loudly but keep the process
+// alive: exiting here turned any stray rejection (e.g. DB hiccups) into a
+// full-site outage via a Render crash loop.
 process.on('unhandledRejection', (err: Error) => {
   console.error(colors.red('[Backend] Unhandled Rejection:'), err.message);
-  // Close server & exit process
-  server.close(() => {
-    process.exit(1);
-  });
 });
 
 export default server;

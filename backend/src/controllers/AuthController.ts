@@ -43,19 +43,10 @@ class AuthController {
         username: usernameToUse 
       };
       
-      const user = await this.authService.registerUser(userData, req);
-      
-      // Return the user without sending a token (email verification required)
-      res.status(201).json({
-      success: true,
-        data: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          username: user.username,
-          message: 'Registration successful. Please check your email to verify your account.'
-        }
-    });
+      const user = await this.authService.registerUser(userData);
+
+      // Account is active immediately - issue a token so the user is logged in
+      this.authService.sendTokenResponse(user, 201, res);
     } catch (error) {
       // AuthService methods should throw ErrorResponse instances on failure
       next(error);
@@ -197,49 +188,6 @@ class AuthController {
     } catch (error) {
       next(error);
     }
-});
-
-// @desc    Verify email
-// @route   GET /api/v1/auth/verify-email/:verificationtoken
-// @access  Public
-  public verifyEmail = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-    const { verificationtoken } = req.params;
-
-    try {
-      const user = await this.authService.verifyUserEmail(verificationtoken);
-      // Decide on response: redirect or send token/success message
-      // For example, redirect to a frontend page:
-      if (process.env.CLIENT_URL) {
-        res.redirect(`${process.env.CLIENT_URL}/email-verified?success=true`);
-      } else {
-        // Fallback if CLIENT_URL is not set, or send token directly
-        this.authService.sendTokenResponse(user, 200, res); 
-      }
-    } catch (error) {
-      // Redirect to a failure page or send error response
-      if (process.env.CLIENT_URL) {
-        // Pass error message or code to client for user-friendly display
-        const errorMessage = error instanceof ErrorResponse ? error.message : 'Verification failed';
-        res.redirect(`${process.env.CLIENT_URL}/email-verified?success=false&error=${encodeURIComponent(errorMessage)}`);
-      } else {
-        next(error);
-      }
-    }
-});
-
-// @desc    Resend email verification token
-// @route   POST /api/v1/auth/resend-verification
-// @access  Public
-  public resendVerificationEmail = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  const { email } = req.body;
-    // Add express-validator check for email in routes if not already present
-
-    try {
-      const successMessage = await this.authService.resendVerificationEmail(email, req);
-      res.status(200).json({ success: true, data: successMessage });
-  } catch (error) {
-      next(error);
-  }
 });
 
 // Get token from model, create cookie and send response

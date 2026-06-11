@@ -3,6 +3,10 @@ import { vi } from 'vitest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
+// Register every schema referenced by populate() calls (e.g. 'badges.badge'
+// -> 'Badge'); tests that only import a service would otherwise hit
+// MissingSchemaError for models loaded as a side effect elsewhere.
+import './models/Badge';
 
 declare global {
   namespace Vi {
@@ -14,7 +18,11 @@ let mongo: MongoMemoryServer;
 
 beforeAll(async () => {
   process.env.JWT_SECRET = 'test-secret';
-  mongo = await MongoMemoryServer.create();
+  // Pin a mongod that links against OpenSSL 3: the old default (5.0.x)
+  // needs libcrypto.so.1.1, which modern runners no longer ship.
+  mongo = await MongoMemoryServer.create({
+    binary: { version: process.env.MONGOMS_VERSION || '7.0.14' }
+  });
   const mongoUri = mongo.getUri();
   await mongoose.connect(mongoUri);
 });
@@ -30,7 +38,8 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await mongoose.connection.close();
-  await mongo.stop();
+  // Guard: if the instance never started, don't mask the original error
+  await mongo?.stop();
 });
 
 global.signin = (id?: string) => {
@@ -50,59 +59,4 @@ global.signin = (id?: string) => {
 globalThis.jest = vi as any;
 
 // Mock fetch
-globalThis.fetch = vi.fn();
-
-// Mock localStorage
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-  length: 0,
-  key: vi.fn()
-};
-globalThis.localStorage = localStorageMock;
-
-// Mock sessionStorage
-const sessionStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-  length: 0,
-  key: vi.fn()
-};
-globalThis.sessionStorage = sessionStorageMock;
-
-// Mock matchMedia
-globalThis.matchMedia = vi.fn().mockImplementation(query => ({
-  matches: false,
-  media: query,
-  onchange: null,
-  addListener: vi.fn(),
-  removeListener: vi.fn(),
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
-  dispatchEvent: vi.fn()
-}));
-
-// Mock ResizeObserver
-globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn()
-}));
-
-// Mock IntersectionObserver
-globalThis.IntersectionObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn()
-}));
-
-// Mock window.scrollTo
-globalThis.window.scrollTo = vi.fn();
-
-// Mock URL.createObjectURL and URL.revokeObjectURL
-globalThis.URL.createObjectURL = vi.fn();
-globalThis.URL.revokeObjectURL = vi.fn(); 
+globalThis.fetch = vi.fn(); 
