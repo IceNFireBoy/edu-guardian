@@ -41,23 +41,31 @@ export const handleApiError = (
   // Response with error status
   else if (error.response) {
     const { status } = error.response;
-    
+    // The backend sends { success: false, error: '...' }; prefer its message
+    // over generic fallbacks so users see the real reason (e.g. 'Invalid
+    // credentials', 'Database unavailable: ...').
+    const serverMessage = error.response.data?.error || error.response.data?.message;
+
     // Authentication errors
     if (status === 401 || status === 403) {
-      message = status === 401 
-        ? 'Your session has expired. Please log in again.' 
-        : 'You do not have permission to access this resource.';
+      message = serverMessage || (status === 401
+        ? 'Your session has expired. Please log in again.'
+        : 'You do not have permission to access this resource.');
       type = ErrorType.AUTHENTICATION;
     }
     // Validation errors
     else if (status === 400 || status === 422) {
-      message = error.response.data?.message || 'Please check your input and try again.';
+      message = serverMessage || 'Please check your input and try again.';
       type = ErrorType.VALIDATION;
     }
     // Server errors
     else if (status >= 500) {
-      message = 'Server error. Please try again later.';
+      message = serverMessage || 'Server error. Please try again later.';
       type = ErrorType.SERVER;
+    }
+    // Anything else (404s, rate limits, ...)
+    else if (serverMessage) {
+      message = serverMessage;
     }
   }
   // Use error message if available
