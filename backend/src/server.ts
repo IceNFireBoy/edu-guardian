@@ -44,12 +44,18 @@ app.use(helmet({
 }));
 
 // Enable CORS
+// FRONTEND_URL may be a single origin or a comma-separated list
+const allowedOrigins = (process.env.FRONTEND_URL || 'https://eduguardian.netlify.app')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL || 'https://eduguardian-app.netlify.app'] 
+  origin: process.env.NODE_ENV === 'production'
+    ? allowedOrigins
     : true, // Allow all origins in development
   credentials: true, // Allow cookies
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 app.use(cors(corsOptions));

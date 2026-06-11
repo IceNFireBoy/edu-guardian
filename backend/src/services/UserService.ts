@@ -192,11 +192,12 @@ export default class UserService {
         const page = Math.max(queryOptions.page ?? 1, 1); // Ensure minimum page is 1
         const limit = Math.min(queryOptions.limit ?? 20, 100); // Cap max limit at 100
         
-        // Filter by activity type if specified
+        // Filter by activity type if specified (accepts a comma-separated list)
         let filteredActivities = user.activity;
         if (queryOptions.type) {
-            filteredActivities = filteredActivities.filter(activity => 
-                activity.action === queryOptions.type
+            const types = queryOptions.type.split(',').map(t => t.trim()).filter(Boolean);
+            filteredActivities = filteredActivities.filter(activity =>
+                types.includes(activity.action)
             );
         }
         

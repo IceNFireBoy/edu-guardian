@@ -13,8 +13,9 @@ export class AuthService {
       expires: Date;
       httpOnly: boolean;
       secure?: boolean;
+      sameSite?: 'none' | 'lax' | 'strict';
     }
-    
+
     const options: CookieOptions = {
       expires: new Date(
         Date.now() + (parseInt(process.env.JWT_COOKIE_EXPIRE ?? '30', 10) * 24 * 60 * 60 * 1000)
@@ -23,7 +24,10 @@ export class AuthService {
     };
 
     if (process.env.NODE_ENV === 'production') {
+      // Frontend (Netlify) and backend (Render) live on different sites,
+      // so the cookie must be SameSite=None + Secure to be sent at all.
       options.secure = true;
+      options.sameSite = 'none';
     }
 
     // Prepare user object for response, excluding sensitive info
@@ -51,8 +55,7 @@ export class AuthService {
   }
 
   public async registerUser(
-    userData: Pick<IUser, 'name' | 'email' | 'password' | 'username'>,
-    req: Request // Pass request object for constructing verification URL
+    userData: Pick<IUser, 'name' | 'email' | 'password' | 'username'>
   ): Promise<IUser> { // Returns the user object
     const { name, email, password, username } = userData;
 
@@ -63,7 +66,7 @@ export class AuthService {
         if (existingUser.emailVerified) {
           throw new ErrorResponse('User with this email already exists', 400);
         } else {
-          // If not verified, delete the old user and allow re-registration
+          // Leftover account from the old verification flow - replace it
           await User.deleteOne({ email });
         }
       } else if (existingUser.username === username) {
@@ -71,42 +74,16 @@ export class AuthService {
       }
     }
 
-    // Create user
+    // Create user. Accounts are active immediately - no email verification step.
     const user = await User.create({
       name,
       email,
       password,
-      username
+      username,
+      emailVerified: true
     });
 
-    // Generate email verification token
-    const verificationToken = user.getEmailVerificationToken(); // This method should be on the User model
-    await user.save({ validateBeforeSave: false }); // validateBeforeSave: false because we are only saving the token
-
-    // Create verification url
-    const verificationUrl = `${req.protocol}://${req.get('host')}/api/v1/auth/verify-email/${verificationToken}`;
-
-    const message = `You are receiving this email because you need to confirm your email address. Please click the link below to verify your email:\n\n${verificationUrl}`;
-
-    try {
-      await sendEmailUtil({
-        email: user.email,
-        subject: 'Email Verification',
-        message
-      });
-
-      return user;
-    } catch (err: Error | unknown) {
-      console.error('[AuthService Register] Email sending error:', err);
-      // Clean up token fields if send fails, so user can try to register again or request new token
-      user.emailVerificationToken = undefined;
-      user.emailVerificationTokenExpire = undefined;
-      await user.save({ validateBeforeSave: false });
-
-      // It's important to let the controller know this specific part failed.
-      // The controller can then decide to inform the user appropriately.
-      throw new ErrorResponse('Email could not be sent. Please try registering again or contact support if the issue persists.', 500);
-    }
+    return user;
   }
 
   public async loginUser(
@@ -130,11 +107,9 @@ export class AuthService {
       throw new ErrorResponse('Invalid credentials (password mismatch)', 401);
     }
 
+    // Heal accounts created under the old email-verification flow
     if (!user.emailVerified) {
-      throw new ErrorResponse(
-        'Please verify your email address to login. You can request a new verification link if needed.',
-        403 // Forbidden
-      );
+      user.emailVerified = true;
     }
 
     // Update streak & activity
@@ -374,79 +349,6 @@ export class AuthService {
     await user.save();
 
     return user; // Return user for sendTokenResponse
-  }
-
-  public async verifyUserEmail(verificationTokenInput: string): Promise<IUser> { // Returns user for potential token response
-    if (!verificationTokenInput) {
-      throw new ErrorResponse('Verification token is required', 400);
-    }
-
-    const emailVerificationToken = crypto
-      .createHash('sha256')
-      .update(verificationTokenInput)
-      .digest('hex');
-
-    const user = await User.findOne({
-      emailVerificationToken,
-      emailVerificationTokenExpire: { $gt: Date.now() } // Check expiry
-    });
-
-    if (!user) {
-      throw new ErrorResponse('Invalid or expired email verification token', 400);
-    }
-
-    user.emailVerified = true;
-    user.emailVerificationToken = undefined;
-    user.emailVerificationTokenExpire = undefined;
-    
-    // Award XP for email verification if not already awarded or handled elsewhere
-    if (!user.activity.some(act => act.action === 'earn_xp' && act.description === 'Email verified')) {
-        user.xp += 20; // Example XP amount
-        user.addActivity('earn_xp', 'Email verified', 20);
-        user.calculateLevel();
-    }
-    
-    await user.save();
-    return user;
-  }
-
-  public async resendVerificationEmail(emailInput: string, req: Request): Promise<string> { // Returns success message
-    if (!emailInput) {
-      throw new ErrorResponse('Please provide an email', 400);
-    }
-    const user = await User.findOne({ email: emailInput });
-
-    if (!user) {
-      // To prevent user enumeration, send a generic success message.
-      return 'If your email is registered and not yet verified, a new verification link has been sent.';
-    }
-
-    if (user.emailVerified) {
-      throw new ErrorResponse('This email is already verified.', 400);
-    }
-
-    // Generate new verification token
-    const verificationToken = user.getEmailVerificationToken(); // Method on User model
-    await user.save({ validateBeforeSave: false });
-
-    const verificationUrl = `${req.protocol}://${req.get('host')}/api/v1/auth/verify-email/${verificationToken}`;
-    const message = `You requested a new email verification link. Please click the link below to verify your email:\n\n${verificationUrl}`;
-
-    try {
-      await sendEmailUtil({
-        email: user.email,
-        subject: 'Email Verification (New Link)',
-        message
-      });
-      return 'If your email is registered and not yet verified, a new verification link has been sent.';
-    } catch (err: Error | unknown) {
-      console.error('[AuthService ResendVerification] Email sending error:', err);
-      // Optionally clear tokens if sending failed, to allow user to try again cleanly
-      user.emailVerificationToken = undefined;
-      user.emailVerificationTokenExpire = undefined;
-      await user.save({ validateBeforeSave: false });
-      throw new ErrorResponse('Email could not be sent at this time. Please try again later.', 500);
-    }
   }
 
   // Placeholder for other auth methods (login, logout, etc.)

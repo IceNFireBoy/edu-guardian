@@ -6,6 +6,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./src/setupVitest.ts'],
+    // Each test file shares one mongodb-memory-server instance (setupVitest);
+    // parallel files race on the mongod binary lock, so run them serially.
+    fileParallelism: false,
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
