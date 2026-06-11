@@ -3,6 +3,10 @@ import { vi } from 'vitest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
+// Register every schema referenced by populate() calls (e.g. 'badges.badge'
+// -> 'Badge'); tests that only import a service would otherwise hit
+// MissingSchemaError for models loaded as a side effect elsewhere.
+import './models/Badge';
 
 declare global {
   namespace Vi {

@@ -112,8 +112,9 @@ export class AuthService {
       user.emailVerified = true;
     }
 
-    // Update streak & activity
-    user.updateStreak();
+    // Update streak & activity (updateStreak saves internally - await it so
+    // the save below doesn't race it with a parallel save on the same doc)
+    await user.updateStreak();
     user.addActivity('login', 'User logged in', 1);
     user.xp += 1; // Direct XP or handled by addActivity if preferred
     user.calculateLevel(); // Recalculate level after XP change
