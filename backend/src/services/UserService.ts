@@ -377,7 +377,13 @@ export default class UserService {
 
         // Update streak based on days difference
         if (diffDays === 0) {
-            // Same day usage, no streak change
+            // Same-day usage keeps the streak, but a fresh account starts
+            // with current=0 and lastUsed defaulted to today - being active
+            // today must still count as a 1-day streak.
+            if ((user.streak.current ?? 0) < 1) {
+                user.streak.current = 1;
+                user.streak.max = Math.max(user.streak.max ?? 0, 1);
+            }
         } else if (diffDays === 1) {
             // Used yesterday, increment streak
             user.streak.current = (user.streak.current ?? 0) + 1;
