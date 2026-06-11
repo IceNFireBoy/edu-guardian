@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { User, LoginCredentials, RegisterCredentials } from './authTypes';
-// Assuming UserProfile is defined in userTypes.ts and is compatible with what the backend returns
-// If not, User type here might need adjustment or UserProfile should be imported.
-// For now, we'll assume 'User' from authTypes is sufficient or can be adapted.
+import { User } from './authTypes';
 import { callAuthenticatedApi } from '../../api/apiClient'; // Import the API calling utility
-import { UserProfile } from '../user/userTypes'; // Assuming UserProfile is the detailed type
 import { useNavigate } from 'react-router-dom';
 
 // Helper to manage token in localStorage
@@ -17,6 +13,14 @@ interface ApiResponse<T> {
   data: T;
   token?: string;
   message?: string;
+}
+
+// Shape of /auth/login and /auth/register responses: the user object is
+// returned under the `user` key (NOT `data`)
+interface AuthTokenResponse {
+  success: boolean;
+  token: string;
+  user: User;
 }
 
 export const useAuth = () => {
@@ -51,20 +55,15 @@ export const useAuth = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await callAuthenticatedApi<ApiResponse<User>>('/auth/login', 'POST', { email, password });
-      
-      if (response.token) {
-        setToken(response.token);
+      const response = await callAuthenticatedApi<AuthTokenResponse>('/auth/login', 'POST', { email, password });
+
+      if (!response?.token || !response?.user) {
+        throw new Error('Unexpected response from the server. Please try again.');
       }
-      
-      setUser(response.data);
-      // Navigate to the dashboard first
-      navigate('/dashboard');
-      // Wait 0.3 seconds before refreshing the page
-      setTimeout(() => {
-        window.location.reload();
-      }, 300);
-      return response.data;
+
+      setToken(response.token);
+      setUser(response.user);
+      return response.user;
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -73,18 +72,19 @@ export const useAuth = () => {
     }
   };
 
-  const registerUser = async (userData: { email: string; password: string; name: string }) => {
+  const registerUser = async (userData: { email: string; password: string; name: string; username?: string }) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await callAuthenticatedApi<ApiResponse<User>>('/auth/register', 'POST', userData);
-      
-      if (response.token) {
-        setToken(response.token);
+      const response = await callAuthenticatedApi<AuthTokenResponse>('/auth/register', 'POST', userData);
+
+      if (!response?.token || !response?.user) {
+        throw new Error('Unexpected response from the server. Please try again.');
       }
-      
-      setUser(response.data);
-      return response.data;
+
+      setToken(response.token);
+      setUser(response.user);
+      return response.user;
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -94,16 +94,16 @@ export const useAuth = () => {
   };
 
   const logout = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       await callAuthenticatedApi('/auth/logout', 'POST', {});
+    } catch {
+      // Logging out locally must always succeed, even if the API is down
+    } finally {
       removeToken();
       setUser(null);
-      navigate('/login');
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
       setLoading(false);
+      navigate('/login');
     }
   }, [navigate]);
 

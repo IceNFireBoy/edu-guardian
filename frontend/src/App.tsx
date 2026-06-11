@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
@@ -183,12 +183,14 @@ function App() {
             <main className="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full">
               <ErrorBoundary>
                 <Routes>
-                  <Route path="/" element={<HomePage />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
-                  
-                  {/* Protected routes */}
+
+                  {/* Protected routes - unauthenticated visitors are sent to /login */}
                   <Route element={<PrivateRoute />}>
+                    <Route path="/" element={<HomePage />} />
+                    {/* Legacy alias: older code navigated to /dashboard */}
+                    <Route path="/dashboard" element={<Navigate to="/" replace />} />
                     <Route path="/my-notes" element={<MyNotes />} />
                     <Route path="/donate" element={<Donate />} />
                     <Route path="/progress" element={<Progress />} />
@@ -201,9 +203,12 @@ function App() {
                     <Route path="/notes/upload" element={<NoteUploader />} />
                     <Route path="/study/:noteId" element={<StudyPage />} />
                   </Route>
-                  
+
                   {/* Debug routes */}
                   <Route path="/debug/test-pdf/*" element={<TestPDFDebug />} />
+
+                  {/* Unknown URLs fall back to the dashboard (or /login when logged out) */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </ErrorBoundary>
             </main>

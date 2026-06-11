@@ -34,7 +34,8 @@ const Register: React.FC = () => {
     
     try {
       await registerUser({ name, username, email, password });
-      navigate('/dashboard');
+      // Registration returns a token, so the user is already logged in
+      navigate('/');
     } catch (err: any) {
       setFormError(err.response?.data?.error || err.message || 'Registration failed');
     }
