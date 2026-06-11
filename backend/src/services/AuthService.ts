@@ -115,9 +115,9 @@ export class AuthService {
     // Update streak & activity (updateStreak saves internally - await it so
     // the save below doesn't race it with a parallel save on the same doc)
     await user.updateStreak();
+    // addActivity awards the XP (3rd arg) and recalculates level itself -
+    // incrementing user.xp here as well double-counted the login reward
     user.addActivity('login', 'User logged in', 1);
-    user.xp += 1; // Direct XP or handled by addActivity if preferred
-    user.calculateLevel(); // Recalculate level after XP change
     await user.save();
 
     this.sendTokenResponse(user, 200, res);
