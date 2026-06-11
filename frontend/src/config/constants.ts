@@ -9,21 +9,24 @@ export const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 export const MAX_UPLOAD_SIZE_MB = MAX_UPLOAD_SIZE_BYTES / (1024 * 1024);
 
 // Add other constants here as needed, e.g., grade levels, semesters if they become dynamic
+// Option VALUES must match the backend enums exactly ('11'/'12', '1'/'2',
+// '1'-'4'); only the labels are decorative. Sending labels as values made
+// every upload fail validation with three 'Invalid value' errors.
 export const gradeLevels = [
-    { value: "Grade 11", label: "Grade 11" },
-    { value: "Grade 12", label: "Grade 12" },
+    { value: "11", label: "Grade 11" },
+    { value: "12", label: "Grade 12" },
 ];
 
 export const semesters = [
-    { value: "Semester 1", label: "1st Semester" },
-    { value: "Semester 2", label: "2nd Semester" },
+    { value: "1", label: "1st Semester" },
+    { value: "2", label: "2nd Semester" },
 ];
 
 export const quarters = [
-    { value: "Quarter 1", label: "Q1" },
-    { value: "Quarter 2", label: "Q2" },
-    { value: "Quarter 3", label: "Q3" },
-    { value: "Quarter 4", label: "Q4" },
+    { value: "1", label: "Quarter 1" },
+    { value: "2", label: "Quarter 2" },
+    { value: "3", label: "Quarter 3" },
+    { value: "4", label: "Quarter 4" },
 ];
 
 export const AI_FEATURE_TYPES = {

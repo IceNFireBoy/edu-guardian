@@ -50,8 +50,8 @@ const FilterForm: React.FC<FilterFormProps> = ({
             aria-label="Select grade"
           >
             <option value="">All Grades</option>
-            <option value="Grade 11">Grade 11</option>
-            <option value="Grade 12">Grade 12</option>
+            <option value="11">Grade 11</option>
+            <option value="12">Grade 12</option>
           </select>
         </div>
         
@@ -66,8 +66,8 @@ const FilterForm: React.FC<FilterFormProps> = ({
             aria-label="Select semester"
           >
             <option value="">All Semesters</option>
-            <option value="Semester 1">1st Semester</option>
-            <option value="Semester 2">2nd Semester</option>
+            <option value="1">1st Semester</option>
+            <option value="2">2nd Semester</option>
           </select>
         </div>
         
@@ -82,10 +82,10 @@ const FilterForm: React.FC<FilterFormProps> = ({
             aria-label="Select quarter"
           >
             <option value="">All Quarters</option>
-            <option value="Quarter 1">Q1</option>
-            <option value="Quarter 2">Q2</option>
-            <option value="Quarter 3">Q3</option>
-            <option value="Quarter 4">Q4</option>
+            <option value="1">Q1</option>
+            <option value="2">Q2</option>
+            <option value="3">Q3</option>
+            <option value="4">Q4</option>
           </select>
         </div>
         

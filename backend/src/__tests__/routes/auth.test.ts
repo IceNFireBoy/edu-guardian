@@ -232,6 +232,53 @@ describe('Auth Routes', () => {
     });
   });
 
+  describe('POST /api/v1/notes', () => {
+    let token: string;
+    const validNote = {
+      title: 'Stats Reviewer',
+      subject: 'General Mathematics',
+      grade: '12',
+      semester: '1',
+      quarter: '4',
+      topic: 'Statistics',
+      fileUrl: 'https://res.cloudinary.com/demo/raw/upload/v1/reviewer.pdf',
+      fileType: 'pdf',
+      fileSize: 12345,
+      description: 'Full intercession reviewer',
+      tags: ['Ateneo', 'Statistics'],
+      isPublic: true
+    };
+
+    beforeEach(async () => {
+      const res = await request(app).post('/api/v1/auth/register').send(credentials);
+      token = res.body.token;
+    });
+
+    it('creates a note with canonical enum values', async () => {
+      const res = await request(app)
+        .post('/api/v1/notes')
+        .set('Authorization', `Bearer ${token}`)
+        .send(validNote);
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.grade).toBe('12');
+      expect(res.body.data.quarter).toBe('4');
+    });
+
+    it('rejects label-style values and NAMES the offending fields', async () => {
+      // Regression: the upload form used to send option labels as values
+      const res = await request(app)
+        .post('/api/v1/notes')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ ...validNote, grade: 'Grade 12', semester: 'Semester 1', quarter: 'Quarter 4' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('grade:');
+      expect(res.body.error).toContain('semester:');
+      expect(res.body.error).toContain('quarter:');
+    });
+  });
+
   describe('GET /api/v1/test', () => {
     it('responds to the health check used by the frontend', async () => {
       const res = await request(app).get('/api/v1/test');
