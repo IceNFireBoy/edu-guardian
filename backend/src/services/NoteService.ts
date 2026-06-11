@@ -47,9 +47,20 @@ export interface NoteQueryFilters extends FilterQuery<INote> {
   // Add other filterable fields from INote as needed
 }
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazily construct the OpenAI client: the SDK throws when the API key is
+// missing, and building it at module load crashed the whole server (and any
+// test importing it) on deployments without OPENAI_API_KEY. AI endpoints now
+// fail with a clear 400 instead while the rest of the API keeps working.
+let openaiClient: OpenAI | null = null;
+const getOpenAI = (): OpenAI => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new BadRequestError('AI features are not configured on this server (missing OPENAI_API_KEY)');
+  }
+  openaiClient ??= new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+  return openaiClient;
+};
 
 export default class NoteService {
   public async createNote(noteData: Partial<INote>, userId: string): Promise<INote> {
@@ -440,7 +451,7 @@ export default class NoteService {
 
     try {
       // Generate summary using OpenAI
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAI().chat.completions.create({
         model: OPENAI_CHAT_MODEL,
         messages: [
           {
@@ -510,7 +521,7 @@ export default class NoteService {
 
     try {
       // Generate flashcards using OpenAI
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAI().chat.completions.create({
         model: OPENAI_CHAT_MODEL,
         messages: [
           {

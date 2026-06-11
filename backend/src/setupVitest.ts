@@ -14,7 +14,11 @@ let mongo: MongoMemoryServer;
 
 beforeAll(async () => {
   process.env.JWT_SECRET = 'test-secret';
-  mongo = await MongoMemoryServer.create();
+  // Pin a mongod that links against OpenSSL 3: the old default (5.0.x)
+  // needs libcrypto.so.1.1, which modern runners no longer ship.
+  mongo = await MongoMemoryServer.create({
+    binary: { version: process.env.MONGOMS_VERSION || '7.0.14' }
+  });
   const mongoUri = mongo.getUri();
   await mongoose.connect(mongoUri);
 });
@@ -30,7 +34,8 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await mongoose.connection.close();
-  await mongo.stop();
+  // Guard: if the instance never started, don't mask the original error
+  await mongo?.stop();
 });
 
 global.signin = (id?: string) => {
