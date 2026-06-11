@@ -30,6 +30,7 @@ import CookieConsent from './components/ui/CookieConsent';
 import OfflineDetector from './components/ui/OfflineDetector';
 import DebugPanel, { debug } from './components/DebugPanel';
 import NetworkStatusMonitor from './components/ui/NetworkStatusMonitor';
+import { DarkModeContext } from './context/DarkModeContext';
 
 // Make debug function available globally (for console usage)
 if (typeof window !== 'undefined') {
@@ -154,6 +155,7 @@ function App() {
 
   try {
     return (
+      <DarkModeContext.Provider value={darkMode}>
       <AuthProvider>
         <div className={`min-h-screen ${darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-900'}`}>
           <Toaster position="top-right" toastOptions={{
@@ -241,6 +243,7 @@ function App() {
           <DebugPanel />
         </div>
       </AuthProvider>
+      </DarkModeContext.Provider>
     );
   } catch (error) {
     console.error('Critical error in App render:', error);

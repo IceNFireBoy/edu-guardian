@@ -68,26 +68,26 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
   const unreadCount = sampleNotifications.filter(n => !n.read).length;
 
   return (
-    <header className="bg-white dark:bg-slate-800 shadow-sm border-b dark:border-slate-700">
+    <header className="bg-white/95 dark:bg-slate-800/95 backdrop-blur border-b border-gray-200 dark:border-slate-700 shrink-0 z-30">
       <div className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
             {isAuthenticated ? (
               <>
                 <motion.div
-                  className="bg-primary/10 px-3 py-1 rounded-full flex items-center mr-4"
+                  className="bg-accent/10 px-3 py-1 rounded-full flex items-center mr-3"
                   whileHover={{ scale: 1.05 }}
                   aria-label={`Current streak: ${currentStreak} days`}
                 >
-                  <span className="font-medium text-primary dark:text-primary-light">Streak: {currentStreak} 🔥</span>
+                  <span className="font-medium text-accent-dark dark:text-accent-light">🔥 {currentStreak} day{currentStreak === 1 ? '' : 's'}</span>
                 </motion.div>
 
                 <motion.div
-                  className="bg-secondary/10 px-3 py-1 rounded-full flex items-center"
+                  className="bg-primary/10 px-3 py-1 rounded-full flex items-center"
                   whileHover={{ scale: 1.05 }}
                   aria-label={`Experience points: ${xp}`}
                 >
-                  <span className="font-medium text-secondary dark:text-secondary-light">XP: {xp} ⭐</span>
+                  <span className="font-medium text-primary dark:text-primary-light">⭐ {xp} XP</span>
                 </motion.div>
               </>
             ) : (
@@ -110,7 +110,7 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
             )}
           </div>
           
-          <div className="text-gray-700 dark:text-gray-200 italic max-w-md hidden md:block">
+          <div className="text-gray-500 dark:text-gray-400 italic text-sm max-w-md hidden md:block truncate">
             "{randomQuote}"
           </div>
           
