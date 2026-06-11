@@ -133,8 +133,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  const actionButtonClasses = "w-full flex items-center space-x-3 p-3 rounded-md transition-colors text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-slate-700";
-  const disabledButtonClasses = "w-full flex items-center space-x-3 p-3 rounded-md text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed";
+  const actionButtonClasses = "w-full flex items-center space-x-3 p-3 rounded-md transition-colors text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white";
+  const disabledButtonClasses = "w-full flex items-center space-x-3 p-3 rounded-md text-sm font-medium text-slate-600 cursor-not-allowed";
 
   const handleAuthAction = (path: string, label: string) => {
     if (label === 'Logout') {
@@ -157,16 +157,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
       headerContent = (
         <>
           <Link to="/" className="flex items-center space-x-2">
-            <h1 className="text-2xl font-bold text-primary dark:text-primary-light">EduGuardian</h1>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-light to-indigo-400 bg-clip-text text-transparent">EduGuardian</h1>
           </Link>
-          <button onClick={toggleSidebar} className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary-light p-1 rounded-md" aria-label="Close sidebar">
+          <button onClick={toggleSidebar} className="text-slate-400 hover:text-primary-light p-1 rounded-md" aria-label="Close sidebar">
             <FaAngleDoubleLeft size={22} />
           </button>
         </>
       );
     } else { // Desktop Collapsed
       headerContent = (
-        <button onClick={toggleSidebar} className="text-primary dark:text-primary-light p-1" aria-label="Open sidebar">
+        <button onClick={toggleSidebar} className="text-primary-light p-1" aria-label="Open sidebar">
           <FaAngleDoubleRight size={22} />
         </button>
       );
@@ -176,9 +176,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
       headerContent = (
         <>
           <Link to="/" className="flex items-center space-x-2" onClick={toggleSidebar}> {/* Also close on nav */}
-            <h1 className="text-2xl font-bold text-primary dark:text-primary-light">EduGuardian</h1>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-light to-indigo-400 bg-clip-text text-transparent">EduGuardian</h1>
           </Link>
-          <button onClick={toggleSidebar} className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary-light p-1 rounded-md" aria-label="Close menu">
+          <button onClick={toggleSidebar} className="text-slate-400 hover:text-primary-light p-1 rounded-md" aria-label="Close menu">
             <FaTimes size={22} />
           </button>
         </>
@@ -219,20 +219,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
             animate={{ x: 0, width: currentSidebarActualWidth }}
             exit={{ x: -currentSidebarActualWidth }}
             transition={{ type: 'spring', stiffness: 300, damping: 30, duration: 0.2 }}
-            className={`fixed top-0 left-0 h-full bg-white dark:bg-slate-800 shadow-xl z-[55] flex flex-col border-r border-gray-200 dark:border-slate-700 ${isMobile && !isOpenState ? 'hidden' : ''}`}
+            className={`fixed top-0 left-0 h-full bg-slate-900 shadow-xl z-[55] flex flex-col border-r border-slate-800 ${isMobile && !isOpenState ? 'hidden' : ''}`}
             style={{ width: currentSidebarActualWidth }}
           >
-            <div className={`p-4 border-b border-gray-200 dark:border-slate-700 flex items-center ${(!isMobile && isOpenState) ? 'justify-between' : 'justify-center'}`}>
+            <div className={`p-4 border-b border-slate-800 flex items-center ${(!isMobile && isOpenState) ? 'justify-between' : 'justify-center'}`}>
               {headerContent}
             </div>
 
             {/* Main Scrollable Content - only if sidebar is fully open OR if on mobile (where it's an overlay) */}
             {(isOpenState || (isMobile && isOpenState)) && (
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                <div className="bg-gray-50 dark:bg-slate-750 rounded-lg shadow">
+                <div className="bg-slate-800/60 rounded-lg">
                   <button
                     onClick={() => toggleSection('navigation')}
-                    className="w-full flex items-center justify-between p-3 text-left font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-t-lg"
+                    className="w-full flex items-center justify-between p-3 text-left font-semibold text-slate-200 hover:bg-slate-800 rounded-t-lg"
                   >
                     <div className="flex items-center space-x-2">
                       <FaLayerGroup className="text-primary dark:text-primary-light" />
@@ -247,7 +247,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="overflow-hidden p-3 border-t border-gray-200 dark:border-slate-600"
+                        className="overflow-hidden p-3 border-t border-slate-700/60"
                       >
                         <ul className="space-y-1.5">
                           {/* Show regular navigation items with auth requirements */}
@@ -261,8 +261,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
                                   to={item.path}
                                   className={`flex items-center p-2.5 rounded-md transition-colors text-sm font-medium ${
                                     location.pathname === item.path
-                                      ? 'bg-primary/10 text-primary dark:text-primary-light dark:bg-primary/20'
-                                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600'
+                                      ? 'bg-primary/20 text-primary-light'
+                                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                                   }`}
                                   onClick={isMobile ? toggleSidebar : undefined}
                                 >
@@ -274,7 +274,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
                           })}
                           
                           {/* Auth section (login/logout) */}
-                          <li className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600">
+                          <li className="mt-4 pt-4 border-t border-slate-700/60">
                             {authItems.map((item) => (
                               <button
                                 key={item.path}
@@ -296,10 +296,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
                 {isAuthenticated && onNoteViewPage && note && (
                   <>
                     {/* Metadata Section */}
-                    <div className="bg-gray-50 dark:bg-slate-750 rounded-lg shadow">
+                    <div className="bg-slate-800/60 rounded-lg">
                       <button
                         onClick={() => toggleSection('metadata')}
-                        className="w-full flex items-center justify-between p-3 text-left font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-t-lg"
+                        className="w-full flex items-center justify-between p-3 text-left font-semibold text-slate-200 hover:bg-slate-800 rounded-t-lg"
                       >
                         <div className="flex items-center space-x-2">
                           <FaInfoCircle className="text-blue-500" />
@@ -314,22 +314,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="overflow-hidden p-4 border-t border-gray-200 dark:border-slate-600"
+                            className="overflow-hidden p-4 border-t border-slate-700/60"
                           >
                             <div className="space-y-2 text-sm">
-                              <p className="font-medium text-gray-700 dark:text-gray-200">Title:</p>
-                              <p className="text-gray-600 dark:text-gray-300">{note?.title || 'Untitled Document'}</p>
+                              <p className="font-medium text-slate-200">Title:</p>
+                              <p className="text-slate-400">{note?.title || 'Untitled Document'}</p>
                               
-                              <p className="font-medium text-gray-700 dark:text-gray-200 mt-3">Subject:</p>
-                              <p className="text-gray-600 dark:text-gray-300">{note?.subject || 'Not specified'}</p>
+                              <p className="font-medium text-slate-200 mt-3">Subject:</p>
+                              <p className="text-slate-400">{note?.subject || 'Not specified'}</p>
                               
-                              <p className="font-medium text-gray-700 dark:text-gray-200 mt-3">Created:</p>
-                              <p className="text-gray-600 dark:text-gray-300">
+                              <p className="font-medium text-slate-200 mt-3">Created:</p>
+                              <p className="text-slate-400">
                                 {note?.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'Unknown'}
                               </p>
                               
-                              <p className="font-medium text-gray-700 dark:text-gray-200 mt-3">Pages:</p>
-                              <p className="text-gray-600 dark:text-gray-300">{note?.pageCount || 'Unknown'}</p>
+                              <p className="font-medium text-slate-200 mt-3">Pages:</p>
+                              <p className="text-slate-400">{note?.pageCount || 'Unknown'}</p>
                             </div>
                           </motion.div>
                         )}
@@ -356,8 +356,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
                           title={item.label}
                           className={`flex justify-center items-center p-3 rounded-md transition-colors ${
                             location.pathname === item.path
-                              ? 'bg-primary/10 text-primary dark:text-primary-light dark:bg-primary/20'
-                              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600'
+                              ? 'bg-primary/20 text-primary-light'
+                              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                           }`}
                         >
                           {item.icon}
@@ -367,7 +367,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
                   })}
                   
                   {/* Auth section (login/logout) */}
-                  <li className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600">
+                  <li className="mt-4 pt-4 border-t border-slate-700/60">
                     {authItems.map((item) => (
                       <button
                         key={item.path}

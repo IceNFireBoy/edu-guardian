@@ -1,6 +1,36 @@
 import React, { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { FaGraduationCap } from 'react-icons/fa';
 import { useAuthContext } from './AuthContext';
+
+interface FieldProps {
+  id: string;
+  label: string;
+  type: string;
+  autoComplete: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+const Field: React.FC<FieldProps> = ({ id, label, type, autoComplete, placeholder, value, onChange }) => (
+  <div>
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      {label}
+    </label>
+    <input
+      id={id}
+      name={id}
+      type={type}
+      autoComplete={autoComplete}
+      required
+      className="input"
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  </div>
+);
 
 const Register: React.FC = () => {
   const [name, setName] = useState('');
@@ -15,23 +45,23 @@ const Register: React.FC = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFormError('');
-    
+
     // Validate form
     if (!name || !username || !email || !password) {
       setFormError('Please fill in all required fields');
       return;
     }
-    
+
     if (password !== confirmPassword) {
       setFormError('Passwords do not match');
       return;
     }
-    
+
     if (password.length < 6) {
       setFormError('Password must be at least 6 characters long');
       return;
     }
-    
+
     try {
       await registerUser({ name, username, email, password });
       // Registration returns a token, so the user is already logged in
@@ -42,122 +72,47 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Create your account</h2>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {formError && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-700">{formError}</div>
-            </div>
-          )}
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="name" className="sr-only">
-                Full Name
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                autoComplete="name"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="username" className="sr-only">
-                Username
-              </label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                autoComplete="username"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="email-address" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="confirm-password" className="sr-only">
-                Confirm Password
-              </label>
-              <input
-                id="confirm-password"
-                name="confirm-password"
-                type="password"
-                autoComplete="new-password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Confirm Password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
+    <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-card border border-gray-200 dark:border-slate-700 overflow-hidden">
+          {/* Brand banner */}
+          <div className="bg-gradient-to-r from-primary to-indigo-600 px-8 py-8 text-center">
+            <FaGraduationCap className="text-4xl text-white/90 mx-auto mb-2" />
+            <h2 className="text-2xl font-bold text-white">Create your account</h2>
+            <p className="text-primary-100 text-sm mt-1">Join EduGuardian and start learning smarter</p>
           </div>
 
-          <div>
+          <form className="p-8 space-y-4" onSubmit={handleSubmit}>
+            {formError && (
+              <div className="rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-3">
+                <div className="text-sm text-red-700 dark:text-red-300">{formError}</div>
+              </div>
+            )}
+            <Field id="name" label="Full Name" type="text" autoComplete="name" placeholder="Juan Dela Cruz" value={name} onChange={setName} />
+            <Field id="username" label="Username" type="text" autoComplete="username" placeholder="juandc" value={username} onChange={setUsername} />
+            <Field id="email" label="Email address" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={setEmail} />
+            <Field id="password" label="Password" type="password" autoComplete="new-password" placeholder="At least 6 characters" value={password} onChange={setPassword} />
+            <Field id="confirm-password" label="Confirm Password" type="password" autoComplete="new-password" placeholder="Repeat your password" value={confirmPassword} onChange={setConfirmPassword} />
+
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="w-full py-2.5 px-4 rounded-lg text-white font-medium bg-gradient-to-r from-primary to-indigo-600 hover:from-primary-dark hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:focus:ring-offset-slate-800 transition-all disabled:opacity-60"
             >
-              {loading ? 'Creating account...' : 'Sign up'}
+              {loading ? 'Creating account…' : 'Sign up'}
             </button>
-          </div>
-          
-          <div className="text-sm text-center">
-            <p>
+
+            <p className="text-sm text-center text-gray-600 dark:text-gray-400">
               Already have an account?{' '}
-              <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+              <Link to="/login" className="font-medium text-primary dark:text-primary-light hover:underline">
                 Sign in
               </Link>
             </p>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );
 };
 
-export default Register; 
+export default Register;

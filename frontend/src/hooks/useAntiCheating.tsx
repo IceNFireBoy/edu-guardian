@@ -15,9 +15,9 @@ export const useAntiCheating = () => {
     if (!isActive) return null;
     return (
       <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
-        <div className="bg-white p-5 rounded-lg shadow-lg max-w-md w-full">
-          <h2 className="text-xl font-bold mb-3">Resting Period</h2>
-          <p>
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg max-w-md w-full">
+          <h2 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">Resting Period</h2>
+          <p className="text-gray-600 dark:text-gray-300">
             You've been studying for a while. Take a short break to maintain
             effective learning.
           </p>

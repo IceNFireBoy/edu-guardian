@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Viewer, Worker } from '@react-pdf-viewer/core';
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
+import { DarkModeContext } from '../../context/DarkModeContext';
 // Bundle the worker that ships with the installed pdfjs-dist so the API and
 // worker versions always match; without a worker the viewer crashes with
 // 'No "GlobalWorkerOptions.workerSrc" specified'.
@@ -20,6 +21,7 @@ interface PDFViewerProps {
 const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, noteTitle, noteId, onLoad }) => {
   const [internalFileUrl, setInternalFileUrl] = useState<string | null>(null);
   const [hasError, setHasError] = useState<boolean>(false);
+  const darkMode = useContext(DarkModeContext);
   const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
   useEffect(() => {
@@ -62,6 +64,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, noteTitle, noteId, onLoa
         <Viewer
           fileUrl={internalFileUrl}
           plugins={[defaultLayoutPluginInstance]}
+          theme={darkMode ? 'dark' : 'light'}
         />
       </Worker>
     </div>
