@@ -89,9 +89,9 @@ export const handleApiError = (
  * @param backoff - Backoff factor (default: 2)
  */
 export const retryWithBackoff = async <T>(
-  fn: () => Promise<T>, 
-  retries = 3, 
-  delay = 1000, 
+  fn: () => Promise<T>,
+  retries = 3,
+  delay = 1000,
   backoff = 2
 ): Promise<T> => {
   try {
@@ -100,16 +100,10 @@ export const retryWithBackoff = async <T>(
     if (retries <= 0) {
       throw error;
     }
-    
-    // Show toast for retry
-    toast.loading(`Retrying connection... (${retries} ${retries === 1 ? 'attempt' : 'attempts'} left)`, { 
-      id: 'retry-toast',
-      duration: delay
-    });
-    
+
     // Wait for the delay duration
     await new Promise(resolve => setTimeout(resolve, delay));
-    
+
     // Retry with reduced count and increased delay
     return retryWithBackoff(fn, retries - 1, delay * backoff, backoff);
   }
