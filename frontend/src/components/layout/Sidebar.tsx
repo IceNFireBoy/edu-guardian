@@ -8,7 +8,6 @@ import {
   FaUniversity, FaUser, FaSignOutAlt, FaSignInAlt, FaUserPlus
 } from 'react-icons/fa';
 import { useAuthContext } from '../../features/auth/AuthContext';
-import { FEATURES } from '../../config/featureFlags';
 
 // Define types for menu items
 interface MenuItem {
@@ -98,12 +97,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
     { path: '/profile', icon: <FaUser size={20} />, label: 'Profile', requiresAuth: true },
     { path: '/my-notes', icon: <FaBook size={20} />, label: 'My Notes', requiresAuth: true },
     { path: '/notes/upload', icon: <FaUpload size={20} />, label: 'Upload Notes', requiresAuth: true },
-    ...(FEATURES.gamification
-      ? [
-          { path: '/badges', icon: <FaAward size={20} />, label: 'Badges', requiresAuth: true },
-          { path: '/progress', icon: <FaChartLine size={20} />, label: 'Progress', requiresAuth: true }
-        ]
-      : []),
+    { path: '/badges', icon: <FaAward size={20} />, label: 'Badges', requiresAuth: true },
+    { path: '/progress', icon: <FaChartLine size={20} />, label: 'Progress', requiresAuth: true },
     { path: '/settings', icon: <FaCog size={20} />, label: 'Settings', requiresAuth: true }
   ];
 
@@ -341,107 +336,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
                       </AnimatePresence>
                     </div>
 
-                    {/* Study Tools + Flashcards: AI-quota tools */}
-                    {FEATURES.ai && (
-                    <>
-                    <div className="bg-gray-50 dark:bg-slate-750 rounded-lg shadow">
-                      <button
-                        onClick={() => toggleSection('studyTools')}
-                        className="w-full flex items-center justify-between p-3 text-left font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-t-lg"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <FaLightbulb className="text-yellow-500" />
-                          <span>Study Tools</span>
-                        </div>
-                        {openSections.studyTools ? <FaChevronUp size={16} /> : <FaChevronDown size={16} />}
-                      </button>
-                      <AnimatePresence>
-                        {openSections.studyTools && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden p-3 space-y-2 border-t border-gray-200 dark:border-slate-600"
-                          >
-                            <button
-                              onClick={() => navigate(`/study/${note.id}`)}
-                              className={actionButtonClasses}
-                            >
-                              <FaBook size={16} className="text-blue-500" />
-                              <span>Study Mode</span>
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                /* Implementation for Generate Summary */
-                              }}
-                              className={user && (user.summaryQuota ?? 0) > 0 ? actionButtonClasses : disabledButtonClasses}
-                              disabled={!user || (user.summaryQuota ?? 0) <= 0}
-                            >
-                              <FaUniversity size={16} className="text-green-500" />
-                              <div className="flex flex-col items-start">
-                                <span>Generate Summary</span>
-                                {user && (
-                                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                                    {(user.summaryQuota ?? 0) > 0 ? `${user.summaryQuota} uses left` : 'No quota left'}
-                                  </span>
-                                )}
-                              </div>
-                            </button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-
-                    {/* Flashcards Section */}
-                    <div className="bg-gray-50 dark:bg-slate-750 rounded-lg shadow">
-                      <button
-                        onClick={() => toggleSection('flashcards')}
-                        className="w-full flex items-center justify-between p-3 text-left font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-t-lg"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <FaLayerGroup className="text-purple-500" />
-                          <span>Flashcards</span>
-                        </div>
-                        {openSections.flashcards ? <FaChevronUp size={16} /> : <FaChevronDown size={16} />}
-                      </button>
-                      <AnimatePresence>
-                        {openSections.flashcards && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden p-3 space-y-2 border-t border-gray-200 dark:border-slate-600"
-                          >
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              Create and manage flashcards for this document.
-                            </p>
-                            
-                            <button
-                              onClick={() => {
-                                /* Implementation for Add Flashcard */
-                              }}
-                              className={user && (user.flashcardQuota ?? 0) > 0 ? actionButtonClasses : disabledButtonClasses}
-                              disabled={!user || (user.flashcardQuota ?? 0) <= 0}
-                            >
-                              <FaPlusSquare size={16} className="text-indigo-500" />
-                              <div className="flex flex-col items-start">
-                                <span>Add Flashcard</span>
-                                {user && (
-                                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                                    {(user.flashcardQuota ?? 0) > 0 ? `${user.flashcardQuota} uses left` : 'No quota left'}
-                                  </span>
-                                )}
-                              </div>
-                            </button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                    </>
-                    )}
                   </>
                 )}
               </div>

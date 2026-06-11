@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Note } from '../types/note';
-import { NoteFilter, NoteUploadData, NoteRating, Flashcard, AISummary, PaginatedNotesResponse, ManualFlashcardPayload, AIGenerationResult, NewlyAwardedBadgeInfo } from './noteTypes';
+import { NoteFilter, NoteUploadData, NoteRating, Flashcard, PaginatedNotesResponse, ManualFlashcardPayload, NewlyAwardedBadgeInfo } from './noteTypes';
 import { callAuthenticatedApi, ApiResponse } from '../../api/notes';
 import { debug } from '../../components/DebugPanel'; // Assuming debug is available
 import { toast } from 'react-hot-toast';
@@ -296,62 +296,6 @@ export const useNote = () => {
     }
   }, []);
 
-  // Generate AI Summary
-  // Backend: POST /notes/:id/summarize -> { success, data: { aiSummary }, newlyAwardedBadges }
-  const getAISummary = useCallback(async (noteId: string): Promise<AIGenerationResult<AISummary> | null> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await callAuthenticatedApi<{ aiSummary?: string }>(
-        `/notes/${noteId}/summarize`,
-        'POST'
-      );
-      if (response.success) {
-        return {
-          data: {
-            noteId,
-            summary: response.data?.aiSummary ?? null,
-            keyPoints: [],
-            generatedAt: new Date().toISOString()
-          },
-          newlyAwardedBadges: response.newlyAwardedBadges || []
-        };
-      }
-      throw new Error(response.error || response.message || 'Failed to generate summary');
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to generate summary';
-      setError(errorMessage);
-      toast.error(errorMessage);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Generate AI Flashcards
-  // Backend: POST /notes/:id/generate-flashcards -> { success, data: { flashcards }, newlyAwardedBadges }
-  const generateFlashcards = useCallback(async (noteId: string): Promise<AIGenerationResult<Flashcard[]>> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await callAuthenticatedApi<{ flashcards?: Flashcard[] }>(`/notes/${noteId}/generate-flashcards`, 'POST');
-      if (response.success) {
-        return {
-          data: response.data?.flashcards || [],
-          newlyAwardedBadges: response.newlyAwardedBadges || []
-        };
-      }
-      throw new Error(response.error || response.message || 'Failed to generate AI flashcards.');
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to generate AI flashcards';
-      setError(errorMessage);
-      toast.error(errorMessage);
-      return { data: [], newlyAwardedBadges: [] };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   // Add Manual Flashcard
   const addManualFlashcard = useCallback(async (noteId: string, payload: ManualFlashcardPayload): Promise<Flashcard | null> => {
     setLoading(true);
@@ -373,41 +317,6 @@ export const useNote = () => {
     }
   }, []);
 
-  // Save AI Generated Flashcards to Note
-  const saveFlashcards = useCallback(async (noteId: string, flashcardsToSave: Pick<Flashcard, 'question' | 'answer' | 'difficulty'>[]): Promise<Flashcard[] | null> => {
-    setLoading(true);
-    setError(null);
-    try {
-      // The backend expects an array of objects with question, answer, and difficulty
-      // The Flashcard type on frontend includes id, noteId, etc., which are not needed for saving AI generated ones initially.
-      const payload = flashcardsToSave.map(fc => ({
-        question: fc.question,
-        answer: fc.answer,
-        difficulty: fc.difficulty || 'medium', // Ensure difficulty is provided
-      }));
-
-      // Endpoint might be something like /api/v1/notes/:noteId/ai-flashcards/save or similar
-      // For now, using a direct call that aligns with the NoteService method name
-      // The backend controller for this needs to be created.
-      // Let's assume the NoteController will have a PUT or POST route like /:noteId/flashcards/save-generated
-      const response = await callAuthenticatedApi<{ flashcards: Flashcard[] }>(`/notes/${noteId}/save-ai-flashcards`, 'POST', { flashcards: payload });
-
-      if (response.success && response.data && response.data.flashcards) {
-        clearAllNotesCaches(); // Invalidate cache as note content (flashcards) has changed
-        debug('[useNote] All notes caches cleared after saving AI flashcards.');
-        return response.data.flashcards;
-      } else {
-        throw new Error(response.error || response.message || 'Failed to save AI generated flashcards.');
-      }
-    } catch (err: any) {
-      console.error('[useNote] Save AI flashcards error:', err);
-      setError(err.message || 'Failed to save flashcards');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   return {
     loading,
     error,
@@ -417,9 +326,6 @@ export const useNote = () => {
     rateNote,
     deleteNote,
     incrementDownloadCount,
-    getAISummary,
-    generateFlashcards,
-    saveFlashcards,
     addManualFlashcard,
     refreshNotes, // Expose the refresh function
   };

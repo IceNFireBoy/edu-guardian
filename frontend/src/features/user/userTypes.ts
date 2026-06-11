@@ -1,9 +1,3 @@
-export interface AIUsage {
-  summaryUsed: number;
-  flashcardUsed: number;
-  lastReset: string;
-}
-
 export interface UserBadge {
   _id: string;
   name: string;
@@ -43,7 +37,6 @@ export interface UserProfile {
   xp: number;
   level: number;
   streak: UserStreak;
-  aiUsage: AIUsage;
   profileImage?: string;
   biography?: string;
   preferences?: UserPreferences;

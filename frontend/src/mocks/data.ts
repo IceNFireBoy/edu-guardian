@@ -98,11 +98,6 @@ export const mockUsers = [
       max: 7,
       lastUsed: '2024-01-01T00:00:00.000Z'
     },
-    aiUsage: {
-      summaryUsed: 2,
-      flashcardUsed: 3,
-      lastReset: '2024-01-01T00:00:00.000Z'
-    },
     badges: [
       {
         _id: 'badge1',
@@ -125,11 +120,6 @@ export const mockUsers = [
       current: 5,
       max: 10,
       lastUsed: '2024-01-02T00:00:00.000Z'
-    },
-    aiUsage: {
-      summaryUsed: 4,
-      flashcardUsed: 6,
-      lastReset: '2024-01-01T00:00:00.000Z'
     },
     badges: [
       {

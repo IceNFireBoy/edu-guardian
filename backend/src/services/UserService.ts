@@ -1,7 +1,6 @@
 import User, { IUser, IUserActivity, IUserBadge } from '../models/User';
 import Note, { INote } from '../models/Note';
 import { QuotaExceededError, NotFoundError, BadRequestError } from '../utils/customErrors';
-import { AI_USAGE_LIMITS, QUOTA_RESET_HOURS, AI_USER_TIERS } from '../config/aiConfig';
 import mongoose, { SortOrder } from 'mongoose';
 import { IBadge } from '../models/Badge';
 import ErrorResponse from '../utils/errorResponse';
@@ -348,97 +347,16 @@ export default class UserService {
         };
     }
 
-    // New AI Quota and Streak Methods
-
     /**
-     * Helper method to check if a user's AI quota should be reset
-     * @param user - The user object to check
-     * @returns - True if quota should be reset, false otherwise
-     */
-    private static isQuotaResetDue(user: IUser): boolean {
-        const now = new Date();
-        const lastReset = user.aiUsage.lastReset || new Date(0);
-        const hoursSinceLastReset = (now.getTime() - lastReset.getTime()) / (1000 * 60 * 60);
-        return hoursSinceLastReset >= QUOTA_RESET_HOURS;
-    }
-    
-    /**
-     * Reset a user's AI quota
-     * @param user - The user object to reset quota for
-     */
-    private static resetUserQuota(user: IUser): void {
-        user.aiUsage.summaryUsed = 0;
-        user.aiUsage.flashcardUsed = 0;
-        user.aiUsage.lastReset = new Date();
-    }
-
-    /**
-     * Check if a user has exceeded their AI quota
-     * @param userId - The ID of the user to check
-     * @param type - The type of AI feature to check (summary or flashcard)
-     * @throws QuotaExceededError if the user has exceeded their quota
-     */
-    public static async checkUserQuota(userId: string, type: 'summary' | 'flashcard'): Promise<void> {
-        const user = await this.findUserForUpdate(userId);
-
-        // Admin/Premium bypass
-        if (user.role === AI_USER_TIERS.ADMIN /* || user.subscription === AI_USER_TIERS.PREMIUM */) {
-            return;
-        }
-
-        // Check if quota reset is due and reset if necessary
-        if (this.isQuotaResetDue(user)) {
-            this.resetUserQuota(user);
-            await user.save();
-        }
-
-        // Check if quota is exceeded based on type
-        if (type === 'summary' && user.aiUsage.summaryUsed >= AI_USAGE_LIMITS.SUMMARY_PER_DAY) {
-            throw new QuotaExceededError('Daily summary generation limit reached.');
-        }
-
-        if (type === 'flashcard' && user.aiUsage.flashcardUsed >= AI_USAGE_LIMITS.FLASHCARDS_PER_DAY) {
-            throw new QuotaExceededError('Daily flashcard generation limit reached.');
-        }
-    }
-
-    /**
-     * Increment a user's AI usage counter
-     * @param userId - The ID of the user to increment usage for
-     * @param type - The type of AI feature to increment (summary or flashcard)
-     */
-    public static async incrementAIUsage(userId: string, type: 'summary' | 'flashcard'): Promise<void> {
-        const user = await this.findUserForUpdate(userId);
-
-        // Check if quota reset is due and reset if necessary
-        if (this.isQuotaResetDue(user)) {
-            this.resetUserQuota(user);
-        }
-
-        // Increment usage based on type
-        if (type === 'summary') {
-            user.aiUsage.summaryUsed += 1;
-            user.totalSummariesGenerated += 1;
-        } else if (type === 'flashcard') {
-            user.aiUsage.flashcardUsed += 1;
-            user.totalFlashcardsGenerated += 1;
-        } else {
-            throw new BadRequestError('Invalid AI usage type specified.');
-        }
-
-        await user.save();
-    }
-
-    /**
-     * Update a user's AI streak
+     * Update a user's study streak (consecutive days with completed study sessions)
      * @param userId - The ID of the user to update streak for
      * @returns The updated user object
      */
-    public static async updateUserAIStreak(userId: string): Promise<IUser> {
+    public static async updateStudyStreak(userId: string): Promise<IUser> {
         const user = await this.findUserForUpdate(userId);
         const today = new Date();
         
-        // Initialize streak if it's the first AI usage
+        // Initialize streak on first study session
         if (!user.streak.lastUsed) {
             user.streak.current = 1;
             user.streak.max = 1;

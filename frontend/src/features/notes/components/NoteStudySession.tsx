@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaClock, FaPause, FaPlay, FaCoffee, FaStopwatch } from 'react-icons/fa';
 import { Note } from '../../types/note';
-import AIFeaturesPanel from './AIFeaturesPanel'; // Corrected import path
-import { FEATURES } from '../../../config/featureFlags';
 // import FinishStudyingButton from '../../progress/FinishStudyingButton'; // Assuming this will be converted/available
 // For now, let's create a placeholder for FinishStudyingButton if it's not critical for this step
 
@@ -186,12 +184,6 @@ const NoteStudySession: React.FC<NoteStudySessionProps> = ({
           />
         </section>
         
-        {FEATURES.ai && note && (
-          <section>
-            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2 mt-2">AI TOOLS</h3>
-            <AIFeaturesPanel note={note} />
-          </section>
-        )}
       </aside>
     </div>
   );

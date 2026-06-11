@@ -2,9 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaFilter, FaSearch, FaBookOpen, FaDownload, FaShare, FaExclamationTriangle, FaRobot, FaStar, FaLightbulb, FaTimes, FaSpinner } from 'react-icons/fa';
 import { useStreak } from '../../hooks/useStreak';
-import AISummarizer from '../../features/notes/components/AISummarizer'; // Updated path
-import FlashcardGenerator from '../../features/notes/components/FlashcardGenerator'; // Updated path
-import { FEATURES } from '../../config/featureFlags';
 import FilterTags from '../../components/ui/FilterTags'; // Ensure this doesn't have .jsx
 import NoteCard, { subjectColors, getSubjectColor } from '../../features/notes/NoteCard'; // Import TSX version
 import StarRating from '../../components/notes/StarRating'; // Import StarRating component
@@ -212,8 +209,6 @@ interface NoteDetailModalProps {
 
 // Note Detail Modal (Typed)
 const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose }) => {
-  const [showSummarizer, setShowSummarizer] = useState(false);
-  const [showFlashcards, setShowFlashcards] = useState(false);
   const { error: errorToast, success: successToast } = useToast();
   const { addManualFlashcard, loading: noteHookLoading, error: noteHookError } = useNote(); // Assuming useNote is imported if needed here, or passed
   const { rateNote, loading: ratingLoading, error: ratingError } = useNote(); // For rating
@@ -349,37 +344,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ note, isOpen, onClose
                 <div><strong className="text-gray-600 dark:text-gray-400">Topic:</strong> {note.topic || 'N/A'}</div>
               </div>
               
-              {/* AI Features Toggle Buttons */}
-              {FEATURES.ai && (
-              <div className="flex space-x-4 mb-4 border-t pt-4 dark:border-slate-700">
-                <button 
-                  onClick={() => { setShowSummarizer(!showSummarizer); setShowFlashcards(false); }}
-                  className={`btn btn-sm flex items-center ${showSummarizer ? 'btn-primary' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}
-                >
-                  <FaRobot className="mr-2" /> AI Summary
-                </button>
-                <button 
-                  onClick={() => { setShowFlashcards(!showFlashcards); setShowSummarizer(false); }}
-                  className={`btn btn-sm flex items-center ${showFlashcards ? 'btn-primary' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}
-                >
-                  <FaLightbulb className="mr-2" /> AI Flashcards
-                </button>
-              </div>
-              )}
 
-              {/* AI Features Content Area */}
-              <AnimatePresence>
-                {showSummarizer && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                    <AISummarizer noteId={note._id} isOpen={true} onClose={() => {}} />
-                  </motion.div>
-                )}
-                {showFlashcards && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                    <FlashcardGenerator noteId={note._id} isOpen={true} onClose={() => {}} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
             </div>
             

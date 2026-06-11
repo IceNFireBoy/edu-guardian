@@ -44,7 +44,6 @@ Before deploying, ensure you have:
    - `CLOUDINARY_CLOUD_NAME`: Your Cloudinary cloud name
    - `CLOUDINARY_API_KEY`: Your Cloudinary API key
    - `CLOUDINARY_API_SECRET`: Your Cloudinary API secret
-   - `OPENAI_API_KEY`: (Optional) Your OpenAI API key
 
 5. Click "Create Web Service"
 

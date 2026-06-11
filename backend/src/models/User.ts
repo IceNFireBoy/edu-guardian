@@ -12,7 +12,7 @@ export interface IUserBadge extends Document { // Can be a sub-document if not n
 
 // Interface for individual activity entry
 export interface IUserActivity extends Document { // Sub-document or object type
-  action: 'study' | 'comment' | 'upload' | 'download' | 'rate' | 'share' | 'login' | 'earn_badge' | 'earn_xp' | 'ai_summary_generated' | 'ai_flashcards_generated';
+  action: 'study' | 'comment' | 'upload' | 'download' | 'rate' | 'share' | 'login' | 'earn_badge' | 'earn_xp';
   description: string;
   xpEarned?: number;
   timestamp: Date;
@@ -54,13 +54,6 @@ export interface IUser extends Document {
   emailVerificationToken?: string;
   emailVerificationTokenExpire?: Date; // Added field based on service logic
   emailVerified: boolean;
-  aiUsage: {
-    summaryUsed: number;
-    flashcardUsed: number;
-    lastReset: Date;
-  };
-  totalSummariesGenerated: number; // Added for lifetime count
-  totalFlashcardsGenerated: number; // Added for lifetime count
   favoriteNotes: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
@@ -145,7 +138,7 @@ const UserSchema = new Schema<IUser>(
       {
         action: {
           type: String,
-          enum: ['study', 'comment', 'upload', 'download', 'rate', 'share', 'login', 'earn_badge', 'earn_xp', 'ai_summary_generated', 'ai_flashcards_generated'],
+          enum: ['study', 'comment', 'upload', 'download', 'rate', 'share', 'login', 'earn_badge', 'earn_xp'],
           required: true
         },
         description: String,
@@ -175,13 +168,6 @@ const UserSchema = new Schema<IUser>(
     emailVerificationToken: String,
     emailVerificationTokenExpire: Date, // Added field based on service logic
     emailVerified: { type: Boolean, default: false },
-    aiUsage: {
-      summaryUsed: { type: Number, default: 0 },
-      flashcardUsed: { type: Number, default: 0 },
-      lastReset: { type: Date, default: Date.now }
-    },
-    totalSummariesGenerated: { type: Number, default: 0 }, // Added for lifetime count
-    totalFlashcardsGenerated: { type: Number, default: 0 }, // Added for lifetime count
     favoriteNotes: [{ type: Schema.Types.ObjectId, ref: 'Note' }],
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }

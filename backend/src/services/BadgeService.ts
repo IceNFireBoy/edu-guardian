@@ -43,14 +43,6 @@ const BADGE_CRITERIA: Record<string, BadgeCriteriaFunction> = {
         const shareCount = user.activity.filter(a => a.action === 'share').length;
         return shareCount >= 1;
     },
-    ai_novice: async (user: IUser) => {
-        const aiSummaryCount = user.activity.filter(a => a.action === 'ai_summary_generated').length;
-        return aiSummaryCount >= 1;
-    },
-    flashcard_fanatic: async (user: IUser) => {
-        const flashcardCount = user.activity.filter(a => a.action === 'ai_flashcards_generated').length;
-        return flashcardCount >= 1;
-    }
 };
 
 export default class BadgeService {

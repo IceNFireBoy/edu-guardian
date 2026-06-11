@@ -1,12 +1,3 @@
-export const OPENAI_CHAT_MODEL = 'gpt-3.5-turbo-1106';
-
-export const AI_FEATURE_TYPES = {
-  SUMMARY: 'summary',
-  FLASHCARD: 'flashcard',
-} as const;
-
-export type AIFeatureType = typeof AI_FEATURE_TYPES[keyof typeof AI_FEATURE_TYPES];
-
 export const FLASHCARD_DIFFICULTY_LEVELS = ['easy', 'medium', 'hard'] as const;
 export type FlashcardDifficulty = typeof FLASHCARD_DIFFICULTY_LEVELS[number];
 

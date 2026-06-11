@@ -56,12 +56,6 @@ export interface UserStreak {
   lastUsed: string;
 }
 
-export interface AIUsage {
-  summaryUsed: number;
-  flashcardUsed: number;
-  lastReset: string;
-}
-
 export interface UserProfile {
   _id: string;
   name: string;
@@ -71,7 +65,6 @@ export interface UserProfile {
   xp: number;
   level: number;
   streak: UserStreak;
-  aiUsage: AIUsage;
   badges: UserBadge[];
   favoriteNotes: string[];
   createdAt: string;
@@ -99,7 +92,6 @@ export interface User {
   xp: number;
   level: number;
   streak: UserStreak;
-  aiUsage: AIUsage;
   badges: UserBadge[];
   favoriteNotes: string[];
   createdAt: string;

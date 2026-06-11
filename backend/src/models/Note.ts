@@ -35,9 +35,6 @@ export interface INote extends Document {
   downloadCount: number;
   ratings: INoteRating[];
   averageRating: number;
-  aiSummary?: string;
-  aiSummaryGeneratedAt?: Date;
-  aiSummaryKeyPoints?: string[];
   flashcards: INoteFlashcard[];
   user: mongoose.Types.ObjectId | IUser; // Can be populated
   isPublic: boolean;
@@ -98,9 +95,6 @@ const NoteSchema = new Schema<INote>(
     downloadCount: { type: Number, default: 0 },
     ratings: [NoteRatingSchema],
     averageRating: { type: Number, default: 0 }, // This will be calculated by a method/hook
-    aiSummary: { type: String, maxlength: [2000, 'AI summary cannot be more than 2000 characters'] },
-    aiSummaryGeneratedAt: { type: Date },
-    aiSummaryKeyPoints: { type: [String] },
     flashcards: [NoteFlashcardSchema],
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Made user required for a note
     isPublic: { type: Boolean, default: true },
