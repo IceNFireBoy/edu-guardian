@@ -1,110 +1,27 @@
 import React, { useState, useEffect, FC, ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { FaTrophy, FaFire, FaStar, FaBook, FaCalendarAlt, FaUsers, FaChartBar, FaSpinner } from 'react-icons/fa'; // Added more icons and FaSpinner
+import { Link } from 'react-router-dom';
+import { FaFire, FaStar, FaBook, FaClock, FaSpinner, FaBookOpen } from 'react-icons/fa';
 import { useUser } from '../features/user/useUser';
-
-import SubjectCard from '../components/progress/SubjectCard'; // Already TSX
-import StudyRecommendation from '../components/progress/StudyRecommendation'; // Already TSX
-import FocusBar from '../components/progress/FocusBar'; // Already TSX
-import MotivationCards from '../components/progress/MotivationCards'; // Already TSX
-
-// --- Interfaces and Types ---
+import { useNote } from '../features/notes/useNote';
+import { useStreak } from '../hooks/useStreak';
+import { getSubjectColor } from '../features/notes/NoteCard';
+import FocusBar from '../components/progress/FocusBar';
+import type { Note } from '../types/note';
 
 interface StatsCardProps {
   title: string;
   value: string | number;
   icon: ReactNode;
-  color: string; // Tailwind text color class, e.g., 'text-blue-500'
+  color: string; // Tailwind text color class, e.g. 'text-orange-500'
 }
-
-interface StoredNoteFeedback {
-  emoji: string;
-  timestamp: string; // ISO Date string
-}
-
-interface StoredCompletedNote {
-  id: string; // Corresponds to Note._id or Note.asset_id
-  title?: string;
-  subject?: string;
-  completedAt: string; // ISO Date string
-  timeSpent: number; // in minutes typically
-  feedback?: string; // Emoji string e.g. "🤓"
-  // Deprecated feedback storage
-  feedbacks?: StoredNoteFeedback[]; // Array of feedback objects
-}
-
-interface StoredNote {
-  _id: string;
-  asset_id?: string;
-  title?: string;
-  subject?: string;
-  secure_url?: string;
-  fileUrl?: string;
-  url?: string;
-  // other fields from actual note structure
-}
-
-interface SubjectEmojiStats {
-  [emoji: string]: number;
-}
-
-interface SubjectProgressDetail {
-  completed: number;
-  total: number;
-  timeSpent: number; // in minutes
-  avgTime: string; // Formatted string e.g., "30 min"
-  emojiStats: SubjectEmojiStats;
-  lastStudied: Date | null;
-  daysSinceLastStudy?: number;
-  percentage: number;
-}
-
-interface SubjectsData {
-  [subject: string]: SubjectProgressDetail;
-}
-
-interface SubjectTimeData { // For FocusBar
-  [subject: string]: number; // timeSpent in minutes
-}
-
-interface InactiveSubjectInfo {
-  name: string;
-  days: number;
-}
-
-interface ProgressPageData {
-  subjectsData: SubjectsData;
-  subjectTimeData: SubjectTimeData;
-  inactiveSubjects: InactiveSubjectInfo[];
-  completedThisWeek: number;
-  totalCompletedNotes: number;
-  currentStreak: number; // From useStreak
-  xp?: number; // From useStreak
-  xpForNextLevel?: number; // From useStreak
-  subjectProgress: SubjectsData; // Duplicates subjectsData with percentage, could be merged
-}
-
-// Assumed return from useStreak hook (adjust if useStreak.ts provides specific types)
-interface AssumedStreakData {
-  currentStreak: number;
-  xp: number;
-  level?: number; // Optional
-  // ... other streak fields
-}
-interface AssumedUseStreakReturn {
-  streak: AssumedStreakData;
-  getXpForNextLevel: () => number;
-  // ... other methods/properties from useStreak
-}
-
-// --- Components ---
 
 const StatsCard: FC<StatsCardProps> = ({ title, value, icon, color }) => (
   <motion.div
     whileHover={{ scale: 1.03 }}
-    className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md flex items-center"
+    className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 flex items-center"
   >
-    <div className={`p-3 rounded-full ${color.replace('text-', 'bg-')}/10 mr-3`}> {/* Basic color conversion */}
+    <div className={`p-3 rounded-full ${color.replace('text-', 'bg-')}/10 mr-3`}>
       {icon}
     </div>
     <div>
@@ -114,170 +31,143 @@ const StatsCard: FC<StatsCardProps> = ({ title, value, icon, color }) => (
   </motion.div>
 );
 
+interface SubjectProgress {
+  subject: string;
+  studied: number;
+  total: number;
+  percentage: number;
+  minutes: number;
+}
+
+const formatMinutes = (totalSeconds: number): string => {
+  const minutes = Math.round(totalSeconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ${minutes % 60}m`;
+};
+
 const Progress: FC = () => {
-  const { profile, loading } = useUser();
-  const [progressData, setProgressData] = useState<ProgressPageData | null>(null);
+  const { profile, loading: profileLoading } = useUser();
+  const { fetchNotes } = useNote();
+  const { getXpForNextLevel } = useStreak();
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [notesLoading, setNotesLoading] = useState(true);
 
   useEffect(() => {
-    if (!profile) return;
-    // Use backend data from profile instead of localStorage
-    const subjectDataMap: SubjectsData = {};
-    const now = new Date();
-    const validNotesBySubject: { [subject: string]: StoredNote[] } = {};
-
-    // Assume profile.notes contains all notes and profile.completedNotes contains completed notes
-    const allNotes: StoredNote[] = profile.notes || [];
-    const completedNotes: StoredCompletedNote[] = profile.completedNotes || [];
-
-    allNotes.forEach(note => {
-      const noteUrl = note.secure_url || note.fileUrl || note.url || '';
-      const hasValidUrl = typeof noteUrl === 'string' && noteUrl.trim() !== '' && (noteUrl.startsWith('http://') || noteUrl.startsWith('https://'));
-      if (!hasValidUrl) return;
-
-      let subject = note.subject || 'Uncategorized';
-      // Basic subject detection from title (could be improved)
-      if (note.title) {
-        if (note.title.toLowerCase().includes('biology')) subject = 'Biology';
-        else if (note.title.toLowerCase().includes('math')) subject = 'Mathematics'; // Example
+    let mounted = true;
+    (async () => {
+      try {
+        const response = await fetchNotes({} as any);
+        if (mounted && response?.data) setNotes(response.data);
+      } finally {
+        if (mounted) setNotesLoading(false);
       }
-      if (!validNotesBySubject[subject]) validNotesBySubject[subject] = [];
-      validNotesBySubject[subject].push(note);
-    });
+    })();
+    return () => { mounted = false; };
+  }, [fetchNotes]);
 
-    Object.entries(validNotesBySubject).forEach(([subject, notesInSubject]) => {
-      subjectDataMap[subject] = {
-        completed: 0,
-        total: notesInSubject.length,
-        timeSpent: 0,
-        avgTime: '0 min',
-        emojiStats: { "🤓": 0, "🤔": 0, "❗": 0 },
-        lastStudied: null,
-        percentage: 0,
-      };
-    });
-
-    completedNotes.forEach(completedNote => {
-      let subject = completedNote.subject || 'Uncategorized';
-      if (subject.includes('Biology')) subject = 'Biology'; // Normalize
-
-      if (!subjectDataMap[subject] || !validNotesBySubject[subject]) return;
-
-      const isValidCompletion = validNotesBySubject[subject].some(validNote => 
-        validNote._id === completedNote.id || validNote.asset_id === completedNote.id
-      );
-      if (!isValidCompletion) return;
-
-      subjectDataMap[subject].completed++;
-      subjectDataMap[subject].timeSpent += completedNote.timeSpent || 0;
-      if (completedNote.feedback && subjectDataMap[subject].emojiStats[completedNote.feedback] !== undefined) {
-        subjectDataMap[subject].emojiStats[completedNote.feedback]++;
-      }
-      if (completedNote.completedAt) {
-        const completedDate = new Date(completedNote.completedAt);
-        if (!subjectDataMap[subject].lastStudied || completedDate > (subjectDataMap[subject].lastStudied as Date)) {
-          subjectDataMap[subject].lastStudied = completedDate;
-        }
-      }
-    });
-
-    Object.keys(subjectDataMap).forEach(subject => {
-      const data = subjectDataMap[subject];
-      data.avgTime = data.completed > 0 ? `${Math.round(data.timeSpent / data.completed)} min` : '0 min';
-      if (data.lastStudied) {
-        const diffTime = Math.abs(now.getTime() - (data.lastStudied as Date).getTime());
-        data.daysSinceLastStudy = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      }
-      data.percentage = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
-    });
-
-    const inactiveSubjects: InactiveSubjectInfo[] = Object.entries(subjectDataMap)
-      .filter(([_, data]) => data.completed > 0 && (data.daysSinceLastStudy || 0) > 7)
-      .map(([subjectName, data]) => ({ name: subjectName, days: data.daysSinceLastStudy || 0 }))
-      .sort((a, b) => b.days - a.days);
-
-    const subjectTimeData: SubjectTimeData = {};
-    Object.entries(subjectDataMap).forEach(([subjectName, data]) => {
-      if (data.timeSpent > 0) subjectTimeData[subjectName] = data.timeSpent;
-    });
-
-    const completedThisWeek = completedNotes.filter(note => {
-      if (!note.completedAt) return false;
-      const completedDate = new Date(note.completedAt);
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      return completedDate >= oneWeekAgo;
-    }).length;
-
-    setProgressData({
-      subjectsData: subjectDataMap,
-      subjectTimeData,
-      inactiveSubjects,
-      completedThisWeek,
-      totalCompletedNotes: completedNotes.length,
-      currentStreak: profile.streak?.current || 0,
-      xp: profile.xp,
-      xpForNextLevel: profile.xpForNextLevel,
-      subjectProgress: subjectDataMap,
-    });
-  }, [profile]);
-
-  // Demo data generation needs to accept streak data
-  const getDemoProgressData = (currentStreakData: AssumedStreakData, currentGetXpForNextLevel: () => number): ProgressPageData => {
-    const demoSubjects: SubjectsData = {
-      'Mathematics': { completed: 8, total: 12, timeSpent: 240, avgTime: '30 min', emojiStats: { "🤓": 5, "🤔": 2, "❗": 1 }, lastStudied: new Date(Date.now() - 2 * 24*60*60*1000), daysSinceLastStudy: 2, percentage: 67 },
-      'Physics': { completed: 5, total: 10, timeSpent: 150, avgTime: '30 min', emojiStats: { "🤓": 2, "🤔": 2, "❗": 1 }, lastStudied: new Date(Date.now() - 4 * 24*60*60*1000), daysSinceLastStudy: 4, percentage: 50 },
-      'Chemistry': { completed: 3, total: 8, timeSpent: 75, avgTime: '25 min', emojiStats: { "🤓": 1, "🤔": 1, "❗": 1 }, lastStudied: new Date(Date.now() - 10 * 24*60*60*1000), daysSinceLastStudy: 10, percentage: 38 },
-    };
-    return {
-      subjectsData: demoSubjects,
-      subjectTimeData: { 'Mathematics': 240, 'Physics': 150, 'Chemistry': 75 },
-      inactiveSubjects: [{ name: 'Chemistry', days: 10 }],
-      completedThisWeek: 5,
-      totalCompletedNotes: 16,
-      currentStreak: currentStreakData.currentStreak,
-      xp: currentStreakData.xp,
-      xpForNextLevel: currentGetXpForNextLevel(),
-      subjectProgress: demoSubjects,
-    };
-  };
-
-  if (loading || !progressData) {
+  if (profileLoading || notesLoading || !profile) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
-        {/* Add a proper loading spinner component here if available */}
         <FaSpinner className="animate-spin text-4xl text-primary" />
       </div>
     );
   }
 
-  const { 
-    subjectsData,
-    subjectTimeData,
-    inactiveSubjects, 
-    completedThisWeek, 
-    totalCompletedNotes, 
-    currentStreak,
-    xp,
-    xpForNextLevel,
-  } = progressData;
+  const studiedNotes = profile.studiedNotes ?? [];
+  const studiedIds = new Set(studiedNotes.map(sn => sn.note));
+  const totalStudySeconds = studiedNotes.reduce((sum, sn) => sum + (sn.totalSeconds || 0), 0);
 
-  const overallProgressPercent = totalCompletedNotes > 0 
-    ? Math.round((totalCompletedNotes / (Object.values(subjectsData).reduce((sum, s) => sum + s.total, 0) || 1)) * 100) 
-    : 0;
+  // Join the user's studied records with the note catalogue per subject
+  const bySubject = new Map<string, SubjectProgress>();
+  notes.forEach(note => {
+    const subject = note.subject || 'Uncategorized';
+    const entry = bySubject.get(subject) ?? { subject, studied: 0, total: 0, percentage: 0, minutes: 0 };
+    entry.total += 1;
+    if (studiedIds.has(note._id)) {
+      entry.studied += 1;
+      const record = studiedNotes.find(sn => sn.note === note._id);
+      entry.minutes += Math.round((record?.totalSeconds || 0) / 60);
+    }
+    bySubject.set(subject, entry);
+  });
+  const subjectProgress = [...bySubject.values()]
+    .map(entry => ({ ...entry, percentage: entry.total > 0 ? Math.round((entry.studied / entry.total) * 100) : 0 }))
+    .sort((a, b) => b.percentage - a.percentage);
+
+  const subjectTimeData = Object.fromEntries(
+    subjectProgress.filter(s => s.minutes > 0).map(s => [s.subject, s.minutes])
+  );
+
+  const xp = profile.xp ?? 0;
+  const xpForNextLevel = getXpForNextLevel();
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
-      className="container mx-auto px-4 py-8 space-y-8"
+      className="space-y-8"
     >
-      <header className="mb-8">
+      <header>
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Your Progress</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">
+          Level {profile.level ?? 1} &middot; {xp} XP{xpForNextLevel > 0 && ` · ${xpForNextLevel} XP to next level`}
+        </p>
       </header>
 
-      {/* Overall Stats Section */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatsCard title="Current Streak" value={`${currentStreak} days`} icon={<FaFire size={24} className="text-orange-500" />} color="text-orange-500" />
-        <StatsCard title="Total XP" value={`${xp || 0} XP`
+      {/* Overall stats */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <StatsCard title="Current Streak" value={`${profile.streak?.current ?? 0} days`} icon={<FaFire size={22} className="text-orange-500" />} color="text-orange-500" />
+        <StatsCard title="Total XP" value={xp} icon={<FaStar size={22} className="text-amber-500" />} color="text-amber-500" />
+        <StatsCard title="Notes Studied" value={studiedNotes.length} icon={<FaBook size={22} className="text-violet-500" />} color="text-violet-500" />
+        <StatsCard title="Study Time" value={formatMinutes(totalStudySeconds)} icon={<FaClock size={22} className="text-sky-500" />} color="text-sky-500" />
+      </section>
+
+      {/* Per-subject progress */}
+      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Progress by Subject</h2>
+        {subjectProgress.length === 0 ? (
+          <div className="text-center py-10">
+            <FaBookOpen className="text-4xl text-gray-300 dark:text-slate-600 mx-auto mb-3" />
+            <p className="text-gray-500 dark:text-gray-400 mb-4">No notes yet — once notes exist and you study them, your per-subject progress shows up here.</p>
+            <Link to="/notes" className="btn btn-primary inline-block">Browse Notes</Link>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {subjectProgress.map(({ subject, studied, total, percentage, minutes }) => {
+              const theme = getSubjectColor(subject);
+              return (
+                <div key={subject}>
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className={`font-medium ${theme.text} ${theme.darkText}`}>{subject}</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      {studied}/{total} studied{minutes > 0 && ` · ${minutes} min`}
+                    </span>
+                  </div>
+                  <div className="h-2.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${theme.bg} transition-all duration-500`}
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Where the study time goes */}
+      {Object.keys(subjectTimeData).length > 0 && (
+        <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Focus Distribution</h2>
+          <FocusBar subjectTimeData={subjectTimeData} />
+        </section>
+      )}
+    </motion.div>
+  );
+};
+
+export default Progress;

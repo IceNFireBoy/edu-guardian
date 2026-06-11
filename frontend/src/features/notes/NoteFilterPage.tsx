@@ -8,6 +8,7 @@ import NoteCard from './NoteCard';
 import NoteDetailModal from './components/NoteDetailModal';
 import { subjectColors } from './NoteCard'; // For subjects list, can be moved to a shared config
 import { toast } from 'react-hot-toast';
+import { useUser } from '../user/useUser';
 
 // Extract subject names for the filter form
 const subjectsArray = Object.keys(subjectColors).filter(key => key !== 'default');
@@ -42,6 +43,9 @@ const EmptyState: React.FC<{ hasFilters: boolean; onClearFilters: () => void }> 
 
 const NoteFilterPage: React.FC = () => {
   const { fetchNotes, loading, error } = useNote();
+  const { profile } = useUser();
+  // Notes this user has finished a study session on (drives the card chip)
+  const studiedNoteIds = new Set((profile?.studiedNotes ?? []).map(sn => sn.note));
   const [notes, setNotes] = useState<Note[]>([]);
   const [filters, setFilters] = useState<NoteFilterType>({
     subject: '',
@@ -155,12 +159,12 @@ const NoteFilterPage: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.2 }}
+                className="h-full"
               >
-                <NoteCard 
-                  note={note} 
-                  onView={() => handleViewNote(note)} 
-                  // Pass onRatingChange if NoteCard needs to inform parent of rating hook usage
-                  // For now, NoteDetailModal handles rating via its own hook instance
+                <NoteCard
+                  note={note}
+                  studied={studiedNoteIds.has(note._id)}
+                  onView={() => handleViewNote(note)}
                 />
               </motion.div>
             ))}

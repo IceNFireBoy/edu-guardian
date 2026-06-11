@@ -161,9 +161,10 @@ export class AuthService {
       profileImage: user.profileImage,
       biography: user.biography,
       preferences: user.preferences,
-      badges: user.badges, 
+      badges: user.badges,
       activity: user.activity ? user.activity.slice(0, 10) : [], // Ensure activity is not null
       subjects: user.subjects,
+      studiedNotes: user.studiedNotes ?? [],
       createdAt: user.createdAt,
       emailVerified: user.emailVerified
       // Ensure any other fields returned are consistent with frontend UserProfile type

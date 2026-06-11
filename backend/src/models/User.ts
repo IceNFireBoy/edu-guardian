@@ -25,6 +25,16 @@ export interface IUserSubject extends Document { // Sub-document or object type
   topics: string[];
 }
 
+// Per-note study record: which notes this user has studied, when, and for
+// how long in total. Powers the "Studied" marker on note cards and the
+// dashboard's studied count / continue-studying widgets.
+export interface IUserStudiedNote {
+  note: mongoose.Types.ObjectId;
+  lastStudiedAt: Date;
+  totalSeconds: number;
+  timesStudied: number;
+}
+
 // Main User Interface
 export interface IUser extends Document {
   name: string;
@@ -55,6 +65,7 @@ export interface IUser extends Document {
   emailVerificationTokenExpire?: Date; // Added field based on service logic
   emailVerified: boolean;
   favoriteNotes: mongoose.Types.ObjectId[];
+  studiedNotes: IUserStudiedNote[];
   createdAt: Date;
   updatedAt: Date;
 
@@ -169,6 +180,12 @@ const UserSchema = new Schema<IUser>(
     emailVerificationTokenExpire: Date, // Added field based on service logic
     emailVerified: { type: Boolean, default: false },
     favoriteNotes: [{ type: Schema.Types.ObjectId, ref: 'Note' }],
+    studiedNotes: [{
+      note: { type: Schema.Types.ObjectId, ref: 'Note', required: true },
+      lastStudiedAt: { type: Date, default: Date.now },
+      totalSeconds: { type: Number, default: 0 },
+      timesStudied: { type: Number, default: 0 }
+    }],
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
   },

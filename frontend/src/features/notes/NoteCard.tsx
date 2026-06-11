@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FaFilePdf, FaFileAlt, FaExclamationCircle, FaEye, FaDownload, FaStar, FaFileWord, FaFilePowerpoint, FaFileExcel } from 'react-icons/fa';
+import { FaFilePdf, FaFileAlt, FaExclamationCircle, FaEye, FaDownload, FaStar, FaFileWord, FaFilePowerpoint, FaFileExcel, FaCheckCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import type { Note } from 'types/note';
 import { useStreak } from '../../hooks/useStreak';
@@ -97,6 +97,8 @@ interface NoteCardProps {
   onDelete?: (note: Note) => void;
   compact?: boolean;
   className?: string;
+  /** Whether the current user has completed a study session on this note */
+  studied?: boolean;
 }
 
 const getIcon = (fileType?: string) => {
@@ -125,7 +127,8 @@ const NoteCard: React.FC<NoteCardProps> = ({
   onEdit,
   onDelete,
   compact = false,
-  className = ''
+  className = '',
+  studied = false
 }) => {
   // Handle invalid note prop
   if (!note || typeof note !== 'object') {
@@ -186,11 +189,11 @@ const NoteCard: React.FC<NoteCardProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className={`group bg-white dark:bg-slate-800 rounded-xl shadow-sm hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200 dark:border-slate-700 flex flex-col ${compact ? 'h-full' : ''} ${className}`}
+      className={`group bg-white dark:bg-slate-800 rounded-xl shadow-sm hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200 dark:border-slate-700 flex flex-col h-full ${className}`}
     >
       {/* Header: subject-tinted banner with a single pill and one file icon */}
       <div
-        className={`${compact ? 'h-28' : 'h-36'} relative cursor-pointer flex items-center justify-center ${colorTheme.light} ${colorTheme.dark}`}
+        className={`${compact ? 'h-28' : 'h-36'} shrink-0 relative cursor-pointer flex items-center justify-center ${colorTheme.light} ${colorTheme.dark}`}
         onClick={handleView}
       >
         {isImage && note.fileUrl ? (
@@ -206,23 +209,27 @@ const NoteCard: React.FC<NoteCardProps> = ({
         <span className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-medium shadow-sm bg-white/95 dark:bg-slate-900/80 ${colorTheme.text} ${colorTheme.darkText}`}>
           {note.subject}
         </span>
+        {studied && (
+          <span className="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium shadow-sm bg-green-100/95 text-green-700 dark:bg-green-900/80 dark:text-green-300">
+            <FaCheckCircle aria-hidden="true" /> Studied
+          </span>
+        )}
       </div>
 
-      {/* Body: title once, one quiet meta line, description only if present */}
+      {/* Body: fixed-height blocks so every card in a row is the same size
+          regardless of title/description length */}
       <div className="p-4 flex-grow">
-        <h3 className="font-semibold text-lg text-gray-900 dark:text-white line-clamp-2">
+        <h3 className="font-semibold text-lg leading-snug text-gray-900 dark:text-white line-clamp-2 min-h-[3.25rem]">
           {getTitle()}
         </h3>
-        <div className="mt-1 flex items-center flex-wrap gap-x-1.5 text-xs text-gray-500 dark:text-gray-400">
+        <div className="mt-1 flex items-center flex-wrap gap-x-1.5 text-xs text-gray-500 dark:text-gray-400 min-h-[1rem]">
           {formattedDate && <span>{formattedDate}</span>}
           {formattedDate && note.isPublic && <span aria-hidden="true">&middot;</span>}
           {note.isPublic && <span className="text-green-600 dark:text-green-400 font-medium">Public</span>}
         </div>
-        {description && (
-          <p className="mt-2 text-gray-600 dark:text-gray-300 text-sm line-clamp-2">
-            {description}
-          </p>
-        )}
+        <p className="mt-2 text-gray-600 dark:text-gray-300 text-sm line-clamp-2 min-h-[2.5rem]">
+          {description}
+        </p>
       </div>
 
       {/* Footer: stats and rating on the left, action on the right */}
