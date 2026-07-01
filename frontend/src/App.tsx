@@ -30,6 +30,7 @@ import CookieConsent from './components/ui/CookieConsent';
 import OfflineDetector from './components/ui/OfflineDetector';
 import DebugPanel, { debug } from './components/DebugPanel';
 import NetworkStatusMonitor from './components/ui/NetworkStatusMonitor';
+import StudyTipsBot from './features/ai/StudyTipsBot';
 import { DarkModeContext } from './context/DarkModeContext';
 
 // Make debug function available globally (for console usage)
@@ -248,6 +249,7 @@ function App() {
             </Routes>
           </div>
           <CookieConsent />
+          <StudyTipsBot />
           <DebugPanel />
         </div>
       </AuthProvider>
