@@ -2,14 +2,16 @@ import express from 'express';
 import { protect, authorize } from '../middleware/auth';
 import BadgeController from '../controllers/BadgeController';
 import { body, param } from 'express-validator';
+import { cacheRoute } from '../middleware/cache';
 
 const router = express.Router();
 
-// Public routes
-router.get('/', BadgeController.getBadges);
-router.get('/:id', BadgeController.getBadgeById);
-router.get('/category/:category', BadgeController.getBadgesByCategory);
-router.get('/rarity/:rarity', BadgeController.getBadgesByRarity);
+// Public routes. The badge catalog changes rarely but is read on nearly every
+// page load, so cache it for 5 minutes (writes below invalidate it immediately).
+router.get('/', cacheRoute(300), BadgeController.getBadges);
+router.get('/category/:category', cacheRoute(300), BadgeController.getBadgesByCategory);
+router.get('/rarity/:rarity', cacheRoute(300), BadgeController.getBadgesByRarity);
+router.get('/:id', cacheRoute(300), BadgeController.getBadgeById);
 
 // Protected routes
 router.use(protect);

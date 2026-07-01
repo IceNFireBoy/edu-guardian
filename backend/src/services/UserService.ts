@@ -31,6 +31,19 @@ interface LeaderboardQueryOptions {
     timeframe?: 'daily' | 'weekly' | 'monthly' | 'allTime'; // Optional future enhancement
 }
 
+// Public, non-sensitive shape returned by the leaderboard endpoint.
+export interface LeaderboardEntry {
+    rank: number;
+    _id: string;
+    username: string;
+    name: string;
+    profileImage: string;
+    level: number;
+    xp: number;
+    currentStreak: number;
+    badgeCount: number;
+}
+
 interface PaginatedActivityResult {
     activities: IUserActivity[];
     count: number;
@@ -116,18 +129,31 @@ export default class UserService {
         return user.badges;
     }
 
-    public static async getLeaderboard(options: LeaderboardQueryOptions): Promise<IUser[]> {
-        const { timeframe, category, limit = 10 } = options as any;
-        const sortOptions: Record<string, SortOrder> = { xp: -1 };
+    public static async getLeaderboard(options: LeaderboardQueryOptions): Promise<LeaderboardEntry[]> {
+        // Clamp the limit so a caller can't request the entire user table.
+        const rawLimit = Number((options as any).limit ?? 10);
+        const limit = Math.min(Math.max(Number.isFinite(rawLimit) ? rawLimit : 10, 1), 100);
 
-        let query: any = {};
-        if (category) {
-            query = { 'badges.badge.category': category };
-        }
+        // IMPORTANT: this endpoint is PUBLIC. Project only non-sensitive fields —
+        // never return email, activity, preferences or password. (The previous
+        // implementation returned whole user documents, leaking student emails.)
+        const users = await User.find({})
+            .select('username name profileImage level xp streak badges')
+            .sort({ xp: -1, 'streak.current': -1 })
+            .limit(limit)
+            .lean();
 
-        return await User.find(query)
-            .sort(sortOptions)
-            .limit(limit);
+        return users.map((user, index) => ({
+            rank: index + 1,
+            _id: String(user._id),
+            username: user.username,
+            name: user.name,
+            profileImage: user.profileImage,
+            level: user.level,
+            xp: user.xp,
+            currentStreak: user.streak?.current ?? 0,
+            badgeCount: Array.isArray(user.badges) ? user.badges.length : 0,
+        }));
     }
 
     private static async findUserForUpdate(userId: string): Promise<IUser> {
