@@ -21,9 +21,11 @@ export const blacklistToken = async (token: string): Promise<void> => {
     : // Fall back to the default cookie lifetime if the token carries no exp claim
       new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
+  // tokenHash is set from the filter on insert; keep it out of $setOnInsert to
+  // avoid a MongoDB path-conflict error on the same field.
   await TokenBlacklist.updateOne(
     { tokenHash: hashToken(token) },
-    { $setOnInsert: { tokenHash: hashToken(token), expiresAt } },
+    { $setOnInsert: { expiresAt } },
     { upsert: true }
   );
 };
