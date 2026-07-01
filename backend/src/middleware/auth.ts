@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import asyncHandler from './async'; // Now async.ts
 import ErrorResponse from '../utils/errorResponse'; // Now errorResponse.ts
 import User, { IUser } from '../models/User'; // Now User.ts
+import { isTokenBlacklisted } from '../utils/tokenBlacklist';
 
 // Extend Express Request type to include the user property
 export interface CustomRequest extends Request {
@@ -50,7 +51,12 @@ export const protect = asyncHandler(async (req: CustomRequest, _res: Response, n
   try {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET) as DecodedToken;
-    
+
+    // Reject tokens that were invalidated via logout (see utils/tokenBlacklist)
+    if (await isTokenBlacklisted(token)) {
+      return next(new ErrorResponse('Session ended. Please log in again.', 401));
+    }
+
     // Find user by ID from token
     const user = await User.findById(decoded.id).select('-password'); // Exclude password explicitly
     if (!user) {

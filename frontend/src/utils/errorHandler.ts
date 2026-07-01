@@ -5,6 +5,7 @@ export enum ErrorType {
   NETWORK = 'network',
   AUTHENTICATION = 'authentication',
   VALIDATION = 'validation',
+  QUOTA = 'quota',
   SERVER = 'server',
   UNKNOWN = 'unknown'
 }
@@ -57,6 +58,11 @@ export const handleApiError = (
     else if (status === 400 || status === 422) {
       message = serverMessage || 'Please check your input and try again.';
       type = ErrorType.VALIDATION;
+    }
+    // Rate limit / usage quota (e.g. daily AI limit, auth throttling)
+    else if (status === 429) {
+      message = serverMessage || "You've reached the usage limit for now. Please wait a little and try again.";
+      type = ErrorType.QUOTA;
     }
     // Server errors
     else if (status >= 500) {

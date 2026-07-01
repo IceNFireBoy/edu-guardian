@@ -279,6 +279,33 @@ describe('Auth Routes', () => {
     });
   });
 
+  describe('POST /api/v1/auth/logout (token blacklist)', () => {
+    it('invalidates the presented token so it can no longer reach protected routes', async () => {
+      const reg = await request(app).post('/api/v1/auth/register').send(credentials);
+      const token = reg.body.token as string;
+
+      // Sanity: the token works before logout
+      const before = await request(app)
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+      expect(before.status).toBe(200);
+
+      // Log out, sending the same token so it gets blacklisted
+      const out = await request(app)
+        .post('/api/v1/auth/logout')
+        .set('Authorization', `Bearer ${token}`);
+      expect(out.status).toBe(200);
+      expect(out.body.success).toBe(true);
+
+      // The very same (still-unexpired) token is now rejected
+      const after = await request(app)
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+      expect(after.status).toBe(401);
+      expect(after.body.success).toBe(false);
+    });
+  });
+
   describe('GET /api/v1/test', () => {
     it('responds to the health check used by the frontend', async () => {
       const res = await request(app).get('/api/v1/test');

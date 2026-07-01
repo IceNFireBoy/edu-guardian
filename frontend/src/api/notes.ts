@@ -1,6 +1,14 @@
-// API client for notes
+// API client for notes.
+//
+// Thin wrapper over the shared axios instance (apiClient) so there is a SINGLE
+// place that owns auth-token injection, 401/session handling and base-URL
+// config. Previously this was a separate hand-rolled fetch wrapper, which meant
+// two divergent request/error pipelines to keep in sync. It is kept as a named
+// helper because it returns the raw `ApiResponse` body and supports FormData
+// uploads + PATCH used throughout the notes feature.
+import type { AxiosRequestConfig } from 'axios';
 import { debug } from '../components/DebugPanel';
-import { API_BASE_URL } from './apiClient';
+import apiClient from './apiClient';
 
 // Define common API response structure
 export interface ApiResponse<T = any> {
@@ -17,112 +25,76 @@ export interface ApiResponse<T = any> {
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
-// Generic authenticated API call function (fetch-based; supports FormData and
-// PATCH, unlike the axios client). Endpoints are relative to the /api/v1 base,
+// Generic authenticated API call. Endpoints are relative to the /api/v1 base,
 // e.g. '/notes' or '/users/me/badges'.
 export async function callAuthenticatedApi<T = any>(
   endpoint: string,
   method: HttpMethod = 'GET',
   body: Record<string, any> | FormData | null = null
 ): Promise<ApiResponse<T>> {
-  let url = `${API_BASE_URL}${endpoint}`;
-  const token = localStorage.getItem('token');
+  const config: AxiosRequestConfig = { url: endpoint, method };
 
-  const headers: Record<string, string> = {};
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const config: RequestInit = {
-    method,
-    headers,
-  };
-
-  // For GET requests, convert body/filters to query params
+  // For GET requests, convert body/filters to query params. We build the query
+  // string manually (rather than relying on axios' serializer) to preserve the
+  // exact semantics the backend expects: skip empty values and repeat array
+  // values as `key=a&key=b`.
   if (method === 'GET' && body && typeof body === 'object' && !(body instanceof FormData)) {
     const params = new URLSearchParams();
     Object.entries(body).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
         if (Array.isArray(value)) {
-          value.forEach(v => params.append(key, v));
+          value.forEach(v => params.append(key, String(v)));
         } else {
-          params.append(key, value as string);
+          params.append(key, String(value));
         }
       }
     });
-    if (params.toString()) {
-      url += (url.includes('?') ? '&' : '?') + params.toString();
+    const qs = params.toString();
+    if (qs) {
+      config.url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}${qs}`;
     }
-    // Do not set config.body for GET
+  } else if (body instanceof FormData) {
+    config.data = body;
+    // Remove the default JSON content-type so the browser sets
+    // multipart/form-data with the correct boundary.
+    config.headers = { 'Content-Type': undefined } as any;
   } else if (body) {
-    if (body instanceof FormData) {
-      config.body = body;
-    } else {
-      headers['Content-Type'] = 'application/json';
-      config.body = JSON.stringify(body);
-    }
+    config.data = body;
   }
 
   try {
-    debug(`[Frontend] Calling authenticated API: ${method} ${url}`);
-    if (body && !(body instanceof FormData) && method !== 'GET') { // Avoid logging large FormData
-      debug("[Frontend] Request body:", body);
-    } else if (body instanceof FormData) {
-      debug("[Frontend] Request body is FormData (content not logged).");
+    debug(`[Frontend] Calling authenticated API: ${method} ${config.url}`);
+    if (body instanceof FormData) {
+      debug('[Frontend] Request body is FormData (content not logged).');
+    } else if (body && method !== 'GET') {
+      debug('[Frontend] Request body:', body);
     }
 
-    const res = await fetch(url, config);
-    const contentType = res.headers.get("content-type");
+    const res = await apiClient.request<ApiResponse<T> | string>(config);
+    const data = res.data;
 
-    let data: ApiResponse<T>;
-
-    if (contentType && contentType.includes("application/json")) {
-      data = await res.json();
-    } else {
-      const textResponse = await res.text();
-      debug(`[Frontend] Received non-JSON response from ${method} ${url}:`, textResponse);
-      if (!res.ok) {
-        throw new Error(textResponse || `API request failed with status ${res.status}`);
-      }
-      // For successful non-JSON, adapt to ApiResponse structure
-      // This case might need specific handling depending on expected non-JSON responses.
-      // For now, assuming it's a simple text success.
-      return { success: true, data: textResponse as any, _raw: true };
+    // Non-JSON success (e.g. a plain-text body)
+    if (typeof data !== 'object' || data === null) {
+      return { success: true, data: data as any, _raw: true };
     }
 
-    debug(`[Frontend] Raw API response from ${method} ${url}:`, data);
-
-    if (!res.ok) {
-      const errorMessage = data?.error || data?.message || `API request failed with status ${res.status}`;
-      debug(`[Frontend] API error from ${method} ${url}:`, errorMessage);
-      throw new Error(errorMessage);
+    // Ensure the response conforms to ApiResponse even if the backend didn't
+    // explicitly send `success` (a 2xx implies success).
+    if ((data as ApiResponse<T>).success === undefined) {
+      return { ...(data as ApiResponse<T>), success: true };
     }
 
-    // Ensure the response conforms to ApiResponse, even if backend doesn't explicitly send 'success'
-    // If 'success' is not in data, but res.ok is true, we assume success.
-    if (data.success === undefined && res.ok) {
-        return { ...data, success: true } as ApiResponse<T>;
-    }
-    
-    return data;
-
+    return data as ApiResponse<T>;
   } catch (err: any) {
-    debug(`[Frontend] Error in callAuthenticatedApi to ${method} ${url}:`, err.message);
-    if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
-      debug("[Frontend] Network error - check if the backend is running and accessible");
-      debug("[Frontend] API URL being called:", url);
-    }
-    // Ensure the thrown error is an instance of Error
-    if (err instanceof Error) {
-        throw err;
-    } else {
-        throw new Error(String(err));
-    }
+    // Surface the backend's real message where available.
+    const serverMessage = err.response?.data?.error || err.response?.data?.message;
+    const message = serverMessage || err.message || `API request failed`;
+    debug(`[Frontend] Error in callAuthenticatedApi to ${method} ${config.url}:`, message);
+    throw new Error(message);
   }
-} 
+}
 
 // Fetch all notes (for NoteViewer and other consumers)
 export async function fetchNotes() {
   return callAuthenticatedApi('/notes', 'GET');
-} 
+}

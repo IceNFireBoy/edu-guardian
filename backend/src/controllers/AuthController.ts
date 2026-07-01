@@ -77,9 +77,17 @@ class AuthController {
 // @desc    Log user out / clear cookie
 // @route   GET /api/v1/auth/logout
   // @access  Private (though can be public depending on how client handles token)
-  public logout = asyncHandler(async (_req: Request, res: Response, next: NextFunction) => {
+  public logout = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.authService.logoutUser(res); // Service handles setting the cookie
+      // Pull the presented token (header or cookie) so the service can blacklist it
+      let token: string | undefined;
+      if (req.headers.authorization?.startsWith('Bearer')) {
+        token = req.headers.authorization.split(' ')[1];
+      } else if (req.cookies?.token && req.cookies.token !== 'none') {
+        token = req.cookies.token;
+      }
+
+      await this.authService.logoutUser(res, token); // Service clears cookie + blacklists token
       res.status(200).json({ success: true, data: 'Successfully logged out' });
     } catch (error) {
       next(error);
