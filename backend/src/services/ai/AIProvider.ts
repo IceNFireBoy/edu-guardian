@@ -28,4 +28,10 @@ export interface AICompletionRequest {
 export interface AIProvider {
   readonly name: string;
   complete(request: AICompletionRequest): Promise<string>;
+  /**
+   * Optional vision capability — extract text from / describe an image.
+   * Only implemented by providers that support it (e.g. Gemini). Callers must
+   * feature-detect (`if (provider.describeImage)`) and fall back to OCR.
+   */
+  describeImage?(imageUrl: string, prompt: string): Promise<string>;
 }

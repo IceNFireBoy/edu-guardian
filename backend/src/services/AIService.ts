@@ -143,6 +143,18 @@ export class AIService {
     return out.trim();
   }
 
+  /**
+   * Analyze an image via a vision-capable provider (OCR + diagram description).
+   * Returns null when no vision provider is configured, so the caller can fall
+   * back to plain OCR (extractTextFromFile).
+   */
+  static async analyzeImage(imageUrl: string): Promise<string | null> {
+    const provider = this.provider();
+    if (!provider.describeImage) return null;
+    const out = await provider.describeImage(imageUrl, PROMPTS.image.user);
+    return out.trim();
+  }
+
   static async explain(passage: string, level = "like I'm 5"): Promise<string> {
     const source = this.clip(passage);
     const out = await this.provider().complete({

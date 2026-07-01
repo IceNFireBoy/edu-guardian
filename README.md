@@ -186,15 +186,22 @@ For support, email support@eduguardian.com or open an issue in the repository.
 These are all optional — the app runs fully without them:
 
 ```
-# AI features (mock is used when unset)
-ANTHROPIC_API_KEY=...        # or:
+# AI features. Providers form a cascade (first available -> ... -> deterministic
+# mock), so any one being unset/rate-limited degrades gracefully. Gemini is also
+# used for image analysis (OCR + diagram description) when present.
+GEMINI_API_KEY=...           # Google AI Studio (free tier) — also enables vision
+ANTHROPIC_API_KEY=...
 OPENAI_API_KEY=...
-AI_MODEL=...                 # override the default model id
+GEMINI_MODEL=gemini-1.5-flash        # optional per-provider model overrides
+ANTHROPIC_MODEL=claude-3-5-haiku-latest
+OPENAI_MODEL=gpt-4o-mini
+AI_MAX_CONCURRENCY=3         # cap simultaneous AI calls (protects free-tier RPM)
+AI_RESULT_TTL=3600           # seconds to cache generated flashcards/quizzes
 
 # Performance
 REDIS_URL=redis://...        # switches the cache from in-memory to Redis
 
-# Image OCR (analyze-image endpoint)
+# Image OCR fallback (used when no vision provider is configured)
 OCR_SPACE_API_KEY=...
 ```
 

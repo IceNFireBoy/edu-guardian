@@ -7,7 +7,8 @@ import AIService from '../services/AIService';
 import SrsService from '../services/SrsService';
 import { extractTextFromFile } from '../utils/extractTextFromFile';
 import { consumeAiQuota } from '../utils/aiUsage';
-import { AI_MAX_SOURCE_CHARS } from '../config/aiConfig';
+import { AI_MAX_SOURCE_CHARS, AI_RESULT_TTL } from '../config/aiConfig';
+import cache from '../utils/cache';
 
 /**
  * Endpoints for AI-powered study features. All are authenticated and enforce a
@@ -37,10 +38,17 @@ export default class AIController {
     );
   }
 
-  // @route POST /api/v1/ai/notes/:id/summary
+  // @route POST /api/v1/ai/notes/:id/summary   body: { regenerate? }
   static summarizeNote = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const note = await Note.findById(req.params.id);
     if (!note) return next(new ErrorResponse('Note not found', 404));
+
+    // Serve the stored summary for free unless the caller forces a regenerate —
+    // most repeat views cost zero provider calls (key protection under load).
+    if (note.aiSummary && !req.body?.regenerate) {
+      res.status(200).json({ success: true, data: { summary: note.aiSummary, cached: true } });
+      return;
+    }
 
     await consumeAiQuota(req.user!, 'summary');
     const source = await AIController.noteSourceText(note);
@@ -52,15 +60,27 @@ export default class AIController {
     res.status(200).json({ success: true, data: { summary } });
   });
 
-  // @route POST /api/v1/ai/notes/:id/flashcards   body: { count?, save? }
+  // @route POST /api/v1/ai/notes/:id/flashcards   body: { count?, save?, regenerate? }
   static generateFlashcards = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const note = await Note.findById(req.params.id);
     if (!note) return next(new ErrorResponse('Note not found', 404));
 
+    const count = Number(req.body?.count) || 8;
+    const cacheKey = `ai:flashcards:${note._id}:${count}:${note.updatedAt?.getTime?.() ?? ''}`;
+
+    // Cache hit -> serve for free (no quota, no provider call).
+    if (!req.body?.regenerate) {
+      const cached = await cache.get<any[]>(cacheKey);
+      if (cached) {
+        res.status(200).json({ success: true, count: cached.length, data: { flashcards: cached }, cached: true });
+        return;
+      }
+    }
+
     await consumeAiQuota(req.user!, 'flashcard');
     const source = await AIController.noteSourceText(note);
-    const count = Number(req.body?.count) || 8;
     const flashcards = await AIService.generateFlashcards(source, count);
+    await cache.set(cacheKey, flashcards, AI_RESULT_TTL);
 
     if (req.body?.save) {
       note.flashcards.push(...(flashcards as any));
@@ -70,15 +90,26 @@ export default class AIController {
     res.status(200).json({ success: true, count: flashcards.length, data: { flashcards } });
   });
 
-  // @route POST /api/v1/ai/notes/:id/quiz   body: { count? }
+  // @route POST /api/v1/ai/notes/:id/quiz   body: { count?, regenerate? }
   static generateQuiz = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const note = await Note.findById(req.params.id);
     if (!note) return next(new ErrorResponse('Note not found', 404));
 
+    const count = Number(req.body?.count) || 5;
+    const cacheKey = `ai:quiz:${note._id}:${count}:${note.updatedAt?.getTime?.() ?? ''}`;
+
+    if (!req.body?.regenerate) {
+      const cached = await cache.get<any[]>(cacheKey);
+      if (cached) {
+        res.status(200).json({ success: true, count: cached.length, data: { questions: cached }, cached: true });
+        return;
+      }
+    }
+
     await consumeAiQuota(req.user!, 'quiz');
     const source = await AIController.noteSourceText(note);
-    const count = Number(req.body?.count) || 5;
     const questions = await AIService.generateQuiz(source, count);
+    await cache.set(cacheKey, questions, AI_RESULT_TTL);
 
     res.status(200).json({ success: true, count: questions.length, data: { questions } });
   });
@@ -112,11 +143,18 @@ export default class AIController {
 
     await consumeAiQuota(req.user!, 'flashcard');
 
+    // Prefer a vision-capable provider (Gemini) — it OCRs *and* describes the
+    // diagram/labels. Fall back to plain OCR (extractTextFromFile) otherwise.
     let text = '';
-    try {
-      text = await extractTextFromFile(imageUrl);
-    } catch (err) {
-      return next(new ErrorResponse('Could not analyze that image', 502));
+    const described = await AIService.analyzeImage(imageUrl).catch(() => null);
+    if (described) {
+      text = described;
+    } else {
+      try {
+        text = await extractTextFromFile(imageUrl);
+      } catch (err) {
+        return next(new ErrorResponse('Image analysis is unavailable (configure GEMINI_API_KEY or OCR_SPACE_API_KEY)', 502));
+      }
     }
 
     const payload: { text: string; flashcards?: unknown } = { text };

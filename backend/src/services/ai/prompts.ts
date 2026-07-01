@@ -47,4 +47,11 @@ export const PROMPTS = {
     user: (passage: string, level: string) =>
       `Explain the following at a "${level}" level:\n\n${passage}`,
   },
+
+  image: {
+    // Used with a vision-capable provider on an uploaded diagram/photo.
+    user:
+      'Extract all readable text from this image. If it is a diagram, briefly ' +
+      'describe what it shows and list its labels. Keep it concise and factual.',
+  },
 } as const;
