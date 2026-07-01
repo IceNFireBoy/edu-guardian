@@ -25,9 +25,22 @@ EduGuardian is a comprehensive educational platform that provides a modern and i
   - Discussion forums
   - File sharing capabilities
 
+- **AI Study Tools** (provider-agnostic; runs on a deterministic mock with no
+  key, upgrades to Anthropic Claude or OpenAI when an API key is set)
+  - AI note summaries and flashcard generation
+  - Adaptive multiple-choice quizzes
+  - Spaced-repetition review deck (SM-2) — missed questions resurface over time
+  - Study-coach chatbot and "explain this simply" helper
+  - Per-user daily usage quotas (HTTP 429 → friendly in-app messaging)
+
+- **Gamification & Social**
+  - XP, levels, streaks, and badges (with rarity/date sorting)
+  - Global leaderboard
+  - Real-time study rooms: live chat + a shared Pomodoro timer (Socket.IO)
+
 - **Modern UI/UX**
   - Responsive design
-  - Dark/Light mode support
+  - Dark/Light mode support with animated page transitions
   - Intuitive navigation
   - Real-time updates
 
@@ -39,7 +52,9 @@ EduGuardian is a comprehensive educational platform that provides a modern and i
 - Tailwind CSS
 - React Router
 - Axios for API calls
-- React Query for state management
+- Framer Motion for animations
+- Context API + hooks for state management
+- Socket.IO client for real-time study rooms
 
 ### Backend
 - Node.js
@@ -154,9 +169,34 @@ For support, email support@eduguardian.com or open an issue in the repository.
 
 - Helmet for security headers
 - XSS protection
-- Rate limiting
-- MongoDB sanitization
+- Global + stricter **auth-route rate limiting** (brute-force / credential-stuffing protection)
+- **JWT blacklisting on logout** (TTL-indexed) so logged-out tokens can't be replayed
+- MongoDB sanitization & HTTP parameter pollution protection
 - Input validation
+- Public endpoints project only non-sensitive fields (no email leakage)
+- Per-user AI usage quotas
+
+## ⚡ Performance
+
+- Graceful caching layer for hot reads (badges, leaderboard): in-process by
+  default, transparently upgrades to **Redis** when `REDIS_URL` is set.
+
+## 🔧 Optional Environment Variables
+
+These are all optional — the app runs fully without them:
+
+```
+# AI features (mock is used when unset)
+ANTHROPIC_API_KEY=...        # or:
+OPENAI_API_KEY=...
+AI_MODEL=...                 # override the default model id
+
+# Performance
+REDIS_URL=redis://...        # switches the cache from in-memory to Redis
+
+# Image OCR (analyze-image endpoint)
+OCR_SPACE_API_KEY=...
+```
 
 ## 🏗️ Project Structure
 

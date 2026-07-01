@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -49,9 +49,21 @@ const StandardLayout: React.FC = () => {
   return (
     <main className="flex-grow min-h-0 overflow-y-auto">
       <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">
-        <ErrorBoundary key={location.pathname}>
-          <Outlet />
-        </ErrorBoundary>
+        {/* Subtle fade/slide between pages. mode="wait" so the outgoing page
+            finishes exiting before the next one enters. */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          >
+            <ErrorBoundary key={location.pathname}>
+              <Outlet />
+            </ErrorBoundary>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </main>
   );
