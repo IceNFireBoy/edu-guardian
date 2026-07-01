@@ -27,7 +27,6 @@ export default defineConfig({
       'src/features/notes/components/__tests__/NoteDetail.test.tsx',
       'src/features/notes/components/__tests__/NoteDetailModal.test.tsx',
       'src/features/notes/components/__tests__/NoteFilter.test.tsx',
-      'src/features/notes/components/__tests__/NoteFlashcards.test.tsx',
       'src/features/notes/components/__tests__/NoteList.test.tsx',
       'src/features/notes/components/__tests__/NoteRating.test.tsx',
       'src/features/notes/components/__tests__/NoteUpload.test.tsx',

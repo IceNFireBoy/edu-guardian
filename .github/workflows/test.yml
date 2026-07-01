@@ -60,6 +60,14 @@ jobs:
       run: npm run build
       working-directory: frontend
 
+    # Report-only for now: the frontend still has a backlog of pre-existing type
+    # errors (esbuild ignores them at build time). This surfaces them without
+    # blocking the pipeline; flip continue-on-error off once the backlog is gone.
+    - name: Frontend typecheck (report-only)
+      run: npm run typecheck
+      working-directory: frontend
+      continue-on-error: true
+
     - name: Run Frontend Tests
       run: npx vitest run
       working-directory: frontend
