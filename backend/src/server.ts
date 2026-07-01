@@ -24,6 +24,8 @@ import userRoutes from './routes/userRoutes';
 import noteRoutes from './routes/noteRoutes';
 import badgeRoutes from './routes/badgeRoutes';
 import adminRoutes from './routes/adminRoutes';
+import aiRoutes from './routes/aiRoutes';
+import srsRoutes from './routes/srsRoutes';
 
 const app = express();
 
@@ -106,6 +108,8 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/notes', noteRoutes);
 app.use('/api/v1/badges', badgeRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/ai', aiRoutes);
+app.use('/api/v1/srs', srsRoutes);
 
 // Error handler
 app.use(errorHandler);
