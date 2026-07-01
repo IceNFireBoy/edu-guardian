@@ -17,6 +17,8 @@ import Donate from './pages/Donate';
 import Progress from './pages/Progress';
 import Settings from './pages/Settings';
 import Badges from './pages/Badges';
+import Leaderboard from './pages/Leaderboard';
+import StudyRooms from './pages/StudyRooms';
 import NoteViewer from './pages/NoteViewer';
 import TestPDFDebug from './debug/TestPDFDebug';
 import NoteFilterPage from './features/notes/NoteFilterPage';
@@ -228,6 +230,8 @@ function App() {
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
                   <Route path="/badges" element={<Badges />} />
+                  <Route path="/leaderboard" element={<Leaderboard />} />
+                  <Route path="/study-rooms" element={<StudyRooms />} />
                   <Route path="/notes" element={<NoteFilterPage />} />
                   <Route path="/notes/upload" element={<NoteUploader />} />
                 </Route>

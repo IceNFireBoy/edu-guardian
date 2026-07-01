@@ -5,7 +5,8 @@ import {
   FaHome, FaBook, FaUpload, FaChartLine, FaCog, FaBars, FaTimes, 
   FaAward, FaInfoCircle, FaLightbulb, FaPlusSquare, FaLayerGroup,
   FaChevronDown, FaChevronUp, FaAngleDoubleLeft, FaAngleDoubleRight,
-  FaUniversity, FaUser, FaSignOutAlt, FaSignInAlt, FaUserPlus
+  FaUniversity, FaUser, FaSignOutAlt, FaSignInAlt, FaUserPlus,
+  FaTrophy, FaUsers
 } from 'react-icons/fa';
 import { useAuthContext } from '../../features/auth/AuthContext';
 
@@ -98,6 +99,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, className, n
     { path: '/my-notes', icon: <FaBook size={20} />, label: 'My Notes', requiresAuth: true },
     { path: '/notes/upload', icon: <FaUpload size={20} />, label: 'Upload Notes', requiresAuth: true },
     { path: '/badges', icon: <FaAward size={20} />, label: 'Badges', requiresAuth: true },
+    { path: '/leaderboard', icon: <FaTrophy size={20} />, label: 'Leaderboard', requiresAuth: true },
+    { path: '/study-rooms', icon: <FaUsers size={20} />, label: 'Study Rooms', requiresAuth: true },
     { path: '/progress', icon: <FaChartLine size={20} />, label: 'Progress', requiresAuth: true },
     { path: '/settings', icon: <FaCog size={20} />, label: 'Settings', requiresAuth: true }
   ];
