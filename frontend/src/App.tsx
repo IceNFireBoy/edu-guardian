@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
@@ -18,9 +18,12 @@ import Progress from './pages/Progress';
 import Settings from './pages/Settings';
 import Badges from './pages/Badges';
 import Leaderboard from './pages/Leaderboard';
-import StudyRooms from './pages/StudyRooms';
-import NoteViewer from './pages/NoteViewer';
-import TestPDFDebug from './debug/TestPDFDebug';
+// Heavy routes are lazy-loaded so the PDF stack (~1 MB of pdfjs +
+// react-pdf-viewer) and the socket.io client stay out of the main bundle
+// until someone actually opens them.
+const StudyRooms = lazy(() => import('./pages/StudyRooms'));
+const NoteViewer = lazy(() => import('./pages/NoteViewer'));
+const TestPDFDebug = lazy(() => import('./debug/TestPDFDebug'));
 import NoteFilterPage from './features/notes/NoteFilterPage';
 import NoteUploader from './features/notes/NoteUploader';
 import ProfilePage from './features/user/ProfilePage';
@@ -227,6 +230,13 @@ function App() {
           <Sidebar />
           <div className="flex flex-col h-screen md:ml-64">
             <Header toggleDarkMode={toggleDarkMode} />
+            <Suspense
+              fallback={
+                <div className="flex-grow flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+                </div>
+              }
+            >
             <Routes>
               <Route element={<StandardLayout />}>
                 <Route path="/login" element={<Login />} />
@@ -264,6 +274,7 @@ function App() {
                 </Route>
               </Route>
             </Routes>
+            </Suspense>
           </div>
           <CookieConsent />
           <StudyTipsBot />

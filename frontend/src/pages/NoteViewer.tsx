@@ -106,21 +106,30 @@ const NoteViewer: FC = () => {
           console.error('Error reading notes from localStorage:', localStorageError);
         }
 
-        // Dynamically import fetchNotes to avoid issues if it has side effects or complex deps
-        const notesApi = await import('../api/notes'); 
-        const response = await notesApi.fetchNotes(); // Assuming fetchNotes is exported
+        // Fetch just this note — previously this pulled the ENTIRE notes
+        // catalogue and searched it client-side, which was slow and expensive
+        // on a cold-starting free-tier backend. Falls back to the list only for
+        // legacy asset_id links, which GET /notes/:id can't resolve.
+        const notesApi = await import('../api/notes');
+        const response = await notesApi.callAuthenticatedApi<Note>(`/notes/${id}`, 'GET').catch(() => null);
 
         if (!isMounted) return;
 
-        if (response && response.success && Array.isArray(response.data)) {
-          foundNote = response.data.find((n: Note) => n && (n._id === id || n.asset_id === id)) || null;
-          if (foundNote) {
-            setNote(foundNote);
-          } else {
-            setError('Note not found');
-          }
+        if (response?.success && response.data) {
+          setNote(response.data as Note);
         } else {
-          setError(response?.error || 'Failed to fetch note data from server');
+          const listResponse = await notesApi.fetchNotes();
+          if (!isMounted) return;
+          if (listResponse?.success && Array.isArray(listResponse.data)) {
+            foundNote = listResponse.data.find((n: Note) => n && (n._id === id || n.asset_id === id)) || null;
+            if (foundNote) {
+              setNote(foundNote);
+            } else {
+              setError('Note not found');
+            }
+          } else {
+            setError(listResponse?.error || 'Failed to fetch note data from server');
+          }
         }
       } catch (err: any) {
         if (isMounted) {
