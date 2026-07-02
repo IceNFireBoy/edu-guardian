@@ -71,7 +71,8 @@ const NoteFilterPage: React.FC = () => {
     const fetchedNotes = await fetchNotes(filters);
     setNotes(fetchedNotes.data);
     if (error) {
-      toast.error(`Failed to fetch notes: ${error}`);
+      // id collapses repeated identical failures into a single toast
+      toast.error(`Failed to fetch notes: ${error}`, { id: `fetch-notes-${error}` });
     }
   }, [fetchNotes, filters, error]);
 

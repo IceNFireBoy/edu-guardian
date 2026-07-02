@@ -21,10 +21,10 @@ describe('handleApiError', () => {
     expect(toast.error).toHaveBeenCalled();
   });
 
-  it('falls back to a friendly quota message when the server sends none', () => {
+  it('falls back to a friendly rate-limit message when the server sends none', () => {
     const result = handleApiError({ response: { status: 429, data: {} } }, { showToast: false });
     expect(result.type).toBe(ErrorType.QUOTA);
-    expect(result.message.toLowerCase()).toContain('usage limit');
+    expect(result.message.toLowerCase()).toContain('too many requests');
   });
 
   it('still maps 401 to AUTHENTICATION', () => {

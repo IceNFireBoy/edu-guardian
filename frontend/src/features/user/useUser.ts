@@ -76,7 +76,8 @@ export const useUser = () => {
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to fetch user profile';
       setError(errorMessage);
-      if (isInitiator) toast.error(errorMessage); // one toast, not one per subscriber
+      // one toast, not one per subscriber; id collapses repeats of the same error
+      if (isInitiator) toast.error(errorMessage, { id: errorMessage });
       return null;
     } finally {
       setLoading(false);
@@ -116,7 +117,7 @@ export const useUser = () => {
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to fetch user badges';
       setError(errorMessage);
-      toast.error(errorMessage);
+      toast.error(errorMessage, { id: errorMessage }); // dedupe identical failures
       return null;
     } finally {
       setLoading(false);
