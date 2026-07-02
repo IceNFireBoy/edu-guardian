@@ -12,19 +12,23 @@ const rarityToLevel: Record<string, UserBadge['level']> = {
   legendary: 'platinum'
 };
 
-interface RawUserBadgeRecord {
+interface RawBadgeFields {
   _id?: string;
-  badge?: {
-    _id?: string;
-    name?: string;
-    description?: string;
-    icon?: string;
-    rarity?: string;
-    category?: string;
-    xpReward?: number;
-  } | null;
+  name?: string;
+  description?: string;
+  icon?: string;
+  rarity?: string;
+  category?: string;
+  xpReward?: number;
+}
+
+// Records arrive either nested ({ badge: {...}, earnedAt }) or pre-flattened
+// (badge fields directly on the record), so the record itself carries the
+// same optional fields. (An index signature here previously typed the flat
+// fields as `unknown`, breaking the UserBadge mapping below.)
+interface RawUserBadgeRecord extends RawBadgeFields {
+  badge?: RawBadgeFields | null;
   earnedAt?: string;
-  [key: string]: unknown;
 }
 
 /**

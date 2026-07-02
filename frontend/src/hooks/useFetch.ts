@@ -7,7 +7,7 @@ interface UseFetchOptions<T> {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: any;
   headers?: Record<string, string>;
-  initialData?: T;
+  initialData?: T | null;
   dependencies?: any[];
   autoFetch?: boolean;
   onSuccess?: (data: T) => void;

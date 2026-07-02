@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaBookOpen } from 'react-icons/fa';
 import { useNote } from './useNote';
-import { Note, NoteFilter as NoteFilterType } from '../types/note';
+import { Note, NoteFilter as NoteFilterType } from '../../types/note';
 import FilterForm from './components/FilterForm';
 import NoteCard from './NoteCard';
 import NoteDetailModal from './components/NoteDetailModal';

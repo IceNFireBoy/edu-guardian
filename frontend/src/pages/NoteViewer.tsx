@@ -8,6 +8,8 @@ import ErrorBoundary from '../components/ErrorBoundary'; // Already TSX
 import usePDFNote from '../hooks/usePDFNote'; // Updated path (TS version)
 import NoteStudySession from '../features/notes/components/NoteStudySession'; // Updated path
 import AIToolsPanel from '../features/notes/components/AIToolsPanel';
+import type { Note as CanonicalNote } from '../types/note';
+import { useUser } from '../features/user/useUser';
 
 // Assuming Note type might be similar to what useNote.ts uses, or define a local one
 // For simplicity, using a local one here based on usage.
@@ -105,21 +107,30 @@ const NoteViewer: FC = () => {
           console.error('Error reading notes from localStorage:', localStorageError);
         }
 
-        // Dynamically import fetchNotes to avoid issues if it has side effects or complex deps
-        const notesApi = await import('../api/notes'); 
-        const response = await notesApi.fetchNotes(); // Assuming fetchNotes is exported
+        // Fetch just this note — previously this pulled the ENTIRE notes
+        // catalogue and searched it client-side, which was slow and expensive
+        // on a cold-starting free-tier backend. Falls back to the list only for
+        // legacy asset_id links, which GET /notes/:id can't resolve.
+        const notesApi = await import('../api/notes');
+        const response = await notesApi.callAuthenticatedApi<Note>(`/notes/${id}`, 'GET').catch(() => null);
 
         if (!isMounted) return;
 
-        if (response && response.success && Array.isArray(response.data)) {
-          foundNote = response.data.find((n: Note) => n && (n._id === id || n.asset_id === id)) || null;
-          if (foundNote) {
-            setNote(foundNote);
-          } else {
-            setError('Note not found');
-          }
+        if (response?.success && response.data) {
+          setNote(response.data as Note);
         } else {
-          setError(response?.error || 'Failed to fetch note data from server');
+          const listResponse = await notesApi.fetchNotes();
+          if (!isMounted) return;
+          if (listResponse?.success && Array.isArray(listResponse.data)) {
+            foundNote = listResponse.data.find((n: Note) => n && (n._id === id || n.asset_id === id)) || null;
+            if (foundNote) {
+              setNote(foundNote);
+            } else {
+              setError('Note not found');
+            }
+          } else {
+            setError(listResponse?.error || 'Failed to fetch note data from server');
+          }
         }
       } catch (err: any) {
         if (isMounted) {
@@ -140,6 +151,13 @@ const NoteViewer: FC = () => {
   }, [getNoteIdFromUrl]);
 
   const { pdfUrl: hookPdfUrl, noteTitle: hookNoteTitle, noteId: hookNoteId, loading: hookLoading, error: hookError } = usePDFNote(note);
+
+  // Owner check drives the flashcard editing UI in the AI tools panel. The
+  // note's owner arrives as userId, a user id string, or a populated object.
+  const { profile } = useUser();
+  const noteOwnerId: string | undefined =
+    note?.userId ?? (typeof note?.user === 'string' ? note.user : note?.user?._id);
+  const isNoteOwner = Boolean(profile?._id && noteOwnerId && profile._id === noteOwnerId);
 
   const isLoading = loading || (note && hookLoading);
   const errorMessage = error || hookError;
@@ -224,10 +242,10 @@ const NoteViewer: FC = () => {
 
     return (
       <ErrorBoundary fallback={<ErrorFallbackPDF error={new Error('PDF viewer crashed')} />}>
-        <PDFViewer 
-          fileUrl={finalPdfUrl} 
-          noteTitle={finalNoteTitle} 
-          noteId={finalNoteId} 
+        <PDFViewer
+          fileUrl={finalPdfUrl ?? ''}
+          noteTitle={finalNoteTitle}
+          noteId={finalNoteId}
         />
       </ErrorBoundary>
     );
@@ -275,7 +293,9 @@ const NoteViewer: FC = () => {
       <div className="flex-1 flex min-h-0">
         <main className="flex-1 min-w-0 relative">{renderMainContent()}</main>
         <NoteStudySession
-          note={note}
+          /* NoteViewer's local Note is a loose merge of localStorage/API
+             shapes; the study panel only reads _id/title/subject from it. */
+          note={note as unknown as CanonicalNote | null}
           open={studySessionOpen}
           onClose={() => setStudySessionOpen(false)}
         />
@@ -287,6 +307,8 @@ const NoteViewer: FC = () => {
           initialSummary={note?.aiSummary}
           open={aiToolsOpen}
           onClose={() => setAiToolsOpen(false)}
+          isOwner={isNoteOwner}
+          initialCards={note?.flashcards ?? []}
         />
       )}
     </div>

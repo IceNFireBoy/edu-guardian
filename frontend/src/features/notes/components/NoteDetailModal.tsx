@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaShare, FaStar, FaRobot, FaLightbulb, FaDownload, FaTrash, FaSpinner } from 'react-icons/fa';
-import type { Note, NoteRating } from 'types/note';
+import type { Note, NoteRating } from '../../../types/note';
 import { useNote } from '../useNote'; // For rateNote and deleteNote
 import { subjectColors, getSubjectColor } from '../NoteCard'; // Assuming NoteCard.tsx is in the same directory
 import { toast } from 'react-hot-toast';
-import { formatDate } from 'utils/dateUtils';
+import { formatDate } from '../../../utils/dateUtils';
 
 interface NoteDetailModalProps {
   note: Note;
@@ -15,6 +15,10 @@ interface NoteDetailModalProps {
   onDelete?: () => void;
   onRate?: (rating: number) => void;
   userRating?: number;
+  /** Called with the updated note after a successful in-modal change (e.g. rating) */
+  onNoteUpdate?: (note: Note) => void;
+  /** Called with the deleted note's id after a successful delete */
+  onNoteDelete?: (noteId: string) => void;
 }
 
 // Helper to get average rating from localStorage (if still needed, or use note.rating)
@@ -36,6 +40,8 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   onDelete,
   onRate,
   userRating = 0,
+  onNoteUpdate,
+  onNoteDelete,
 }) => {
   const [rating, setRating] = useState(userRating);
   const { rateNote, deleteNote: deleteNoteHook, loading: noteActionLoading, error: noteActionError } = useNote();
@@ -56,9 +62,15 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
   const colorTheme = note.subject ? getSubjectColor(note.subject) : subjectColors.default;
 
-  const handleRate = (value: number) => {
+  const handleRate = async (value: number) => {
     setRating(value);
     onRate?.(value);
+    // Persist the rating and let the parent list refresh its copy of the note.
+    // (The ratings endpoint actually returns the updated note document.)
+    const updated = await rateNote(note._id, value);
+    if (updated) {
+      onNoteUpdate?.(updated as unknown as Note);
+    }
   };
 
   const handleShare = () => {
@@ -86,6 +98,7 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
         if (success) {
             toast.success('Note deleted successfully.');
             onDelete?.();
+            onNoteDelete?.(note._id);
             onClose();
         } else {
             // Error is handled by noteActionError effect

@@ -23,6 +23,16 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        // Keep the giant, rarely-changing libraries in their own cacheable
+        // chunks instead of the main bundle.
+        manualChunks: {
+          pdf: ['pdfjs-dist', '@react-pdf-viewer/core', '@react-pdf-viewer/default-layout'],
+          vendor: ['react', 'react-dom', 'react-router-dom', 'framer-motion', 'axios'],
+        },
+      },
+    },
   },
   server: {
     port: 5173,

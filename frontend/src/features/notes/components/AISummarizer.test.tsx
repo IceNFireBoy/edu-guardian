@@ -29,7 +29,7 @@ import AISummarizer from './AISummarizer';
 import { aiApi } from '../../../api/ai';
 
 describe('AISummarizer', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('renders the generated summary after clicking Summarize', async () => {
     (aiApi.summarizeNote as any).mockResolvedValue({ summary: 'Photosynthesis in a nutshell.' });

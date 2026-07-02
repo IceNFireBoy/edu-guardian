@@ -98,6 +98,32 @@ export default class SrsService {
       .limit(safeLimit);
   }
 
+  /** The user's whole deck, paginated, soonest-due first. */
+  static async getAllCards(
+    userId: string,
+    page = 1,
+    limit = 50
+  ): Promise<{ cards: ISrsCard[]; total: number; page: number; totalPages: number }> {
+    const safePage = Math.max(page, 1);
+    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    const [cards, total] = await Promise.all([
+      SrsCard.find({ user: userId })
+        .sort({ dueDate: 1 })
+        .skip((safePage - 1) * safeLimit)
+        .limit(safeLimit),
+      SrsCard.countDocuments({ user: userId }),
+    ]);
+    return { cards, total, page: safePage, totalPages: Math.max(Math.ceil(total / safeLimit), 1) };
+  }
+
+  /** Remove one of the user's own cards from their deck. */
+  static async deleteCard(userId: string, cardId: string): Promise<void> {
+    const deleted = await SrsCard.findOneAndDelete({ _id: cardId, user: userId });
+    if (!deleted) {
+      throw new NotFoundError('Review card not found');
+    }
+  }
+
   /** Grade a card (0–5) and reschedule it via SM-2. */
   static async gradeCard(userId: string, cardId: string, quality: number): Promise<ISrsCard> {
     if (quality === undefined || quality === null || Number.isNaN(Number(quality))) {

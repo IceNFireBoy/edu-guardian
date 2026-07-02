@@ -290,4 +290,41 @@ export default class NoteService {
     return note.populate({ path: 'user', select: 'name username profileImage' });
   }
 
+  public async updateFlashcard(
+    noteId: string,
+    userId: string,
+    flashcardId: string,
+    updates: { question?: string; answer?: string; difficulty?: 'easy' | 'medium' | 'hard' }
+  ): Promise<INote | null> {
+    const note = await Note.findById(noteId);
+    if (!note) return null;
+    if (note.user.toString() !== userId) {
+      throw new ErrorResponse('User not authorized to edit flashcards on this note', 401);
+    }
+    const card = (note.flashcards as any).id(flashcardId);
+    if (!card) {
+      throw new ErrorResponse('Flashcard not found on this note', 404);
+    }
+    if (updates.question !== undefined) card.question = updates.question;
+    if (updates.answer !== undefined) card.answer = updates.answer;
+    if (updates.difficulty !== undefined) card.difficulty = updates.difficulty;
+    await note.save();
+    return note;
+  }
+
+  public async deleteFlashcard(noteId: string, userId: string, flashcardId: string): Promise<INote | null> {
+    const note = await Note.findById(noteId);
+    if (!note) return null;
+    if (note.user.toString() !== userId) {
+      throw new ErrorResponse('User not authorized to delete flashcards on this note', 401);
+    }
+    const card = (note.flashcards as any).id(flashcardId);
+    if (!card) {
+      throw new ErrorResponse('Flashcard not found on this note', 404);
+    }
+    card.deleteOne();
+    await note.save();
+    return note;
+  }
+
 } 

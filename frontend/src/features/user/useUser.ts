@@ -8,67 +8,111 @@ import { UserProfile, CompleteStudyPayload, StudyCompletionResult } from './user
 export type { StudyCompletionResult };
 import { toast } from 'react-hot-toast';
 
+// ---------------------------------------------------------------------------
+// Module-level profile cache shared by EVERY useUser() instance. Several
+// components mount this hook at once (pages, header, useStreak); without
+// sharing, each fired its own GET /auth/me — painful on a cold-starting
+// free-tier backend. One request serves all subscribers, and components that
+// mount later render instantly from the cached profile.
+// ---------------------------------------------------------------------------
+const PROFILE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+let sharedProfile: UserProfile | null = null;
+let sharedProfileAt = 0;
+let profileRequest: Promise<UserProfile> | null = null;
+let badgesRequest: Promise<any[]> | null = null;
+
+/** Reset the shared cache — call on login/register/logout so a new session
+ *  never sees the previous user's data. */
+export const clearProfileCache = (): void => {
+  sharedProfile = null;
+  sharedProfileAt = 0;
+  profileRequest = null;
+  badgesRequest = null;
+};
+
 export const useUser = () => {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  // Seed from the shared cache so late mounts render immediately.
+  const [profile, setProfile] = useState<UserProfile | null>(() => sharedProfile);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newXp, setNewXp] = useState(0); // Track newly earned XP for animations
   const [newBadgeIds, setNewBadgeIds] = useState<string[]>([]);
-  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-  
+
   // Refs for debouncing study completion
   const studyCompletionTimers = useRef<Record<string, number>>({});
 
-  const fetchUserProfile = useCallback(async (force = false) => {
-    const now = Date.now();
-    if (!force && profile && now - lastFetchTime < CACHE_DURATION) {
-      return profile;
+  const fetchUserProfile = useCallback(async (force = false): Promise<UserProfile | null> => {
+    if (!force && sharedProfile && Date.now() - sharedProfileAt < PROFILE_CACHE_TTL) {
+      setProfile(sharedProfile);
+      return sharedProfile;
     }
 
     setLoading(true);
     setError(null);
+
+    // Only the first caller starts a request; everyone else joins it.
+    const isInitiator = !profileRequest;
+    if (!profileRequest) {
+      profileRequest = (async (): Promise<UserProfile> => {
+        try {
+          const response = await callAuthenticatedApi<UserProfile>('/auth/me', 'GET');
+          if (response.success && response.data) {
+            sharedProfile = response.data;
+            sharedProfileAt = Date.now();
+            return response.data;
+          }
+          throw new Error(response.error || response.message || 'Failed to fetch user profile');
+        } finally {
+          profileRequest = null;
+        }
+      })();
+    }
+
     try {
-      const response = await callAuthenticatedApi<UserProfile>('/auth/me', 'GET');
-      if (response.success && response.data) {
-        setProfile(response.data);
-        setLastFetchTime(now);
-        return response.data;
-      }
-      throw new Error(response.error || response.message || 'Failed to fetch user profile');
+      const data = await profileRequest;
+      setProfile(data);
+      return data;
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to fetch user profile';
       setError(errorMessage);
-      toast.error(errorMessage);
+      if (isInitiator) toast.error(errorMessage); // one toast, not one per subscriber
       return null;
     } finally {
       setLoading(false);
     }
-  }, [profile, lastFetchTime]);
+  }, []);
 
   const fetchUserBadges = useCallback(async (force = false) => {
-    const now = Date.now();
-    if (!force && profile?.badges && now - lastFetchTime < CACHE_DURATION) {
+    if (!force && profile?.badges && Date.now() - sharedProfileAt < PROFILE_CACHE_TTL) {
       return profile.badges;
     }
 
     setLoading(true);
     setError(null);
     try {
-      // Backend: GET /users/me/badges -> { success, count, data: Badge[] }
-      const response = await callAuthenticatedApi<any[]>('/users/me/badges', 'GET');
-      if (response.success && Array.isArray(response.data)) {
-        const badges = response.data;
-        const newBadges = badges.filter(badge =>
-          !profile?.badges?.some(existingBadge => existingBadge._id === badge._id)
-        );
-        if (newBadges.length > 0) {
-          setNewBadgeIds(newBadges.map(badge => badge._id));
-          toast.success(`Earned ${newBadges.length} new badge${newBadges.length > 1 ? 's' : ''}!`);
-        }
-        return badges;
+      // Backend: GET /users/me/badges -> { success, count, data: Badge[] }.
+      // Deduped across hook instances like the profile fetch.
+      if (!badgesRequest) {
+        badgesRequest = (async (): Promise<any[]> => {
+          try {
+            const res = await callAuthenticatedApi<any[]>('/users/me/badges', 'GET');
+            if (res.success && Array.isArray(res.data)) return res.data;
+            throw new Error(res.error || res.message || 'Failed to fetch user badges');
+          } finally {
+            badgesRequest = null;
+          }
+        })();
       }
-      throw new Error(response.error || response.message || 'Failed to fetch user badges');
+      const badges = await badgesRequest;
+      const newBadges = badges.filter(badge =>
+        !profile?.badges?.some(existingBadge => existingBadge._id === badge._id)
+      );
+      if (newBadges.length > 0) {
+        setNewBadgeIds(newBadges.map(badge => badge._id));
+        toast.success(`Earned ${newBadges.length} new badge${newBadges.length > 1 ? 's' : ''}!`);
+      }
+      return badges;
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to fetch user badges';
       setError(errorMessage);
@@ -77,7 +121,7 @@ export const useUser = () => {
     } finally {
       setLoading(false);
     }
-  }, [profile?.badges, lastFetchTime]);
+  }, [profile?.badges]);
 
   // Log note study completion
   const completeStudy = useCallback(async (payload: CompleteStudyPayload): Promise<StudyCompletionResult | null> => {
@@ -159,6 +203,9 @@ export const useUser = () => {
     try {
       const response = await callAuthenticatedApi<UserProfile>('/auth/me', 'PUT', updates);
       if (response.success && response.data) {
+        // Keep the shared cache in sync so other useUser() instances see the update
+        sharedProfile = response.data;
+        sharedProfileAt = Date.now();
         setProfile(response.data);
         return response.data;
       }

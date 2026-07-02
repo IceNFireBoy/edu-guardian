@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -18,9 +18,13 @@ import Progress from './pages/Progress';
 import Settings from './pages/Settings';
 import Badges from './pages/Badges';
 import Leaderboard from './pages/Leaderboard';
-import StudyRooms from './pages/StudyRooms';
-import NoteViewer from './pages/NoteViewer';
-import TestPDFDebug from './debug/TestPDFDebug';
+import MyFlashcards from './pages/MyFlashcards';
+// Heavy routes are lazy-loaded so the PDF stack (~1 MB of pdfjs +
+// react-pdf-viewer) and the socket.io client stay out of the main bundle
+// until someone actually opens them.
+const StudyRooms = lazy(() => import('./pages/StudyRooms'));
+const NoteViewer = lazy(() => import('./pages/NoteViewer'));
+const TestPDFDebug = lazy(() => import('./debug/TestPDFDebug'));
 import NoteFilterPage from './features/notes/NoteFilterPage';
 import NoteUploader from './features/notes/NoteUploader';
 import ProfilePage from './features/user/ProfilePage';
@@ -49,21 +53,22 @@ const StandardLayout: React.FC = () => {
   return (
     <main className="flex-grow min-h-0 overflow-y-auto">
       <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">
-        {/* Subtle fade/slide between pages. mode="wait" so the outgoing page
-            finishes exiting before the next one enters. */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-          >
-            <ErrorBoundary key={location.pathname}>
-              <Outlet />
-            </ErrorBoundary>
-          </motion.div>
-        </AnimatePresence>
+        {/* Enter-only fade on route change. Deliberately NO AnimatePresence /
+            exit animation here: with an un-frozen <Outlet/> the exiting wrapper
+            re-renders the NEW route, double-mounting every page (double
+            fetches), and mode="wait" could wedge into a blank screen. Keyed
+            enter-only animation gives the same polish and can never block
+            rendering. */}
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+        >
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
+        </motion.div>
       </div>
     </main>
   );
@@ -226,6 +231,13 @@ function App() {
           <Sidebar />
           <div className="flex flex-col h-screen md:ml-64">
             <Header toggleDarkMode={toggleDarkMode} />
+            <Suspense
+              fallback={
+                <div className="flex-grow flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+                </div>
+              }
+            >
             <Routes>
               <Route element={<StandardLayout />}>
                 <Route path="/login" element={<Login />} />
@@ -243,6 +255,7 @@ function App() {
                   <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
                   <Route path="/badges" element={<Badges />} />
                   <Route path="/leaderboard" element={<Leaderboard />} />
+                  <Route path="/flashcards" element={<MyFlashcards />} />
                   <Route path="/study-rooms" element={<StudyRooms />} />
                   <Route path="/notes" element={<NoteFilterPage />} />
                   <Route path="/notes/upload" element={<NoteUploader />} />
@@ -263,6 +276,7 @@ function App() {
                 </Route>
               </Route>
             </Routes>
+            </Suspense>
           </div>
           <CookieConsent />
           <StudyTipsBot />

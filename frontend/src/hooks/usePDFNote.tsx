@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 
-// Types for the note
+// Types for the note. Nullability matches NoteViewer's local Note shape
+// (fields can arrive as null from localStorage/API merges).
 type Note = {
   _id?: string;
   id?: string;
   asset_id?: string;
-  title?: string;
-  noteTitle?: string;
-  fileUrl?: string;
-  secure_url?: string;
-  url?: string;
+  title?: string | null;
+  noteTitle?: string | null;
+  fileUrl?: string | null;
+  secure_url?: string | null;
+  url?: string | null;
   publicId?: string;
   [key: string]: any;
 };

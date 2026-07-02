@@ -59,8 +59,8 @@ const ProfilePage: React.FC = () => {
           <FaExclamationTriangle className="text-red-500 text-4xl mx-auto mb-4" />
           <h2 className="text-xl font-bold text-red-700 dark:text-red-400 mb-2">Error Loading Profile</h2>
           <p className="text-gray-700 dark:text-gray-300 mb-4">{error}</p>
-          <button 
-            onClick={fetchUserProfile}
+          <button
+            onClick={() => fetchUserProfile(true)}
             className="btn btn-primary"
           >
             Try Again

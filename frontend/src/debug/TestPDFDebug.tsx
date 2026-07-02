@@ -144,7 +144,7 @@ const TestPDFDebug: FC = () => {
                 <ErrorBoundary>
                   <div className="h-96 border border-gray-200 dark:border-gray-700 rounded">
                     <PDFViewer 
-                      noteUrl="https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf" 
+                      fileUrl="https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf" 
                       noteTitle="Valid Test PDF" 
                     />
                   </div>
@@ -157,7 +157,7 @@ const TestPDFDebug: FC = () => {
                 <ErrorBoundary>
                   <div className="h-96 border border-gray-200 dark:border-gray-700 rounded">
                     <PDFViewer 
-                      noteUrl={null} 
+                      fileUrl={''} 
                       noteTitle="Test with Null URL" 
                     />
                   </div>
@@ -170,7 +170,7 @@ const TestPDFDebug: FC = () => {
                 <ErrorBoundary>
                   <div className="h-96 border border-gray-200 dark:border-gray-700 rounded">
                     <PDFViewer 
-                      noteUrl="" 
+                      fileUrl="" 
                       noteTitle="Test with Empty URL" 
                     />
                   </div>
@@ -183,7 +183,7 @@ const TestPDFDebug: FC = () => {
                 <ErrorBoundary>
                   <div className="h-96 border border-gray-200 dark:border-gray-700 rounded">
                     <PDFViewer 
-                      noteUrl="https://invalid-url-that-will-fail.pdf" 
+                      fileUrl="https://invalid-url-that-will-fail.pdf" 
                       noteTitle="Test with Invalid URL" 
                     />
                   </div>
@@ -196,8 +196,8 @@ const TestPDFDebug: FC = () => {
                 <ErrorBoundary>
                   <div className="h-96 border border-gray-200 dark:border-gray-700 rounded">
                     <PDFViewer 
-                      noteUrl="https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf" 
-                      noteTitle={null} 
+                      fileUrl="https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf" 
+                      noteTitle={undefined} 
                     />
                   </div>
                 </ErrorBoundary>

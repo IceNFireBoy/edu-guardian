@@ -2,11 +2,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { User } from './authTypes';
 import { callAuthenticatedApi } from '../../api/apiClient'; // Import the API calling utility
 import { useNavigate } from 'react-router-dom';
+import { clearProfileCache } from '../user/useUser';
 
-// Helper to manage token in localStorage
+// Helper to manage token in localStorage. Session changes must also drop the
+// shared profile cache so a new login never sees the previous user's data.
 const getToken = (): string | null => localStorage.getItem('token');
-const setToken = (token: string): void => localStorage.setItem('token', token);
-const removeToken = (): void => localStorage.removeItem('token');
+const setToken = (token: string): void => {
+  localStorage.setItem('token', token);
+  clearProfileCache();
+};
+const removeToken = (): void => {
+  localStorage.removeItem('token');
+  clearProfileCache();
+};
 
 interface ApiResponse<T> {
   success: boolean;

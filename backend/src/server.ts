@@ -2,6 +2,7 @@ import express from 'express';
 import http from 'http';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import compression from 'compression';
 import helmet from 'helmet';
 import xss from 'xss-clean';
 import hpp from 'hpp';
@@ -31,8 +32,13 @@ import srsRoutes from './routes/srsRoutes';
 
 const app = express();
 
-// Body parser
-app.use(express.json({ limit: '50mb' }));
+// Gzip responses (badge catalogs, note lists, leaderboards compress well)
+app.use(compression());
+
+// Body parser. Files upload browser -> Cloudinary directly and never pass
+// through this API, so a small JSON limit is enough and shields the server
+// from oversized-payload abuse (was 50mb).
+app.use(express.json({ limit: '2mb' }));
 
 // Cookie parser
 app.use(cookieParser());
