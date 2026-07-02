@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaShare, FaStar, FaRobot, FaLightbulb, FaDownload, FaTrash, FaSpinner } from 'react-icons/fa';
-import type { Note, NoteRating } from 'types/note';
+import type { Note, NoteRating } from '../../../types/note';
 import { useNote } from '../useNote'; // For rateNote and deleteNote
 import { subjectColors, getSubjectColor } from '../NoteCard'; // Assuming NoteCard.tsx is in the same directory
 import { toast } from 'react-hot-toast';
-import { formatDate } from 'utils/dateUtils';
+import { formatDate } from '../../../utils/dateUtils';
 
 interface NoteDetailModalProps {
   note: Note;

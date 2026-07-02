@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FaFilePdf, FaFileAlt, FaExclamationCircle, FaEye, FaDownload, FaStar, FaFileWord, FaFilePowerpoint, FaFileExcel, FaCheckCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import type { Note } from 'types/note';
+import type { Note } from '../../types/note';
 import { useStreak } from '../../hooks/useStreak';
 
 interface SubjectColor {

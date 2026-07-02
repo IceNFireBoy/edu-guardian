@@ -10,7 +10,7 @@ import { handleApiError, ErrorType } from './errorHandler';
 import { toast } from 'react-hot-toast';
 
 describe('handleApiError', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('maps HTTP 429 to the QUOTA type and surfaces the server message', () => {
     const result = handleApiError({

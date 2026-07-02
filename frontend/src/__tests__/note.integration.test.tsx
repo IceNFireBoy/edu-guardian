@@ -7,25 +7,27 @@ import { setupServer } from 'msw/node';
 import { Note, NoteRating } from '../features/notes/noteTypes';
 
 const mockNote: Note = {
-  id: 'note1',
+  _id: 'note1',
   title: 'Test Note',
+  content: 'Test Content',
   description: 'Test Content',
   subject: 'mathematics',
   grade: 'grade10',
   semester: '1',
   quarter: '1',
   topic: 'Algebra',
+  isPublic: true,
   fileUrl: 'https://example.com/test.pdf',
   fileType: 'pdf',
-  fileSize: 1024,
   createdAt: new Date().toISOString(),
-  user: {
-    username: 'testuser'
-  },
+  updatedAt: new Date().toISOString(),
+  userId: 'user1',
+  viewCount: 0,
+  downloadCount: 0,
+  rating: 0,
+  ratingCount: 0,
   averageRating: 0,
   ratings: [],
-  viewCount: 0,
-  isPublic: true,
   tags: ['test', 'algebra']
 };
 

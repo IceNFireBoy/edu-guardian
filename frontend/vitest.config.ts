@@ -21,10 +21,7 @@ export default defineConfig({
       //   src/features/user/components/__tests__/ActivityLog.test.tsx
       'src/__tests__/**/*.test.tsx',
       'src/components/__tests__/ErrorBoundary.test.tsx',
-      'src/features/notes/__tests__/useNote.test.tsx',
-      'src/features/notes/components/__tests__/NoteDetailModal.test.tsx',
-      'src/features/user/__tests__/**',
-      'src/features/user/components/__tests__/BadgeGrid.test.tsx',
+      'src/features/user/__tests__/ProfilePage.test.tsx',
       'src/features/user/components/__tests__/DashboardFeed.test.tsx',
     ],
     coverage: {

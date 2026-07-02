@@ -3,27 +3,21 @@ import { describe, it, expect } from 'vitest';
 import ActivityLog from '../ActivityLog';
 
 describe('ActivityLog', () => {
+  // Shape must match UserActivity (see features/user/userTypes.ts)
   const mockActivities = [
     {
-      id: 'activity1',
+      _id: 'activity1',
       action: 'upload',
       description: 'Created a new note',
-      timestamp: new Date('2024-01-01T10:00:00Z'),
-      xpEarned: 10,
-      metadata: {
-        noteId: 'note1',
-        noteTitle: 'Test Note'
-      }
+      timestamp: '2024-01-01T10:00:00Z',
+      xpEarned: 10
     },
     {
-      id: 'activity2',
+      _id: 'activity2',
       action: 'streak',
       description: 'Achieved a 7-day streak',
-      timestamp: new Date('2024-01-01T08:00:00Z'),
-      xpEarned: 0,
-      metadata: {
-        streakDays: 7
-      }
+      timestamp: '2024-01-01T08:00:00Z',
+      xpEarned: 0
     }
   ];
 
