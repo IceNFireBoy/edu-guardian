@@ -7,6 +7,8 @@ const router = express.Router();
 router.use(protect);
 
 router.post('/cards', SrsController.addCards);
+router.get('/cards', SrsController.getCards);
+router.delete('/cards/:cardId', SrsController.deleteCard);
 router.get('/due', SrsController.getDue);
 router.post('/review', SrsController.reviewCard);
 

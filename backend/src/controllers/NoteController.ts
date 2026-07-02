@@ -505,4 +505,46 @@ export default class NoteController {
     }
   });
 
+  // @desc    Update a flashcard on a note (owner only)
+  // @route   PUT /api/v1/notes/:id/flashcards/:flashcardId
+  // @access  Protected
+  public updateFlashcard = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return next(new ErrorResponse('User not authenticated', 401));
+    }
+    const { question, answer, difficulty } = req.body;
+    try {
+      const note = await noteService.updateFlashcard(
+        req.params.id,
+        req.user.id,
+        req.params.flashcardId,
+        { question, answer, difficulty }
+      );
+      if (!note) {
+        return next(new ErrorResponse(`Note not found with id of ${req.params.id}`, 404));
+      }
+      res.status(200).json({ success: true, data: note });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // @desc    Delete a flashcard from a note (owner only)
+  // @route   DELETE /api/v1/notes/:id/flashcards/:flashcardId
+  // @access  Protected
+  public deleteFlashcard = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return next(new ErrorResponse('User not authenticated', 401));
+    }
+    try {
+      const note = await noteService.deleteFlashcard(req.params.id, req.user.id, req.params.flashcardId);
+      if (!note) {
+        return next(new ErrorResponse(`Note not found with id of ${req.params.id}`, 404));
+      }
+      res.status(200).json({ success: true, data: note });
+    } catch (error) {
+      next(error);
+    }
+  });
+
 } 

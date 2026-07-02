@@ -26,6 +26,14 @@ export interface DueCard {
   dueDate: string;
 }
 
+/** Flashcard subdocument as stored on a note */
+export interface NoteFlashcard {
+  _id: string;
+  question: string;
+  answer: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+}
+
 async function post<T>(url: string, body?: unknown): Promise<T> {
   try {
     const res = await apiClient.post(url, body ?? {});
@@ -61,6 +69,85 @@ export const aiApi = {
     try {
       const res = await apiClient.get('/srs/due');
       return (res.data.data as DueCard[]) ?? [];
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  },
+
+  /** The user's whole review deck (soonest-due first). */
+  getDeck: async (page = 1, limit = 100): Promise<{ cards: DueCard[]; total: number }> => {
+    try {
+      const res = await apiClient.get(`/srs/cards?page=${page}&limit=${limit}`);
+      return { cards: (res.data.data as DueCard[]) ?? [], total: res.data.count ?? 0 };
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  },
+
+  deleteDeckCard: async (cardId: string): Promise<void> => {
+    try {
+      await apiClient.delete(`/srs/cards/${cardId}`);
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  },
+};
+
+/**
+ * User-authored flashcards attached to a note (owner-gated server-side).
+ * Every call resolves with the note's refreshed flashcards array.
+ */
+const noteFlashcardsFrom = (res: any): NoteFlashcard[] =>
+  (res?.data?.data?.flashcards as NoteFlashcard[]) ?? [];
+
+export const noteCardsApi = {
+  create: async (
+    noteId: string,
+    card: { question: string; answer: string; difficulty?: string }
+  ): Promise<NoteFlashcard[]> => {
+    try {
+      const res = await apiClient.post(`/notes/${noteId}/flashcards`, card);
+      return noteFlashcardsFrom(res);
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  },
+
+  bulkAdd: async (
+    noteId: string,
+    flashcards: Array<{ question: string; answer: string; difficulty?: string }>
+  ): Promise<NoteFlashcard[]> => {
+    try {
+      const res = await apiClient.post(`/notes/${noteId}/flashcards/bulk`, { flashcards });
+      return noteFlashcardsFrom(res);
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  },
+
+  update: async (
+    noteId: string,
+    cardId: string,
+    updates: { question?: string; answer?: string; difficulty?: string }
+  ): Promise<NoteFlashcard[]> => {
+    try {
+      const res = await apiClient.put(`/notes/${noteId}/flashcards/${cardId}`, updates);
+      return noteFlashcardsFrom(res);
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  },
+
+  remove: async (noteId: string, cardId: string): Promise<NoteFlashcard[]> => {
+    try {
+      const res = await apiClient.delete(`/notes/${noteId}/flashcards/${cardId}`);
+      return noteFlashcardsFrom(res);
     } catch (error) {
       handleApiError(error);
       throw error;

@@ -1,22 +1,43 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles } from 'lucide-react';
 import AISummarizer from './AISummarizer';
 import FlashcardGenerator from './FlashcardGenerator';
+import FlashcardEditor from './FlashcardEditor';
 import AIQuiz from './AIQuiz';
+import type { NoteFlashcard } from '../../../api/ai';
 
 interface AIToolsPanelProps {
   noteId: string;
   initialSummary?: string;
   open: boolean;
   onClose: () => void;
+  /** Owner of the note gets the flashcard editing UI */
+  isOwner?: boolean;
+  /** The note's saved (user-authored or AI-saved) flashcards */
+  initialCards?: NoteFlashcard[];
 }
 
 /**
  * Slide-over panel that hosts the AI study tools (summary, flashcards, quiz) for
  * a single note. Animated in/out with Framer Motion.
  */
-const AIToolsPanel: React.FC<AIToolsPanelProps> = ({ noteId, initialSummary, open, onClose }) => {
+const AIToolsPanel: React.FC<AIToolsPanelProps> = ({
+  noteId,
+  initialSummary,
+  open,
+  onClose,
+  isOwner = false,
+  initialCards = [],
+}) => {
+  const [cards, setCards] = useState<NoteFlashcard[]>(initialCards);
+
+  // Re-seed when the viewer navigates to a different note
+  useEffect(() => {
+    setCards(initialCards);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteId]);
+
   return (
     <AnimatePresence>
       {open && (
@@ -53,6 +74,13 @@ const AIToolsPanel: React.FC<AIToolsPanelProps> = ({ noteId, initialSummary, ope
             </header>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              <FlashcardEditor
+                noteId={noteId}
+                cards={cards}
+                onCardsChange={setCards}
+                isOwner={isOwner}
+              />
+              <hr className="border-gray-100 dark:border-slate-800" />
               <AISummarizer noteId={noteId} initialSummary={initialSummary} />
               <hr className="border-gray-100 dark:border-slate-800" />
               <FlashcardGenerator noteId={noteId} />

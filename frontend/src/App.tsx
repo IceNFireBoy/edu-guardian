@@ -18,6 +18,7 @@ import Progress from './pages/Progress';
 import Settings from './pages/Settings';
 import Badges from './pages/Badges';
 import Leaderboard from './pages/Leaderboard';
+import MyFlashcards from './pages/MyFlashcards';
 // Heavy routes are lazy-loaded so the PDF stack (~1 MB of pdfjs +
 // react-pdf-viewer) and the socket.io client stay out of the main bundle
 // until someone actually opens them.
@@ -254,6 +255,7 @@ function App() {
                   <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
                   <Route path="/badges" element={<Badges />} />
                   <Route path="/leaderboard" element={<Leaderboard />} />
+                  <Route path="/flashcards" element={<MyFlashcards />} />
                   <Route path="/study-rooms" element={<StudyRooms />} />
                   <Route path="/notes" element={<NoteFilterPage />} />
                   <Route path="/notes/upload" element={<NoteUploader />} />

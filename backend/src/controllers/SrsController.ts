@@ -27,6 +27,26 @@ export default class SrsController {
     res.status(200).json({ success: true, count: cards.length, data: cards });
   });
 
+  // @route GET /api/v1/srs/cards?page=1&limit=50 — the user's whole deck
+  static getCards = asyncHandler(async (req: CustomRequest, res: Response) => {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 50;
+    const result = await SrsService.getAllCards(req.user!.id, page, limit);
+    res.status(200).json({
+      success: true,
+      count: result.total,
+      totalPages: result.totalPages,
+      currentPage: result.page,
+      data: result.cards,
+    });
+  });
+
+  // @route DELETE /api/v1/srs/cards/:cardId
+  static deleteCard = asyncHandler(async (req: CustomRequest, res: Response) => {
+    await SrsService.deleteCard(req.user!.id, req.params.cardId);
+    res.status(200).json({ success: true, data: {} });
+  });
+
   // @route POST /api/v1/srs/review   body: { cardId, quality }
   static reviewCard = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const { cardId, quality } = req.body ?? {};

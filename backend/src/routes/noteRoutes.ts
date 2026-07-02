@@ -98,14 +98,34 @@ router.put('/:id/download', protect, [
     param('id').isMongoId().withMessage('Invalid note ID')
 ], noteController.incrementDownloads);
 
-// Flashcards for a specific note
-// The addFlashcardsToNote route was more for bulk adding, createFlashcardForNote for individual
+// Flashcards on a note. Create/update/delete are owner-gated in the service.
 router.post('/:id/flashcards', protect, [
     param('id').isMongoId().withMessage('Invalid note ID'),
     body('question').notEmpty().isString(),
     body('answer').notEmpty().isString(),
     body('difficulty').optional().isIn(['easy', 'medium', 'hard'])
-], noteController.createFlashcardForNote); 
-// If addFlashcardsToNote (for bulk) is still needed, it can be added as a separate route or logic within createFlashcardForNote can handle arrays.
+], noteController.createFlashcardForNote);
+
+// Bulk add (used by the paste-import in the flashcard editor)
+router.post('/:id/flashcards/bulk', protect, [
+    param('id').isMongoId().withMessage('Invalid note ID'),
+    body('flashcards').isArray({ min: 1 }).withMessage('flashcards must be a non-empty array'),
+    body('flashcards.*.question').notEmpty().isString(),
+    body('flashcards.*.answer').notEmpty().isString(),
+    body('flashcards.*.difficulty').optional().isIn(['easy', 'medium', 'hard'])
+], noteController.addFlashcardsToNote);
+
+router.put('/:id/flashcards/:flashcardId', protect, [
+    param('id').isMongoId().withMessage('Invalid note ID'),
+    param('flashcardId').isMongoId().withMessage('Invalid flashcard ID'),
+    body('question').optional().notEmpty().isString(),
+    body('answer').optional().notEmpty().isString(),
+    body('difficulty').optional().isIn(['easy', 'medium', 'hard'])
+], noteController.updateFlashcard);
+
+router.delete('/:id/flashcards/:flashcardId', protect, [
+    param('id').isMongoId().withMessage('Invalid note ID'),
+    param('flashcardId').isMongoId().withMessage('Invalid flashcard ID')
+], noteController.deleteFlashcard);
 
 export default router; 

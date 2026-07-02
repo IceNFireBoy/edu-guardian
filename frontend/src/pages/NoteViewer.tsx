@@ -9,6 +9,7 @@ import usePDFNote from '../hooks/usePDFNote'; // Updated path (TS version)
 import NoteStudySession from '../features/notes/components/NoteStudySession'; // Updated path
 import AIToolsPanel from '../features/notes/components/AIToolsPanel';
 import type { Note as CanonicalNote } from '../types/note';
+import { useUser } from '../features/user/useUser';
 
 // Assuming Note type might be similar to what useNote.ts uses, or define a local one
 // For simplicity, using a local one here based on usage.
@@ -150,6 +151,13 @@ const NoteViewer: FC = () => {
   }, [getNoteIdFromUrl]);
 
   const { pdfUrl: hookPdfUrl, noteTitle: hookNoteTitle, noteId: hookNoteId, loading: hookLoading, error: hookError } = usePDFNote(note);
+
+  // Owner check drives the flashcard editing UI in the AI tools panel. The
+  // note's owner arrives as userId, a user id string, or a populated object.
+  const { profile } = useUser();
+  const noteOwnerId: string | undefined =
+    note?.userId ?? (typeof note?.user === 'string' ? note.user : note?.user?._id);
+  const isNoteOwner = Boolean(profile?._id && noteOwnerId && profile._id === noteOwnerId);
 
   const isLoading = loading || (note && hookLoading);
   const errorMessage = error || hookError;
@@ -299,6 +307,8 @@ const NoteViewer: FC = () => {
           initialSummary={note?.aiSummary}
           open={aiToolsOpen}
           onClose={() => setAiToolsOpen(false)}
+          isOwner={isNoteOwner}
+          initialCards={note?.flashcards ?? []}
         />
       )}
     </div>
