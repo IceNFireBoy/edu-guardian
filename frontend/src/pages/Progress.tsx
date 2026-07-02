@@ -1,10 +1,9 @@
 import React, { useState, useEffect, FC, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaFire, FaStar, FaBook, FaClock, FaSpinner, FaBookOpen } from 'react-icons/fa';
+import { FaFire, FaStar, FaBook, FaClock, FaSpinner, FaBookOpen, FaExclamationTriangle } from 'react-icons/fa';
 import { useUser } from '../features/user/useUser';
 import { useNote } from '../features/notes/useNote';
-import { useStreak } from '../hooks/useStreak';
 import { getSubjectColor } from '../features/notes/NoteCard';
 import FocusBar from '../components/progress/FocusBar';
 import type { Note } from '../types/note';
@@ -47,9 +46,8 @@ const formatMinutes = (totalSeconds: number): string => {
 };
 
 const Progress: FC = () => {
-  const { profile, loading: profileLoading } = useUser();
+  const { profile, loading: profileLoading, error: profileError, fetchUserProfile } = useUser();
   const { fetchNotes } = useNote();
-  const { getXpForNextLevel } = useStreak();
   const [notes, setNotes] = useState<Note[]>([]);
   const [notesLoading, setNotesLoading] = useState(true);
 
@@ -59,12 +57,33 @@ const Progress: FC = () => {
       try {
         const response = await fetchNotes({} as any);
         if (mounted && response?.data) setNotes(response.data);
+      } catch {
+        // Non-fatal: the page still renders profile stats without the catalogue
       } finally {
         if (mounted) setNotesLoading(false);
       }
     })();
     return () => { mounted = false; };
   }, [fetchNotes]);
+
+  // Failed profile fetch (e.g. backend cold start timed out): offer a retry
+  // instead of spinning forever.
+  if (!profile && !profileLoading && profileError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center px-4">
+        <FaExclamationTriangle className="text-4xl text-yellow-500 mb-3" />
+        <p className="text-gray-600 dark:text-gray-300 mb-4">
+          Couldn't load your progress — the server may be waking up.
+        </p>
+        <button
+          onClick={() => fetchUserProfile(true)}
+          className="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary/90"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   if (profileLoading || notesLoading || !profile) {
     return (
@@ -100,7 +119,11 @@ const Progress: FC = () => {
   );
 
   const xp = profile.xp ?? 0;
-  const xpForNextLevel = getXpForNextLevel();
+  // Backend leveling: level = 1 + floor(xp / 100), so the next level starts at
+  // level * 100 XP. (The old useStreak hook used a sqrt formula that
+  // contradicted the backend and showed wrong numbers.)
+  const level = profile.level ?? 1;
+  const xpForNextLevel = Math.max(level * 100 - xp, 0);
 
   return (
     <motion.div

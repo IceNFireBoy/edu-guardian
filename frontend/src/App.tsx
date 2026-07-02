@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -49,21 +49,22 @@ const StandardLayout: React.FC = () => {
   return (
     <main className="flex-grow min-h-0 overflow-y-auto">
       <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">
-        {/* Subtle fade/slide between pages. mode="wait" so the outgoing page
-            finishes exiting before the next one enters. */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-          >
-            <ErrorBoundary key={location.pathname}>
-              <Outlet />
-            </ErrorBoundary>
-          </motion.div>
-        </AnimatePresence>
+        {/* Enter-only fade on route change. Deliberately NO AnimatePresence /
+            exit animation here: with an un-frozen <Outlet/> the exiting wrapper
+            re-renders the NEW route, double-mounting every page (double
+            fetches), and mode="wait" could wedge into a blank screen. Keyed
+            enter-only animation gives the same polish and can never block
+            rendering. */}
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+        >
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
+        </motion.div>
       </div>
     </main>
   );
