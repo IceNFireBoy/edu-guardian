@@ -24,6 +24,12 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       fullWidth = false,
       className = '',
       disabled,
+      // These React DOM handlers collide with Framer Motion's identically
+      // named props on motion.button — strip them from the spread.
+      onAnimationStart: _onAnimationStart,
+      onDragStart: _onDragStart,
+      onDragEnd: _onDragEnd,
+      onDrag: _onDrag,
       ...props
     },
     ref

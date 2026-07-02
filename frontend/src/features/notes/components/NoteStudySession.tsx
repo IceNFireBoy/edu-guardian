@@ -5,7 +5,7 @@ import {
   FaClock, FaPause, FaPlay, FaCoffee, FaStopwatch, FaTimes, FaDownload,
   FaStar, FaCheckCircle, FaFire, FaTrophy, FaHourglassHalf
 } from 'react-icons/fa';
-import { Note } from '../../types/note';
+import { Note } from '../../../types/note';
 import { useUser, StudyCompletionResult } from '../../user/useUser';
 import { useNote } from '../useNote';
 

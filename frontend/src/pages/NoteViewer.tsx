@@ -8,6 +8,7 @@ import ErrorBoundary from '../components/ErrorBoundary'; // Already TSX
 import usePDFNote from '../hooks/usePDFNote'; // Updated path (TS version)
 import NoteStudySession from '../features/notes/components/NoteStudySession'; // Updated path
 import AIToolsPanel from '../features/notes/components/AIToolsPanel';
+import type { Note as CanonicalNote } from '../types/note';
 
 // Assuming Note type might be similar to what useNote.ts uses, or define a local one
 // For simplicity, using a local one here based on usage.
@@ -224,10 +225,10 @@ const NoteViewer: FC = () => {
 
     return (
       <ErrorBoundary fallback={<ErrorFallbackPDF error={new Error('PDF viewer crashed')} />}>
-        <PDFViewer 
-          fileUrl={finalPdfUrl} 
-          noteTitle={finalNoteTitle} 
-          noteId={finalNoteId} 
+        <PDFViewer
+          fileUrl={finalPdfUrl ?? ''}
+          noteTitle={finalNoteTitle}
+          noteId={finalNoteId}
         />
       </ErrorBoundary>
     );
@@ -275,7 +276,9 @@ const NoteViewer: FC = () => {
       <div className="flex-1 flex min-h-0">
         <main className="flex-1 min-w-0 relative">{renderMainContent()}</main>
         <NoteStudySession
-          note={note}
+          /* NoteViewer's local Note is a loose merge of localStorage/API
+             shapes; the study panel only reads _id/title/subject from it. */
+          note={note as unknown as CanonicalNote | null}
           open={studySessionOpen}
           onClose={() => setStudySessionOpen(false)}
         />

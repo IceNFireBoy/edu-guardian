@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaFilter, FaSearch } from 'react-icons/fa';
-import { NoteFilter as NoteFilterType } from '../../types/note';
+import { NoteFilter as NoteFilterType } from '../../../types/note';
 
 interface FilterFormProps {
   filters: NoteFilterType;

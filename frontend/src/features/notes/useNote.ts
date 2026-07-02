@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Note } from '../types/note';
+import { Note } from '../../types/note';
 import { NoteFilter, NoteUploadData, NoteRating, Flashcard, PaginatedNotesResponse, ManualFlashcardPayload, NewlyAwardedBadgeInfo } from './noteTypes';
 import { callAuthenticatedApi, ApiResponse } from '../../api/notes';
 import { debug } from '../../components/DebugPanel'; // Assuming debug is available
@@ -36,7 +36,9 @@ const getNotesCacheKey = (filter: NoteFilter): string => {
   // Sort keys for consistent key generation
   const sortedFilterKeys = Object.keys(filter).sort();
   const filterString = sortedFilterKeys.map(key => `${key}=${filter[key as keyof NoteFilter]}`).join('&');
-  return `notes_cache_${filterString || 'all'}`;
+  // v2: cached value shape changed from a bare Note[] to the normalized
+  // { data, count, totalPages, currentPage } object — old entries must miss.
+  return `notes_cache_v2_${filterString || 'all'}`;
 };
 
 // Helper function to clear all notes caches (e.g., after upload or delete)
@@ -101,11 +103,20 @@ export const useNote = () => {
 
     try {
       debug('[useNote] Fetching notes from API for filter:', filter);
-      // Adjust callAuthenticatedApi to expect PaginatedNotesResponse for this endpoint
-      const response = await callAuthenticatedApi<PaginatedNotesResponse>('/notes', 'GET', filter as any);
-      
-      if (response.success && response.data) {
-        const notesData = response.data;
+      // Backend list shape: { success, count, totalPages, currentPage, data: Note[] }
+      const response = await callAuthenticatedApi<Note[]>('/notes', 'GET', filter as any);
+
+      if (response.success && Array.isArray(response.data)) {
+        // Normalize into the documented PaginatedNotesResponse so every caller
+        // can rely on `.data` being the Note[] (previously this returned the
+        // bare array while claiming a nested object — callers reading `.data`
+        // silently got undefined and rendered empty lists).
+        const notesData: PaginatedNotesResponse = {
+          data: response.data,
+          count: response.count ?? response.data.length,
+          totalPages: response.totalPages ?? 1,
+          currentPage: response.currentPage ?? 1,
+        };
         try {
           localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data: notesData }));
           debug('[useNote] Cached notes for filter:', filter);

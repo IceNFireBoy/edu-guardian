@@ -29,45 +29,48 @@ interface UseStreakReturn {
  * 
  * @returns {UseStreakReturn} streak and xp data and functions
  */
+// Map the backend profile fields onto this hook's legacy shape. The profile
+// stores streak.max (not "longest"), streak.lastUsed (not "lastVisit") and
+// activity entries as { action, xpEarned } (not { type, xp }).
+const fromProfile = (profile: NonNullable<ReturnType<typeof useUser>['profile']>): StreakData => ({
+  currentStreak: profile.streak?.current || 0,
+  longestStreak: profile.streak?.max || 0,
+  lastVisit: profile.streak?.lastUsed || null,
+  xp: profile.xp || 0,
+  level: profile.level || 1,
+  activities: (profile.activity || []).map(a => ({
+    type: a.action,
+    description: a.description,
+    xp: a.xpEarned,
+    timestamp: a.timestamp,
+  })),
+});
+
+const EMPTY_STREAK: StreakData = {
+  currentStreak: 0,
+  longestStreak: 0,
+  lastVisit: null,
+  xp: 0,
+  level: 1,
+  activities: []
+};
+
 export const useStreak = (): UseStreakReturn => {
   const { profile } = useUser();
-  const [streak, setStreak] = useState<StreakData>(() => {
-    if (profile) {
-      return {
-        currentStreak: profile.streak?.current || 0,
-        longestStreak: profile.streak?.longest || 0,
-        lastVisit: profile.lastVisit || null,
-        xp: profile.xp || 0,
-        level: profile.level || 1,
-        activities: profile.activities || []
-      };
-    }
-    return {
-      currentStreak: 0,
-      longestStreak: 0,
-      lastVisit: null,
-      xp: 0,
-      level: 1,
-      activities: []
-    };
-  });
+  const [streak, setStreak] = useState<StreakData>(() =>
+    profile ? fromProfile(profile) : EMPTY_STREAK
+  );
 
   useEffect(() => {
     if (profile) {
-      setStreak({
-        currentStreak: profile.streak?.current || 0,
-        longestStreak: profile.streak?.longest || 0,
-        lastVisit: profile.lastVisit || null,
-        xp: profile.xp || 0,
-        level: profile.level || 1,
-        activities: profile.activities || []
-      });
+      setStreak(fromProfile(profile));
     }
   }, [profile]);
 
-  // Calculate level based on XP
+  // Level formula must match the backend (User.calculateLevel):
+  // level = 1 + floor(xp / 100)
   const calculateLevel = (xp: number): number => {
-    return Math.floor(Math.sqrt(xp / 10)) + 1;
+    return 1 + Math.floor(xp / 100);
   };
 
   // Record a user activity and award XP
@@ -105,12 +108,10 @@ export const useStreak = (): UseStreakReturn => {
     }
   };
 
-  // Get XP needed for next level
+  // Get XP needed for next level (backend leveling: next level starts at
+  // level * 100 XP)
   const getXpForNextLevel = (): number => {
-    const currentLevel = streak.level;
-    const nextLevel = currentLevel + 1;
-    const xpNeeded = nextLevel * nextLevel * 10;
-    return xpNeeded - streak.xp;
+    return Math.max(streak.level * 100 - streak.xp, 0);
   };
 
   // Reset streak and progress (for testing)
