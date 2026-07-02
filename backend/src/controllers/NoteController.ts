@@ -489,13 +489,13 @@ export default class NoteController {
   const userId = req.user.id;
     const noteId = req.params.id;
 
-    const {
-        front,
-        back
-    } = req.body;
+    // Route validators and all clients send question/answer (the note schema's
+    // field names). This previously destructured front/back, which never
+    // existed on the body — cards were saved with undefined question/answer.
+    const { question, answer, difficulty } = req.body;
 
     try {
-      const flashcard = await noteService.createFlashcardForNote(noteId, userId, front, back);
+      const flashcard = await noteService.createFlashcardForNote(noteId, userId, question, answer, difficulty);
       if (!flashcard) {
         return next(new ErrorResponse(`Note not found with id of ${noteId}`, 404));
       }
