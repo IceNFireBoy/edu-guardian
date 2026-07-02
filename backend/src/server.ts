@@ -1,4 +1,5 @@
 import express from 'express';
+import http from 'http';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -11,6 +12,7 @@ import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
 import { connectDB } from './config/db';
 import errorHandler from './middleware/error';
+import { initSocket } from './socket';
 
 // Load env vars
 dotenv.config();
@@ -24,6 +26,8 @@ import userRoutes from './routes/userRoutes';
 import noteRoutes from './routes/noteRoutes';
 import badgeRoutes from './routes/badgeRoutes';
 import adminRoutes from './routes/adminRoutes';
+import aiRoutes from './routes/aiRoutes';
+import srsRoutes from './routes/srsRoutes';
 
 const app = express();
 
@@ -106,14 +110,18 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/notes', noteRoutes);
 app.use('/api/v1/badges', badgeRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/ai', aiRoutes);
+app.use('/api/v1/srs', srsRoutes);
 
 // Error handler
 app.use(errorHandler);
 
-// Start the server if this file is run directly
+// Start the server if this file is run directly (dev entry: ts-node-dev server.ts)
 if (require.main === module) {
   const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
+  const httpServer = http.createServer(app);
+  initSocket(httpServer); // attach real-time study rooms to the same server
+  httpServer.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
   });
 }

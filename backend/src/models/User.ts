@@ -55,6 +55,15 @@ export interface IUser extends Document {
     max: number;
     lastUsed: Date;
   };
+  // Per-day counters for AI-powered features, used to enforce fair-use quotas.
+  // Counters reset lazily on the first request of a new UTC day.
+  aiUsage: {
+    summaryUsed: number;
+    flashcardUsed: number;
+    quizUsed: number;
+    chatUsed: number;
+    lastReset: Date;
+  };
   lastActive: Date;
   badges: IUserBadge[];
   activity: IUserActivity[];
@@ -133,6 +142,13 @@ const UserSchema = new Schema<IUser>(
       current: { type: Number, default: 0 },
       max: { type: Number, default: 0 },
       lastUsed: { type: Date, default: Date.now }
+    },
+    aiUsage: {
+      summaryUsed: { type: Number, default: 0 },
+      flashcardUsed: { type: Number, default: 0 },
+      quizUsed: { type: Number, default: 0 },
+      chatUsed: { type: Number, default: 0 },
+      lastReset: { type: Date, default: Date.now }
     },
     lastActive: {
       type: Date,

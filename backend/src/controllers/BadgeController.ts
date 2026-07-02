@@ -4,6 +4,7 @@ import ErrorResponse from '../utils/errorResponse';
 import { CustomRequest } from '../middleware/auth';
 import BadgeService from '../services/BadgeService';
 import { IBadge } from '../models/Badge';
+import { invalidateRouteCache } from '../middleware/cache';
 
 export default class BadgeController {
   // @desc    Get all badges
@@ -46,6 +47,7 @@ export default class BadgeController {
   public static createBadge = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const badge = await BadgeService.createBadge(req.body);
+      await invalidateRouteCache('/api/v1/badges'); // catalog changed
       res.status(201).json({
         success: true,
         data: badge
@@ -64,6 +66,7 @@ export default class BadgeController {
       if (!badge) {
         return next(new ErrorResponse(`Badge not found with id of ${req.params.id}`, 404));
       }
+      await invalidateRouteCache('/api/v1/badges'); // catalog changed
       res.status(200).json({
         success: true,
         data: badge
@@ -82,6 +85,7 @@ export default class BadgeController {
       if (!badge) {
         return next(new ErrorResponse(`Badge not found with id of ${req.params.id}`, 404));
       }
+      await invalidateRouteCache('/api/v1/badges'); // catalog changed
       res.status(200).json({
         success: true,
         data: {}

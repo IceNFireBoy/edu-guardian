@@ -2,12 +2,13 @@ import express from 'express';
 import AuthController from '../controllers/AuthController';
 import { check, body } from 'express-validator';
 import { protect } from '../middleware/auth';
+import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiters';
 
 const router = express.Router();
 const authController = new AuthController();
 
-// Public routes
-router.post('/register', [
+// Public routes (throttled to slow brute-force / credential-stuffing)
+router.post('/register', authLimiter, [
   check('name', 'Name is required').not().isEmpty(),
   check('email', 'Please include a valid email').isEmail(),
   check('username').optional(),
@@ -16,6 +17,7 @@ router.post('/register', [
 
 router.post(
   '/login',
+  authLimiter,
   [
     check('email', 'Please include a valid email').isEmail(),
     check('password', 'Password is required').exists()
@@ -41,12 +43,12 @@ router.put('/updatepassword', protect, [
     body('newPassword', 'New password must be 6 or more characters').isLength({ min: 6 })
 ], authController.updatePassword);
 
-// Forgot and Reset Password Routes
-router.post('/forgotpassword', [
+// Forgot and Reset Password Routes (throttled to prevent reset-email abuse)
+router.post('/forgotpassword', passwordResetLimiter, [
     body('email', 'Please provide a valid email').isEmail()
 ], authController.forgotPassword);
 
-router.put('/resetpassword/:resettoken', [
+router.put('/resetpassword/:resettoken', passwordResetLimiter, [
     body('password', 'New password must be 6 or more characters').isLength({ min: 6 })
 ], authController.resetPassword);
 

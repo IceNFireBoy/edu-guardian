@@ -16,12 +16,22 @@ const levelColorMap = {
   platinum: 'border-blue-400',
 };
 
+// Ordering used when sorting by rarity. Falls back to the UI tier (level) when a
+// badge has no backend rarity, so every badge still ranks deterministically.
+const rarityRank: Record<string, number> = { common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5 };
+const levelRank: Record<string, number> = { bronze: 1, silver: 2, gold: 3, platinum: 4 };
+const rankOf = (b: UserBadge): number =>
+  rarityRank[(b.rarity || '').toLowerCase()] ?? levelRank[b.level] ?? 0;
+
+type SortKey = 'rarity_desc' | 'date_desc' | 'date_asc' | 'xp_desc';
+
 const BadgeGrid: React.FC<BadgeGridProps> = ({ badges, newBadgeIds = [], showToast }) => {
   const toast = useToast();
   const showToastFn = showToast || toast.showToast;
   const [highlightedBadges, setHighlightedBadges] = useState<Set<string>>(new Set(newBadgeIds));
   const [levelFilter, setLevelFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<SortKey>('rarity_desc');
 
   useEffect(() => {
     // Show toast notifications for new badges
@@ -44,11 +54,25 @@ const BadgeGrid: React.FC<BadgeGridProps> = ({ badges, newBadgeIds = [], showToa
     return () => clearTimeout(timeout);
   }, [newBadgeIds, badges, showToastFn]);
 
-  const filteredBadges = badges.filter(badge => {
-    const matchesLevel = levelFilter === 'all' || badge.level === levelFilter;
-    const matchesCategory = categoryFilter === 'all' || badge.category === categoryFilter;
-    return matchesLevel && matchesCategory;
-  });
+  const filteredBadges = badges
+    .filter(badge => {
+      const matchesLevel = levelFilter === 'all' || badge.level === levelFilter;
+      const matchesCategory = categoryFilter === 'all' || badge.category === categoryFilter;
+      return matchesLevel && matchesCategory;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'date_desc':
+          return new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime();
+        case 'date_asc':
+          return new Date(a.earnedAt).getTime() - new Date(b.earnedAt).getTime();
+        case 'xp_desc':
+          return (b.xpReward ?? 0) - (a.xpReward ?? 0);
+        case 'rarity_desc':
+        default:
+          return rankOf(b) - rankOf(a);
+      }
+    });
 
   if (badges.length === 0) {
     return (
@@ -86,6 +110,19 @@ const BadgeGrid: React.FC<BadgeGridProps> = ({ badges, newBadgeIds = [], showToa
           <option value="ai">AI</option>
           <option value="streak">Streak</option>
           <option value="achievement">Achievement</option>
+          </select>
+
+          <select
+          data-testid="badge-sort"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortKey)}
+          className="px-3 py-2 border rounded-md ml-auto"
+          aria-label="Sort badges"
+          >
+            <option value="rarity_desc">Rarest first</option>
+          <option value="date_desc">Newest earned</option>
+          <option value="date_asc">Oldest earned</option>
+          <option value="xp_desc">Most XP</option>
           </select>
       </div>
 

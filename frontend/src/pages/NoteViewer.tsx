@@ -1,11 +1,13 @@
 import React, { useState, useEffect, FC, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FaSpinner, FaExclamationTriangle, FaArrowLeft, FaStopwatch } from 'react-icons/fa';
+import { Sparkles } from 'lucide-react';
 
 import PDFViewer from '../features/notes/PDFViewer'; // Updated path
 import ErrorBoundary from '../components/ErrorBoundary'; // Already TSX
 import usePDFNote from '../hooks/usePDFNote'; // Updated path (TS version)
 import NoteStudySession from '../features/notes/components/NoteStudySession'; // Updated path
+import AIToolsPanel from '../features/notes/components/AIToolsPanel';
 
 // Assuming Note type might be similar to what useNote.ts uses, or define a local one
 // For simplicity, using a local one here based on usage.
@@ -48,6 +50,7 @@ const NoteViewer: FC = () => {
   const [studySessionOpen, setStudySessionOpen] = useState<boolean>(
     () => typeof window === 'undefined' || window.innerWidth >= 1024
   );
+  const [aiToolsOpen, setAiToolsOpen] = useState<boolean>(false);
 
   const getNoteIdFromUrl = useCallback((): string | null => {
     try {
@@ -242,6 +245,18 @@ const NoteViewer: FC = () => {
           <FaArrowLeft />
         </button>
         <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-100 truncate flex-1">{finalNoteTitle}</h1>
+        {finalNoteId && (
+          <button
+            data-testid="ai-tools-open-btn"
+            onClick={() => setAiToolsOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-primary
+              hover:bg-primary/10 transition-colors"
+            aria-label="Open AI study tools"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">AI Tools</span>
+          </button>
+        )}
         <button
           onClick={() => setStudySessionOpen((v) => !v)}
           className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -265,6 +280,15 @@ const NoteViewer: FC = () => {
           onClose={() => setStudySessionOpen(false)}
         />
       </div>
+
+      {finalNoteId && (
+        <AIToolsPanel
+          noteId={String(finalNoteId)}
+          initialSummary={note?.aiSummary}
+          open={aiToolsOpen}
+          onClose={() => setAiToolsOpen(false)}
+        />
+      )}
     </div>
   );
 };

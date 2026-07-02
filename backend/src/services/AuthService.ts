@@ -4,6 +4,7 @@ import ErrorResponse from '../utils/errorResponse';
 import sendEmailUtil from '../utils/sendEmail'; // Will need sendEmail.ts
 import { Request, Response } from 'express'; // For req.protocol and req.get('host'), and res for sendTokenResponse
 import { NotFoundError } from '../utils/customErrors'; // For consistency, use customErrors if user not found
+import { blacklistToken } from '../utils/tokenBlacklist';
 
 export class AuthService {
   public sendTokenResponse(user: IUser, statusCode: number, res: Response) {
@@ -123,19 +124,24 @@ export class AuthService {
     this.sendTokenResponse(user, 200, res);
   }
 
-  public async logoutUser(res: Response): Promise<void> {
-    // Note: JWTs are stateless. True logout involves client-side token deletion.
-    // This clears the httpOnly cookie if one was set.
-    // For more robust logout (e.g., token blacklisting), a more complex solution is needed.
+  public async logoutUser(res: Response, token?: string): Promise<void> {
+    // Clear the httpOnly cookie immediately so the browser drops the session.
     res.cookie('token', 'none', {
       expires: new Date(Date.now() + 5 * 1000), // Expire quickly
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production'
     });
 
-    // No user data to send back, just success
-    // The client should then clear any local storage of the token/user data.
-    // res.status(200).json({ success: true, data: {} }); // Service doesn't send response for this one directly
+    // Invalidate the presented JWT so it cannot be replayed before its natural
+    // expiry (e.g. if it was captured). Best-effort: logout must still succeed
+    // for the client even if the blacklist write fails (e.g. DB blip).
+    if (token) {
+      try {
+        await blacklistToken(token);
+      } catch (err) {
+        console.error('[AuthService] Failed to blacklist token on logout:', err);
+      }
+    }
   }
 
   public async getAuthenticatedUserProfile(userId: string): Promise<Partial<IUser>> {

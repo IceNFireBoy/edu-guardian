@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -17,6 +17,8 @@ import Donate from './pages/Donate';
 import Progress from './pages/Progress';
 import Settings from './pages/Settings';
 import Badges from './pages/Badges';
+import Leaderboard from './pages/Leaderboard';
+import StudyRooms from './pages/StudyRooms';
 import NoteViewer from './pages/NoteViewer';
 import TestPDFDebug from './debug/TestPDFDebug';
 import NoteFilterPage from './features/notes/NoteFilterPage';
@@ -30,6 +32,7 @@ import CookieConsent from './components/ui/CookieConsent';
 import OfflineDetector from './components/ui/OfflineDetector';
 import DebugPanel, { debug } from './components/DebugPanel';
 import NetworkStatusMonitor from './components/ui/NetworkStatusMonitor';
+import StudyTipsBot from './features/ai/StudyTipsBot';
 import { DarkModeContext } from './context/DarkModeContext';
 
 // Make debug function available globally (for console usage)
@@ -46,9 +49,21 @@ const StandardLayout: React.FC = () => {
   return (
     <main className="flex-grow min-h-0 overflow-y-auto">
       <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">
-        <ErrorBoundary key={location.pathname}>
-          <Outlet />
-        </ErrorBoundary>
+        {/* Subtle fade/slide between pages. mode="wait" so the outgoing page
+            finishes exiting before the next one enters. */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          >
+            <ErrorBoundary key={location.pathname}>
+              <Outlet />
+            </ErrorBoundary>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </main>
   );
@@ -227,6 +242,8 @@ function App() {
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} darkMode={darkMode} />} />
                   <Route path="/badges" element={<Badges />} />
+                  <Route path="/leaderboard" element={<Leaderboard />} />
+                  <Route path="/study-rooms" element={<StudyRooms />} />
                   <Route path="/notes" element={<NoteFilterPage />} />
                   <Route path="/notes/upload" element={<NoteUploader />} />
                 </Route>
@@ -248,6 +265,7 @@ function App() {
             </Routes>
           </div>
           <CookieConsent />
+          <StudyTipsBot />
           <DebugPanel />
         </div>
       </AuthProvider>

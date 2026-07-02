@@ -1,5 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { callAuthenticatedApi } from '../../api/apiClient';
+// Use the envelope-returning client (ApiResponse<T> with success/data/error) —
+// this hook consumes response.success/.data. It wraps the same shared axios
+// instance under the hood.
+import { callAuthenticatedApi } from '../../api/notes';
 import { UserProfile, CompleteStudyPayload, StudyCompletionResult } from './userTypes';
 
 export type { StudyCompletionResult };

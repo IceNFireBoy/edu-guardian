@@ -3,13 +3,15 @@ import UserController from '../controllers/UserController';
 import UserActivityFeedController from '../controllers/UserActivityFeedController';
 import { protect, authorize } from '../middleware/auth';
 import { body, param } from 'express-validator'; // For potential future validation
+import { cacheRoute } from '../middleware/cache';
 
 const router = express.Router();
 const userActivityFeedController = new UserActivityFeedController();
 const userController = new UserController();
 
-// Public routes
-router.get('/leaderboard', UserController.getLeaderboard);
+// Public routes. The leaderboard is a hot, expensive read; a short 60s cache
+// smooths spikes while keeping rankings near-real-time.
+router.get('/leaderboard', cacheRoute(60), UserController.getLeaderboard);
 router.get('/:username/profile', UserController.getUserPublicProfile);
 router.get('/me/badges', protect, UserController.getMyBadges);
 router.get('/:userId/badges', UserController.getUserBadgesById);
