@@ -6,6 +6,7 @@ import BadgeGrid from './components/BadgeGrid';
 import ActivityLog from './components/ActivityLog';
 import { UserBadge } from './userTypes';
 import { flattenUserBadges } from './badgeUtils';
+import Avatar from '../../components/ui/Avatar';
 
 // Simple Analytics Card sub-component
 interface AnalyticsItemProps {
@@ -76,17 +77,12 @@ const ProfilePage: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div className="flex items-center">
           <div className="mr-4">
-            {profile?.profileImage ? (
-              <img 
-                src={profile.profileImage}
-                alt={profile.name}
-                className="w-16 h-16 rounded-full object-cover border-2 border-primary"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <FaUser className="text-primary text-2xl" />
-              </div>
-            )}
+            <Avatar
+              src={profile?.profileImage}
+              alt={profile?.name || profile?.username || 'You'}
+              size="xl"
+              className="border-2 border-primary"
+            />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{profile?.name}</h1>

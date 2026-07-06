@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Flame, Award, Loader2 } from 'lucide-react';
 import apiClient from '../api/apiClient';
+import Avatar from '../components/ui/Avatar';
 
 interface LeaderboardEntry {
   rank: number;
@@ -79,13 +80,7 @@ const Leaderboard: React.FC = () => {
               <span className="w-8 text-center text-lg font-bold text-gray-500">
                 {medal[e.rank - 1] ?? e.rank}
               </span>
-              {e.profileImage && /^https?:\/\//.test(e.profileImage) ? (
-                <img src={e.profileImage} alt={e.name} className="w-10 h-10 rounded-full object-cover" />
-              ) : (
-                <span className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold">
-                  {(e.name || e.username || '?').charAt(0).toUpperCase()}
-                </span>
-              )}
+              <Avatar src={e.profileImage} alt={e.name || e.username} size="md" />
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900 dark:text-white truncate">{e.name || e.username}</p>
                 <p className="text-xs text-gray-500">Level {e.level}</p>

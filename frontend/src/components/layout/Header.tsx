@@ -1,30 +1,46 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaMoon, FaSun, FaBell, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
 import { useStreak } from '../../hooks/useStreak';
 import { useAuthContext } from '../../features/auth/AuthContext';
+import { useUser } from '../../features/user/useUser';
 import { Link } from 'react-router-dom';
-
-interface Notification {
-  id: number;
-  title: string;
-  time: string;
-  read: boolean;
-}
+import Avatar from '../ui/Avatar';
+import { getRelativeTime } from '../../utils/dateUtils';
 
 interface HeaderProps {
   toggleDarkMode: () => void;
 }
 
+const SEEN_KEY = 'eg_notif_seen_at';
+
+// Human-friendly titles for activity feed entries
+const activityTitle = (action: string, description: string, xp: number): string => {
+  const icons: Record<string, string> = {
+    login: '👋',
+    study: '📖',
+    upload: '📤',
+    download: '📥',
+    rate: '⭐',
+    share: '🔗',
+    earn_badge: '🏅',
+    earn_xp: '✨',
+  };
+  const icon = icons[action] ?? '🔔';
+  const xpNote = xp > 0 ? ` (+${xp} XP)` : '';
+  return `${icon} ${description || action}${xpNote}`;
+};
+
 const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
+  const [seenAt, setSeenAt] = useState<number>(() => Number(localStorage.getItem(SEEN_KEY)) || 0);
   const notificationRef = useRef<HTMLDivElement>(null);
-  const { streak: streakData, recordActivity } = useStreak();
-  const { isAuthenticated, user } = useAuthContext();
-  
+  const { streak: streakData } = useStreak();
+  const { isAuthenticated } = useAuthContext();
+  const { profile } = useUser();
+
   const currentStreak = streakData?.currentStreak || 0;
   const xp = streakData?.xp || 0;
-  const lastVisit = streakData?.lastVisit;
 
   // Motivational quotes
   const quotes = [
@@ -33,16 +49,20 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
     "The more that you read, the more things you will know.",
     "Education is not preparation for life; education is life itself."
   ];
-  
-  const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-  // Sample notifications (using current streak)
-  const sampleNotifications: Notification[] = [
-    { id: 1, title: "🎉 You gained 15 XP for uploading notes!", time: "Just now", read: false },
-    { id: 2, title: `🔥 You're on a ${currentStreak}-day streak!`, time: "Today", read: false },
-    { id: 3, title: "📚 New notes added to Grade 12 > Science!", time: "Yesterday", read: true },
-    { id: 4, title: "⭐ You've earned the 'Note Scholar' badge!", time: "2 days ago", read: true },
-  ];
+  const randomQuote = useMemo(() => quotes[Math.floor(Math.random() * quotes.length)], []);
+
+  // Real notifications: the user's recent activity from the profile
+  const notifications = useMemo(() => {
+    return (profile?.activity ?? []).slice(0, 8).map((a) => ({
+      id: a._id ?? `${a.action}-${a.timestamp}`,
+      title: activityTitle(a.action, a.description, a.xpEarned ?? 0),
+      time: getRelativeTime(a.timestamp),
+      unread: new Date(a.timestamp).getTime() > seenAt,
+    }));
+  }, [profile?.activity, seenAt]);
+
+  const unreadCount = notifications.filter((n) => n.unread).length;
 
   // Close notifications when clicking outside
   useEffect(() => {
@@ -56,16 +76,17 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-  
-  // Mark all notifications as read
+
   const markAllAsRead = () => {
-    // In a real app, this would update a database
-    // For now, we'll just close the dropdown
+    const now = Date.now();
+    setSeenAt(now);
+    try {
+      localStorage.setItem(SEEN_KEY, String(now));
+    } catch {
+      /* storage blocked — unread state just won't persist */
+    }
     setShowNotifications(false);
   };
-  
-  // Count unread notifications
-  const unreadCount = sampleNotifications.filter(n => !n.read).length;
 
   return (
     <header className="bg-white/95 dark:bg-slate-800/95 backdrop-blur border-b border-gray-200 dark:border-slate-700 shrink-0 z-30">
@@ -92,15 +113,15 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
               </>
             ) : (
               <div className="flex space-x-2">
-                <Link 
-                  to="/login" 
+                <Link
+                  to="/login"
                   className="bg-primary/10 hover:bg-primary/20 px-3 py-1 rounded-full flex items-center"
                 >
                   <FaSignInAlt className="mr-1 text-primary dark:text-primary-light" />
                   <span className="font-medium text-primary dark:text-primary-light">Login</span>
                 </Link>
-                <Link 
-                  to="/register" 
+                <Link
+                  to="/register"
                   className="bg-secondary/10 hover:bg-secondary/20 px-3 py-1 rounded-full flex items-center"
                 >
                   <FaUserPlus className="mr-1 text-secondary dark:text-secondary-light" />
@@ -109,15 +130,15 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
               </div>
             )}
           </div>
-          
+
           <div className="text-gray-500 dark:text-gray-400 italic text-sm max-w-md hidden md:block truncate">
             "{randomQuote}"
           </div>
-          
+
           <div className="flex items-center space-x-4">
             {isAuthenticated && (
               <div className="relative" ref={notificationRef}>
-                <button 
+                <button
                   className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary-light relative"
                   onClick={() => setShowNotifications(!showNotifications)}
                   aria-label="Notifications"
@@ -126,12 +147,16 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
                 >
                   <FaBell size={20} />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                      {unreadCount}
-                    </span>
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center"
+                    >
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </motion.span>
                   )}
                 </button>
-                
+
                 {/* Notification dropdown */}
                 <AnimatePresence>
                   {showNotifications && (
@@ -148,12 +173,12 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
                         <h3 className="font-medium text-gray-800 dark:text-gray-100">Notifications</h3>
                       </div>
                       <div className="max-h-96 overflow-y-auto">
-                        {sampleNotifications.length > 0 ? (
-                          sampleNotifications.map(notification => (
-                            <div 
-                              key={notification.id} 
+                        {notifications.length > 0 ? (
+                          notifications.map(notification => (
+                            <div
+                              key={notification.id}
                               className={`p-3 border-b border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 ${
-                                notification.read ? '' : 'bg-blue-50 dark:bg-blue-900/20'
+                                notification.unread ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                               }`}
                             >
                               <p className="text-gray-800 dark:text-gray-100 text-sm">{notification.title}</p>
@@ -162,12 +187,13 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
                           ))
                         ) : (
                           <div className="p-3 text-center text-gray-500 dark:text-gray-400">
-                            No notifications yet
+                            No notifications yet — activity like uploads, badges and study
+                            sessions shows up here.
                           </div>
                         )}
                       </div>
                       <div className="p-3 text-center">
-                        <button 
+                        <button
                           className="text-primary dark:text-primary-light text-sm hover:underline"
                           onClick={markAllAsRead}
                           aria-label="Mark all notifications as read"
@@ -180,15 +206,15 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
                 </AnimatePresence>
               </div>
             )}
-            
-            <button 
+
+            <button
               onClick={toggleDarkMode}
               className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary-light"
               aria-label="Toggle dark mode"
               role="switch"
               aria-checked={document.documentElement.classList.contains('dark')}
             >
-              <motion.div 
+              <motion.div
                 whileHover={{ rotate: 180 }}
                 transition={{ duration: 0.3 }}
               >
@@ -196,6 +222,19 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
                 <FaSun size={20} className="hidden dark:block" />
               </motion.div>
             </button>
+
+            {isAuthenticated && profile && (
+              <Link
+                to="/profile"
+                className="flex items-center gap-2 group"
+                aria-label="Your profile"
+              >
+                <Avatar src={profile.profileImage} alt={profile.name || profile.username} size="sm" />
+                <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-200 group-hover:text-primary">
+                  {profile.name?.split(' ')[0] || profile.username}
+                </span>
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -203,4 +242,4 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode }) => {
   );
 };
 
-export default Header; 
+export default Header;

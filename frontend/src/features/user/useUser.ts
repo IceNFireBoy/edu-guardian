@@ -7,6 +7,7 @@ import { UserProfile, CompleteStudyPayload, StudyCompletionResult } from './user
 
 export type { StudyCompletionResult };
 import { toast } from 'react-hot-toast';
+import { notify } from '../../utils/notify';
 
 // ---------------------------------------------------------------------------
 // Module-level profile cache shared by EVERY useUser() instance. Several
@@ -111,7 +112,9 @@ export const useUser = () => {
       );
       if (newBadges.length > 0) {
         setNewBadgeIds(newBadges.map(badge => badge._id));
-        toast.success(`Earned ${newBadges.length} new badge${newBadges.length > 1 ? 's' : ''}!`);
+        // notify() reaches hidden tabs via the system Notification API and
+        // falls back to a toast when the tab is visible
+        notify(`🏅 Earned ${newBadges.length} new badge${newBadges.length > 1 ? 's' : ''}!`);
       }
       return badges;
     } catch (err: any) {

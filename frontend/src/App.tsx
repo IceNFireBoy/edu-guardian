@@ -37,6 +37,7 @@ import OfflineDetector from './components/ui/OfflineDetector';
 import DebugPanel, { debug } from './components/DebugPanel';
 import NetworkStatusMonitor from './components/ui/NetworkStatusMonitor';
 import StudyTipsBot from './features/ai/StudyTipsBot';
+import FocusGuard from './components/FocusGuard';
 import { DarkModeContext } from './context/DarkModeContext';
 
 // Make debug function available globally (for console usage)
@@ -280,6 +281,7 @@ function App() {
           </div>
           <CookieConsent />
           <StudyTipsBot />
+          <FocusGuard />
           <DebugPanel />
         </div>
       </AuthProvider>

@@ -3,6 +3,8 @@ import { io, Socket } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Send, Play, Pause, RotateCcw, LogOut, Timer } from 'lucide-react';
 import { API_BASE_URL } from '../api/apiClient';
+import Avatar from '../components/ui/Avatar';
+import { notify, requestNotificationPermission } from '../utils/notify';
 
 interface ChatEntry {
   kind: 'message' | 'system';
@@ -85,6 +87,9 @@ const StudyRooms: React.FC = () => {
     const id = roomInput.trim();
     if (!id) return;
 
+    // So chat messages can reach a student who tabbed away to study elsewhere
+    void requestNotificationPermission();
+
     const socket = io(socketOrigin, {
       auth: { token: localStorage.getItem('token'), name },
       transports: ['websocket', 'polling'],
@@ -102,9 +107,14 @@ const StudyRooms: React.FC = () => {
     socket.on('room:system', (m: { text: string; ts: number }) =>
       setChat((c) => [...c, { kind: 'system', text: m.text, ts: m.ts }])
     );
-    socket.on('room:message', (m: { user: string; text: string; ts: number }) =>
-      setChat((c) => [...c, { kind: 'message', user: m.user, text: m.text, ts: m.ts, mine: m.user === name }])
-    );
+    socket.on('room:message', (m: { user: string; text: string; ts: number }) => {
+      const mine = m.user === name;
+      setChat((c) => [...c, { kind: 'message', user: m.user, text: m.text, ts: m.ts, mine }]);
+      // Surface other people's messages when this tab is hidden
+      if (!mine && document.hidden) {
+        notify(`${m.user} · room ${id}`, m.text);
+      }
+    });
     socket.on('pomodoro:state', (p: { state: PomodoroState }) => {
       if (p?.state) setTimer(p.state);
     });
@@ -201,17 +211,20 @@ const StudyRooms: React.FC = () => {
           {chat.map((c, i) =>
             c.kind === 'system' ? (
               <p key={i} className="text-center text-xs text-gray-400">{c.text}</p>
-            ) : (
+            ) : c.mine ? (
               <div
                 key={i}
-                className={`max-w-[80%] px-3 py-2 rounded-lg text-sm ${
-                  c.mine
-                    ? 'ml-auto bg-primary text-white'
-                    : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-100'
-                }`}
+                className="max-w-[80%] ml-auto px-3 py-2 rounded-lg text-sm bg-primary text-white"
               >
-                {!c.mine && <span className="block text-[10px] opacity-70">{c.user}</span>}
                 {c.text}
+              </div>
+            ) : (
+              <div key={i} className="flex items-end gap-2 max-w-[85%]">
+                <Avatar alt={c.user || '?'} size="xs" />
+                <div className="px-3 py-2 rounded-lg text-sm bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                  <span className="block text-[10px] opacity-70">{c.user}</span>
+                  {c.text}
+                </div>
               </div>
             )
           )}

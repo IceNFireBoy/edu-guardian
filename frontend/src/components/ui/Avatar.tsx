@@ -12,6 +12,28 @@ interface AvatarProps {
   fallback?: React.ReactNode;
 }
 
+/**
+ * Only real URLs count as an avatar image. The backend's default profileImage
+ * is the literal string "no-photo.jpg", which would otherwise render a broken
+ * <img>; anything non-http falls through to the initials circle.
+ */
+export const resolveAvatarSrc = (src?: string | null): string | undefined =>
+  src && /^https?:\/\//.test(src) ? src : undefined;
+
+/**
+ * Deterministic solid background for initials: hash the name to a hue so the
+ * same person always gets the same color, and every color pairs with white
+ * text (fixed saturation/lightness).
+ */
+export const avatarColor = (name: string): string => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 65%, 45%)`;
+};
+
 const Avatar: React.FC<AvatarProps> = ({
   src,
   alt = '',
@@ -55,11 +77,13 @@ const Avatar: React.FC<AvatarProps> = ({
       .slice(0, 2);
   };
 
+  const validSrc = resolveAvatarSrc(src);
+
   const content = (
     <>
-      {src ? (
+      {validSrc ? (
         <img
-          src={src}
+          src={validSrc}
           alt={alt}
           className="w-full h-full object-cover"
           onError={(e) => {
@@ -70,7 +94,13 @@ const Avatar: React.FC<AvatarProps> = ({
       ) : fallback ? (
         fallback
       ) : (
-        <span className="font-medium">{getInitials(alt)}</span>
+        <span
+          className="w-full h-full flex items-center justify-center font-semibold text-white"
+          style={{ backgroundColor: avatarColor(alt || '?') }}
+          data-testid="avatar-initials"
+        >
+          {getInitials(alt || '?') || '?'}
+        </span>
       )}
       {status && (
         <span
