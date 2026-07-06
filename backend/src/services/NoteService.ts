@@ -183,7 +183,10 @@ export default class NoteService {
         } as any); // Cast to any to satisfy INoteFlashcard structure if subdocument _id is an issue
     });
     
-    await note.save();
+    // validateModifiedOnly: legacy notes can carry malformed subdocuments (e.g.
+    // a rating missing its value); a full-validation save would reject THIS
+    // write for THAT old data ("Path `value` is required").
+    await note.save({ validateModifiedOnly: true });
     return note;
   }
 
@@ -210,7 +213,10 @@ export default class NoteService {
     // note.publicId = ... // from cloudinary or other service
     // note.assetId = ... // from cloudinary or other service
     
-    await note.save();
+    // validateModifiedOnly: legacy notes can carry malformed subdocuments (e.g.
+    // a rating missing its value); a full-validation save would reject THIS
+    // write for THAT old data ("Path `value` is required").
+    await note.save({ validateModifiedOnly: true });
     return note.populate({ path: 'user', select: 'name username profileImage' });
   }
 
@@ -259,7 +265,10 @@ export default class NoteService {
 
     // Don't need this if we're using the update approach above
     note.getAverageRating();
-    await note.save();
+    // validateModifiedOnly: legacy notes can carry malformed subdocuments (e.g.
+    // a rating missing its value); a full-validation save would reject THIS
+    // write for THAT old data ("Path `value` is required").
+    await note.save({ validateModifiedOnly: true });
     return note;
   }
 
@@ -286,7 +295,10 @@ export default class NoteService {
       throw new ErrorResponse('User not authorized to add flashcards to this note', 401);
     }
     note.flashcards.push({ question, answer, difficulty } as any);
-    await note.save();
+    // validateModifiedOnly: legacy notes can carry malformed subdocuments (e.g.
+    // a rating missing its value); a full-validation save would reject THIS
+    // write for THAT old data ("Path `value` is required").
+    await note.save({ validateModifiedOnly: true });
     return note.populate({ path: 'user', select: 'name username profileImage' });
   }
 
@@ -308,7 +320,10 @@ export default class NoteService {
     if (updates.question !== undefined) card.question = updates.question;
     if (updates.answer !== undefined) card.answer = updates.answer;
     if (updates.difficulty !== undefined) card.difficulty = updates.difficulty;
-    await note.save();
+    // validateModifiedOnly: legacy notes can carry malformed subdocuments (e.g.
+    // a rating missing its value); a full-validation save would reject THIS
+    // write for THAT old data ("Path `value` is required").
+    await note.save({ validateModifiedOnly: true });
     return note;
   }
 
@@ -323,7 +338,10 @@ export default class NoteService {
       throw new ErrorResponse('Flashcard not found on this note', 404);
     }
     card.deleteOne();
-    await note.save();
+    // validateModifiedOnly: legacy notes can carry malformed subdocuments (e.g.
+    // a rating missing its value); a full-validation save would reject THIS
+    // write for THAT old data ("Path `value` is required").
+    await note.save({ validateModifiedOnly: true });
     return note;
   }
 

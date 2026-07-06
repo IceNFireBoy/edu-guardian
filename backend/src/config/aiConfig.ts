@@ -19,10 +19,21 @@ export const AI_MAX_SOURCE_CHARS = 12000;
 // Per-provider env vars so a cascade can mix providers without sending one
 // vendor's model id to another.
 export const AI_DEFAULT_MODEL = {
-  gemini: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+  // gemini-1.5-* is retired for new API keys (the API returns 404, which
+  // silently cascaded to mock output in production). 2.5-flash and 2.0-flash
+  // are the current free-tier models.
+  gemini: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   anthropic: process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-latest',
   openai: process.env.OPENAI_MODEL || 'gpt-4o-mini',
 } as const;
+
+// Ordered candidates GeminiProvider tries when a model id 404s (e.g. an env
+// override pointing at a retired model). De-duplicated at use site.
+export const GEMINI_MODEL_CANDIDATES = [
+  process.env.GEMINI_MODEL,
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+].filter((m): m is string => Boolean(m));
 
 // Max simultaneous in-flight AI calls across the process. Bursts beyond this
 // queue rather than all hitting the provider at once (protects free-tier RPM

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { AICompletionRequest, AIProvider } from './AIProvider';
-import { AI_DEFAULT_MODEL, AI_MAX_CONCURRENCY } from '../../config/aiConfig';
+import { AI_DEFAULT_MODEL, AI_MAX_CONCURRENCY, GEMINI_MODEL_CANDIDATES } from '../../config/aiConfig';
 import MockProvider from './MockProvider';
 
 /**
@@ -17,15 +17,53 @@ import MockProvider from './MockProvider';
 
 class GeminiProvider implements AIProvider {
   public readonly name = 'gemini';
+  // Resolved after the first successful call; subsequent calls skip straight
+  // to the model that is known to work for this API key.
+  private workingModel: string | null = null;
+
   constructor(private readonly apiKey: string) {}
 
-  private endpoint(): string {
-    return `https://generativelanguage.googleapis.com/v1beta/models/${AI_DEFAULT_MODEL.gemini}:generateContent?key=${this.apiKey}`;
+  private endpoint(model: string): string {
+    return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
+  }
+
+  /**
+   * Try the configured model first, then fall back through current model ids.
+   * Google retires model families (gemini-1.5-* now 404s for new keys), and a
+   * silent 404 previously cascaded all the way to mock output in production.
+   */
+  private async generate(body: Record<string, unknown>, timeout: number): Promise<string> {
+    const candidates = this.workingModel
+      ? [this.workingModel]
+      : [...new Set(GEMINI_MODEL_CANDIDATES)];
+
+    let lastErr: unknown;
+    for (const model of candidates) {
+      try {
+        const res = await axios.post(this.endpoint(model), body, {
+          timeout,
+          headers: { 'content-type': 'application/json' },
+        });
+        if (this.workingModel !== model) {
+          this.workingModel = model;
+          console.log(`[ai] gemini responding with model "${model}"`);
+        }
+        const parts = res.data?.candidates?.[0]?.content?.parts;
+        return Array.isArray(parts) ? parts.map((p: any) => p.text ?? '').join('') : '';
+      } catch (err: any) {
+        lastErr = err;
+        const status = err?.response?.status;
+        console.warn(`[ai] gemini model "${model}" failed (${status ?? err?.message})`);
+        // Only a bad-model style error justifies trying the next id; anything
+        // else (429 quota, 401 key, network) will fail for every model.
+        if (status !== 404 && status !== 400) break;
+      }
+    }
+    throw lastErr ?? new Error('Gemini request failed');
   }
 
   async complete(request: AICompletionRequest): Promise<string> {
-    const res = await axios.post(
-      this.endpoint(),
+    return this.generate(
       {
         systemInstruction: request.system ? { parts: [{ text: request.system }] } : undefined,
         contents: [{ role: 'user', parts: [{ text: request.prompt }] }],
@@ -35,10 +73,8 @@ class GeminiProvider implements AIProvider {
           ...(request.json ? { responseMimeType: 'application/json' } : {}),
         },
       },
-      { timeout: 30000, headers: { 'content-type': 'application/json' } }
+      30000
     );
-    const parts = res.data?.candidates?.[0]?.content?.parts;
-    return Array.isArray(parts) ? parts.map((p: any) => p.text ?? '').join('') : '';
   }
 
   async describeImage(imageUrl: string, prompt: string): Promise<string> {
@@ -47,18 +83,15 @@ class GeminiProvider implements AIProvider {
     const mimeType = (img.headers['content-type'] as string) || 'image/png';
     const data = Buffer.from(img.data).toString('base64');
 
-    const res = await axios.post(
-      this.endpoint(),
+    return this.generate(
       {
         contents: [
           { role: 'user', parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data } }] },
         ],
         generationConfig: { maxOutputTokens: 1024, temperature: 0.2 },
       },
-      { timeout: 45000, headers: { 'content-type': 'application/json' } }
+      45000
     );
-    const parts = res.data?.candidates?.[0]?.content?.parts;
-    return Array.isArray(parts) ? parts.map((p: any) => p.text ?? '').join('') : '';
   }
 }
 
@@ -121,6 +154,12 @@ class OpenAIProvider implements AIProvider {
 // Cascade: try each provider in order, fall through on failure, end at mock.
 // ---------------------------------------------------------------------------
 
+// Which provider actually served the most recent completion. A coarse hint
+// (not per-request under concurrency) that the API exposes so the UI can tell
+// users when they're looking at deterministic sample output instead of real AI.
+let lastServedBy = 'mock';
+export const getLastAIProviderName = (): string => lastServedBy;
+
 class CascadeProvider implements AIProvider {
   public readonly name: string;
   public readonly describeImage?: (imageUrl: string, prompt: string) => Promise<string>;
@@ -149,7 +188,9 @@ class CascadeProvider implements AIProvider {
     let lastErr: unknown;
     for (const p of this.providers) {
       try {
-        return await p.complete(request);
+        const out = await p.complete(request);
+        lastServedBy = p.name;
+        return out;
       } catch (err) {
         lastErr = err;
         console.warn(`[ai] provider ${p.name} failed, falling through to next:`, (err as Error).message);

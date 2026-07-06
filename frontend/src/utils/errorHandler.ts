@@ -61,7 +61,7 @@ export const handleApiError = (
     }
     // Rate limit / usage quota (e.g. daily AI limit, auth throttling)
     else if (status === 429) {
-      message = serverMessage || "You've reached the usage limit for now. Please wait a little and try again.";
+      message = serverMessage || 'Too many requests right now — please wait a moment and try again.';
       type = ErrorType.QUOTA;
     }
     // Server errors
@@ -110,8 +110,14 @@ export const retryWithBackoff = async <T>(
 ): Promise<T> => {
   try {
     return await fn();
-  } catch (error) {
-    if (retries <= 0) {
+  } catch (error: any) {
+    // Only retry when it can plausibly help: network failures (no response) or
+    // server errors (5xx). Retrying 4xx — especially 429 rate limits — just
+    // repeats the same failure and makes throttling WORSE.
+    const status = error?.response?.status;
+    const retryable = !error?.response || (typeof status === 'number' && status >= 500);
+
+    if (retries <= 0 || !retryable) {
       throw error;
     }
 

@@ -85,6 +85,9 @@ export interface IUser extends Document {
   getEmailVerificationToken(): string;
   calculateLevel(): number;
   updateStreak(): Promise<void>;
+  /** Same streak logic as updateStreak but mutation-only (no save) — lets
+   *  callers batch streak + activity into a single write. */
+  applyStreak(): void;
   addActivity(action: IUserActivity['action'], description: string, xpEarned?: number): void;
 }
 
@@ -277,14 +280,14 @@ UserSchema.methods.calculateLevel = function(this: IUser): number {
   return this.level;
 };
 
-// Update streak count
-UserSchema.methods.updateStreak = async function(this: IUser): Promise<void> {
+// Apply streak logic in memory only (no save). Callers that also mutate other
+// fields (e.g. login adds an activity) can then persist everything in ONE
+// write instead of two sequential round-trips to Mongo.
+UserSchema.methods.applyStreak = function(this: IUser): void {
   const now = new Date();
   if (!this.streak.lastUsed) {
-    // Initialize streak if lastUsed is not set
     this.streak.current = 1;
     this.streak.lastUsed = now;
-    await this.save();
     return;
   }
 
@@ -298,11 +301,10 @@ UserSchema.methods.updateStreak = async function(this: IUser): Promise<void> {
     if (this.streak.current === 0) {
       this.streak.current = 1;
       this.streak.max = Math.max(1, this.streak.max || 0);
-      await this.save();
     }
     return;
   }
-  
+
   // Consecutive day login
   if (diffDays === 1) {
     this.streak.current += 1;
@@ -313,6 +315,11 @@ UserSchema.methods.updateStreak = async function(this: IUser): Promise<void> {
   }
 
   this.streak.lastUsed = now;
+};
+
+// Update streak count (mutates via applyStreak, then persists)
+UserSchema.methods.updateStreak = async function(this: IUser): Promise<void> {
+  this.applyStreak();
   try {
     await this.save();
   } catch (err) {

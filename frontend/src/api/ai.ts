@@ -54,7 +54,8 @@ export const aiApi = {
   generateQuiz: (noteId: string, count = 5) =>
     post<{ questions: QuizQuestion[] }>(`/ai/notes/${noteId}/quiz`, { count }),
 
-  chat: (message: string) => post<{ reply: string }>(`/ai/chat`, { message }),
+  chat: (message: string, history: Array<{ role: 'user' | 'bot'; text: string }> = []) =>
+    post<{ reply: string; provider?: string }>(`/ai/chat`, { message, history }),
 
   explain: (passage: string, level?: string) =>
     post<{ explanation: string }>(`/ai/explain`, { passage, level }),

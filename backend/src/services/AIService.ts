@@ -71,16 +71,16 @@ export class AIService {
     return out.trim().slice(0, 4000);
   }
 
-  static async generateFlashcards(text: string, count = 8): Promise<GeneratedFlashcard[]> {
+  static async generateFlashcards(text: string, count = 8, context = ''): Promise<GeneratedFlashcard[]> {
     const source = this.clip(text);
     const safeCount = Math.min(Math.max(count, 1), 20);
     const out = await this.provider().complete({
       intent: 'flashcards',
       json: true,
       system: PROMPTS.flashcards.system,
-      prompt: PROMPTS.flashcards.user(source, safeCount),
+      prompt: PROMPTS.flashcards.user(source, safeCount, context),
       sourceText: source,
-      maxTokens: 1200,
+      maxTokens: 1600,
     });
 
     const parsed = this.extractJson<any[]>(out) ?? [];
@@ -96,16 +96,16 @@ export class AIService {
       }));
   }
 
-  static async generateQuiz(text: string, count = 5): Promise<QuizQuestion[]> {
+  static async generateQuiz(text: string, count = 5, context = ''): Promise<QuizQuestion[]> {
     const source = this.clip(text);
     const safeCount = Math.min(Math.max(count, 1), 20);
     const out = await this.provider().complete({
       intent: 'quiz',
       json: true,
       system: PROMPTS.quiz.system,
-      prompt: PROMPTS.quiz.user(source, safeCount),
+      prompt: PROMPTS.quiz.user(source, safeCount, context),
       sourceText: source,
-      maxTokens: 1600,
+      maxTokens: 2000,
     });
 
     const parsed = this.extractJson<any[]>(out) ?? [];
@@ -133,12 +133,24 @@ export class AIService {
       });
   }
 
-  static async chat(message: string, context: string): Promise<string> {
+  static async chat(
+    message: string,
+    context: string,
+    history: Array<{ role: 'user' | 'bot'; text: string }> = []
+  ): Promise<string> {
+    // Compact transcript (newest last) so the model can hold a conversation
+    // instead of treating every message as the first.
+    const turns = [...history.slice(-10), { role: 'user' as const, text: message }];
+    const transcript = turns
+      .map((t) => `${t.role === 'user' ? 'Student' : 'Coach'}: ${t.text.slice(0, 500)}`)
+      .join('\n');
+
     const out = await this.provider().complete({
       intent: 'chat',
       system: PROMPTS.chat.system,
-      prompt: PROMPTS.chat.user(message, context),
+      prompt: PROMPTS.chat.conversation(transcript, context),
       maxTokens: 500,
+      temperature: 0.7, // conversation should feel alive, not templated
     });
     return out.trim();
   }

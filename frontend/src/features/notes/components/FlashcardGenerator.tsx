@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Layers, Loader2, BookOpen } from 'lucide-react';
 import { aiApi, GeneratedFlashcard } from '../../../api/ai';
 import { useToast } from '../../../hooks/useToast';
 import { NoteFlashcards } from './NoteFlashcards';
+import { readLocalCache, writeLocalCache, DAY_MS } from '../../../utils/localCache';
 
 interface FlashcardGeneratorProps {
   noteId: string;
@@ -15,9 +16,18 @@ interface FlashcardGeneratorProps {
  */
 const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ noteId }) => {
   const toast = useToast();
+  const cacheKey = `eg_ai_flashcards_${noteId}`;
   const [cards, setCards] = useState<GeneratedFlashcard[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Reuse cards generated in the last 24h — reopening the panel costs zero
+  // API calls (protects the AI quota and rate limits from repeat views).
+  useEffect(() => {
+    const cached = readLocalCache<GeneratedFlashcard[]>(cacheKey);
+    setCards(cached && cached.length > 0 ? cached : []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteId]);
 
   const generate = async () => {
     setLoading(true);
@@ -25,6 +35,7 @@ const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ noteId }) => {
       const data = await aiApi.generateFlashcards(noteId, 8);
       setCards(data.flashcards);
       if (data.flashcards.length > 0) {
+        writeLocalCache(cacheKey, data.flashcards, DAY_MS);
         toast.success(`Generated ${data.flashcards.length} flashcards`);
       } else {
         toast.info('No flashcards could be generated from this note.');

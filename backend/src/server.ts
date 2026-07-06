@@ -7,7 +7,7 @@ import helmet from 'helmet';
 import xss from 'xss-clean';
 import hpp from 'hpp';
 import mongoSanitize from 'express-mongo-sanitize';
-import rateLimit from 'express-rate-limit';
+import { createLimiter } from './middleware/rateLimiters';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
@@ -31,6 +31,13 @@ import aiRoutes from './routes/aiRoutes';
 import srsRoutes from './routes/srsRoutes';
 
 const app = express();
+
+// CRITICAL on Render (or any proxy/load balancer): trust the first proxy hop
+// so req.ip is the real client address. Without this, every request appears to
+// come from the load balancer's IP and ALL USERS share a single rate-limit
+// bucket — a handful of people browsing exhausted the "per-IP" limits and the
+// whole site returned 429s.
+app.set('trust proxy', 1);
 
 // Gzip responses (badge catalogs, note lists, leaderboards compress well)
 app.use(compression());
@@ -85,16 +92,12 @@ app.use(xss());
 // @ts-ignore - hpp doesn't have proper TypeScript definitions
 app.use(hpp());
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 300 // limit each IP to 300 requests per windowMs
-});
-app.use(limiter);
-
 // Health check used by the frontend and for production diagnosis: reports
 // whether the DB is reachable and whether required env vars are present
 // (booleans only - never the values).
+// Registered BEFORE the rate limiter on purpose: every open tab polls it, the
+// keep-alive workflow pings it every 10 minutes, and Render's own health
+// checker hits it — none of that should consume anyone's request budget.
 const healthCheck = (req: express.Request, res: express.Response) => {
   res.json({
     success: true,
@@ -109,6 +112,17 @@ app.get('/api/test', healthCheck);
 
 // Same health check on /api/v1/test to match frontend health check
 app.get('/api/v1/test', healthCheck);
+
+// Global rate limiting (per real client IP — see trust proxy above). Uses the
+// shared factory so throttled responses carry the JSON {success,error}
+// envelope + Retry-After headers the frontend understands, instead of the
+// plain-text default. CORS preflights don't count against the budget.
+const limiter = createLimiter({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: Number(process.env.RATE_LIMIT_MAX) || 600,
+  skip: (req) => req.method === 'OPTIONS',
+});
+app.use(limiter);
 
 // Mount routers
 app.use('/api/v1/auth', authRoutes);

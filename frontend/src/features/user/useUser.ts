@@ -7,6 +7,7 @@ import { UserProfile, CompleteStudyPayload, StudyCompletionResult } from './user
 
 export type { StudyCompletionResult };
 import { toast } from 'react-hot-toast';
+import { notify } from '../../utils/notify';
 
 // ---------------------------------------------------------------------------
 // Module-level profile cache shared by EVERY useUser() instance. Several
@@ -76,7 +77,8 @@ export const useUser = () => {
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to fetch user profile';
       setError(errorMessage);
-      if (isInitiator) toast.error(errorMessage); // one toast, not one per subscriber
+      // one toast, not one per subscriber; id collapses repeats of the same error
+      if (isInitiator) toast.error(errorMessage, { id: errorMessage });
       return null;
     } finally {
       setLoading(false);
@@ -110,13 +112,15 @@ export const useUser = () => {
       );
       if (newBadges.length > 0) {
         setNewBadgeIds(newBadges.map(badge => badge._id));
-        toast.success(`Earned ${newBadges.length} new badge${newBadges.length > 1 ? 's' : ''}!`);
+        // notify() reaches hidden tabs via the system Notification API and
+        // falls back to a toast when the tab is visible
+        notify(`🏅 Earned ${newBadges.length} new badge${newBadges.length > 1 ? 's' : ''}!`);
       }
       return badges;
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to fetch user badges';
       setError(errorMessage);
-      toast.error(errorMessage);
+      toast.error(errorMessage, { id: errorMessage }); // dedupe identical failures
       return null;
     } finally {
       setLoading(false);
