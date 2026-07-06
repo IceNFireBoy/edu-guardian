@@ -113,11 +113,10 @@ export class AuthService {
       user.emailVerified = true;
     }
 
-    // Update streak & activity (updateStreak saves internally - await it so
-    // the save below doesn't race it with a parallel save on the same doc)
-    await user.updateStreak();
-    // addActivity awards the XP (3rd arg) and recalculates level itself -
-    // incrementing user.xp here as well double-counted the login reward
+    // Streak + activity batched into ONE write (login used to do two
+    // sequential saves on the same document, doubling login latency).
+    // addActivity awards the XP (3rd arg) and recalculates level itself.
+    user.applyStreak();
     user.addActivity('login', 'User logged in', 1);
     await user.save();
 

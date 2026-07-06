@@ -3,12 +3,14 @@ import asyncHandler from '../middleware/async';
 import ErrorResponse from '../utils/errorResponse';
 import { CustomRequest } from '../middleware/auth';
 import Note, { INote } from '../models/Note';
+import SrsCard from '../models/SrsCard';
 import AIService from '../services/AIService';
 import SrsService from '../services/SrsService';
 import { extractTextFromFile } from '../utils/extractTextFromFile';
 import { consumeAiQuota } from '../utils/aiUsage';
 import { AI_MAX_SOURCE_CHARS, AI_RESULT_TTL } from '../config/aiConfig';
 import cache from '../utils/cache';
+import { getLastAIProviderName } from '../services/ai';
 
 /**
  * Endpoints for AI-powered study features. All are authenticated and enforce a
@@ -54,10 +56,12 @@ export default class AIController {
     const source = await AIController.noteSourceText(note);
     const summary = await AIService.summarize(source);
 
-    note.aiSummary = summary;
-    await note.save();
+    // Targeted update, NOT note.save(): a full save re-validates every legacy
+    // subdocument, and old notes with malformed ratings entries were failing
+    // with "Path `value` is required" — blocking summaries entirely.
+    await Note.findByIdAndUpdate(note._id, { aiSummary: summary });
 
-    res.status(200).json({ success: true, data: { summary } });
+    res.status(200).json({ success: true, data: { summary, provider: getLastAIProviderName() } });
   });
 
   // @route POST /api/v1/ai/notes/:id/flashcards   body: { count?, save?, regenerate? }
@@ -79,15 +83,20 @@ export default class AIController {
 
     await consumeAiQuota(req.user!, 'flashcard');
     const source = await AIController.noteSourceText(note);
-    const flashcards = await AIService.generateFlashcards(source, count);
+    const noteContext = `"${note.title}" — ${note.subject}, Grade ${note.grade}`;
+    const flashcards = await AIService.generateFlashcards(source, count, noteContext);
     await cache.set(cacheKey, flashcards, AI_RESULT_TTL);
 
     if (req.body?.save) {
-      note.flashcards.push(...(flashcards as any));
-      await note.save();
+      // $push instead of note.save(): avoids re-validating legacy subdocuments
+      await Note.findByIdAndUpdate(note._id, { $push: { flashcards: { $each: flashcards } } });
     }
 
-    res.status(200).json({ success: true, count: flashcards.length, data: { flashcards } });
+    res.status(200).json({
+      success: true,
+      count: flashcards.length,
+      data: { flashcards, provider: getLastAIProviderName() },
+    });
   });
 
   // @route POST /api/v1/ai/notes/:id/quiz   body: { count?, regenerate? }
@@ -108,21 +117,41 @@ export default class AIController {
 
     await consumeAiQuota(req.user!, 'quiz');
     const source = await AIController.noteSourceText(note);
-    const questions = await AIService.generateQuiz(source, count);
+    const noteContext = `"${note.title}" — ${note.subject}, Grade ${note.grade}`;
+    const questions = await AIService.generateQuiz(source, count, noteContext);
     await cache.set(cacheKey, questions, AI_RESULT_TTL);
 
-    res.status(200).json({ success: true, count: questions.length, data: { questions } });
+    res.status(200).json({
+      success: true,
+      count: questions.length,
+      data: { questions, provider: getLastAIProviderName() },
+    });
   });
 
-  // @route POST /api/v1/ai/chat   body: { message }
+  // @route POST /api/v1/ai/chat   body: { message, history?: [{role:'user'|'bot', text}] }
   static chat = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
     const message = (req.body?.message ?? '').toString().trim();
     if (!message) return next(new ErrorResponse('A message is required', 400));
 
-    await consumeAiQuota(req.user!, 'chat');
-    const reply = await AIService.chat(message, AIController.userContext(req));
+    // Sanitize client-supplied history down to a bounded, typed transcript.
+    const rawHistory = Array.isArray(req.body?.history) ? req.body.history : [];
+    const history = rawHistory
+      .filter((t: any) => t && (t.role === 'user' || t.role === 'bot') && typeof t.text === 'string')
+      .slice(-10)
+      .map((t: any) => ({ role: t.role as 'user' | 'bot', text: t.text }));
 
-    res.status(200).json({ success: true, data: { reply } });
+    await consumeAiQuota(req.user!, 'chat');
+
+    // Live coaching context: profile stats + how many review cards are due now.
+    const dueCount = await SrsCard.countDocuments({
+      user: req.user!.id,
+      dueDate: { $lte: new Date() },
+    }).catch(() => 0);
+    const context = `${AIController.userContext(req)} ${dueCount} flashcards due for review right now.`;
+
+    const reply = await AIService.chat(message, context, history);
+
+    res.status(200).json({ success: true, data: { reply, provider: getLastAIProviderName() } });
   });
 
   // @route POST /api/v1/ai/explain   body: { passage, level? }

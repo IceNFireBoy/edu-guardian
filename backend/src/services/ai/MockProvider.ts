@@ -110,12 +110,43 @@ export class MockProvider implements AIProvider {
   }
 
   private chat(prompt: string): string {
-    const ask = prompt.split('Student asks:').pop()?.trim() || 'your studies';
+    // Pull the student's latest message out of either prompt format
+    // (single "Student says:" or a multi-turn transcript of "Student:" lines).
+    const lastStudentLine =
+      prompt
+        .split('\n')
+        .reverse()
+        .find((l) => /^student( says)?:/i.test(l.trim()))
+        ?.replace(/^student( says)?:/i, '')
+        .trim() || 'your studies';
+    const lower = lastStudentLine.toLowerCase();
+
+    if (/^(hi|hello|hey|yo|sup|good (morning|afternoon|evening))\b/.test(lower)) {
+      return (
+        `Hey! 👋 Good to see you. Want a suggestion for what to study next, ` +
+        `or shall we knock out the flashcards that are due?`
+      );
+    }
+    if (/thank|thanks|salamat/.test(lower)) {
+      return `Anytime! Come back after your next study session and tell me how it went. 💪`;
+    }
+    if (/quiz|test( me)?|practice/.test(lower)) {
+      return (
+        `Love the energy! Open any note and hit "Start quiz" in the AI tools panel — ` +
+        `whatever you miss, add to your review deck and I'll make sure it comes back around.`
+      );
+    }
+    if (/what.*(study|focus|next)|plan|schedule/.test(lower)) {
+      return (
+        `Start with your due flashcards — clearing those keeps the spaced-repetition ` +
+        `magic working. Then 25 focused minutes on your weakest subject. What subject ` +
+        `feels shakiest right now?`
+      );
+    }
     return (
-      `Great question about ${firstWords(ask, 8)}! Here's what I'd suggest:\n` +
-      `1. Review your most-studied note again with active recall.\n` +
-      `2. Generate a quick quiz and redo the ones you miss.\n` +
-      `3. Keep your streak going — short, daily sessions beat cramming.`
+      `Here's my take on "${firstWords(lastStudentLine, 10)}": break it into one small ` +
+      `piece you can finish today, review it with active recall, and quiz yourself ` +
+      `tomorrow. Want me to point you at your due cards?`
     );
   }
 }
