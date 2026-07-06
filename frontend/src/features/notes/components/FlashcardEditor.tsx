@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { PencilLine, Plus, Trash2, Check, X, ClipboardPaste, BookOpen, Loader2 } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { PencilLine, Plus, Trash2, Check, X, ClipboardPaste, BookOpen, Loader2, Upload } from 'lucide-react';
 import { noteCardsApi, aiApi, NoteFlashcard } from '../../../api/ai';
 import { useToast } from '../../../hooks/useToast';
 import { NoteFlashcards } from './NoteFlashcards';
+import { parseFlashcards } from '../../../utils/parseFlashcards';
 
 interface FlashcardEditorProps {
   noteId: string;
@@ -28,6 +29,7 @@ const FlashcardEditor: React.FC<FlashcardEditorProps> = ({ noteId, cards, onCard
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState('');
   const [busy, setBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const run = async (fn: () => Promise<NoteFlashcard[]>, successMsg: string) => {
     setBusy(true);
@@ -66,20 +68,13 @@ const FlashcardEditor: React.FC<FlashcardEditorProps> = ({ noteId, cards, onCard
   const deleteCard = (cardId: string) =>
     run(() => noteCardsApi.remove(noteId, cardId), 'Flashcard deleted');
 
-  const importCards = async () => {
-    // One card per line: "question | answer" (also accepts "question :: answer")
-    const parsed = importText
-      .split('\n')
-      .map((line) => {
-        const parts = line.split(/\s*(?:\||::)\s*/);
-        return parts.length >= 2 && parts[0].trim() && parts[1].trim()
-          ? { question: parts[0].trim(), answer: parts.slice(1).join(' ').trim() }
-          : null;
-      })
-      .filter((c): c is { question: string; answer: string } => c !== null);
+  const importCards = async (text = importText) => {
+    // Universal parser: Anki .txt exports, CSV/TSV from AI chatbots,
+    // "question | answer" lines, Q:/A: pairs, markdown tables.
+    const parsed = parseFlashcards(text);
 
     if (parsed.length === 0) {
-      toast.error('No valid lines found. Use one "question | answer" per line.');
+      toast.error('No cards found. Supported: Anki .txt export, CSV, "question | answer", Q:/A: pairs.');
       return;
     }
     const ok = await run(
@@ -90,6 +85,12 @@ const FlashcardEditor: React.FC<FlashcardEditorProps> = ({ noteId, cards, onCard
       setImportText('');
       setShowImport(false);
     }
+  };
+
+  const onFilePicked = async (file: File | undefined) => {
+    if (!file) return;
+    await importCards(await file.text());
+    if (fileRef.current) fileRef.current.value = '';
   };
 
   const addAllToDeck = async () => {
@@ -143,25 +144,45 @@ const FlashcardEditor: React.FC<FlashcardEditorProps> = ({ noteId, cards, onCard
       {isOwner && showImport && (
         <div className="space-y-2 rounded-lg border border-dashed border-gray-300 dark:border-slate-600 p-3">
           <p className="text-xs text-gray-500">
-            Paste one card per line as <code>question | answer</code>
+            Paste cards in any format — Anki export (File → Export → "Notes in Plain Text"),
+            CSV from ChatGPT/Claude/Gemini, <code>question | answer</code> lines, or Q:/A: pairs —
+            or upload the exported file directly.
           </p>
           <textarea
             data-testid="editor-import-textarea"
             value={importText}
             onChange={(e) => setImportText(e.target.value)}
             rows={4}
-            placeholder={'What is a cell? | The basic unit of life\nWhat is DNA? | The molecule carrying genetic instructions'}
+            placeholder={'What is a cell? | The basic unit of life\nQ: What is DNA?\nA: The molecule carrying genetic instructions'}
             className="w-full text-sm px-3 py-2 rounded-md border border-gray-200 dark:border-slate-700
               bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
-          <button
-            data-testid="editor-import-btn"
-            onClick={importCards}
-            disabled={busy || !importText.trim()}
-            className="px-3 py-1.5 text-sm rounded-md bg-primary text-white disabled:opacity-60"
-          >
-            {busy ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Import cards'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              data-testid="editor-import-btn"
+              onClick={() => importCards()}
+              disabled={busy || !importText.trim()}
+              className="px-3 py-1.5 text-sm rounded-md bg-primary text-white disabled:opacity-60"
+            >
+              {busy ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Import cards'}
+            </button>
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={busy}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border border-gray-300
+                dark:border-slate-600 text-gray-600 dark:text-gray-300 disabled:opacity-60"
+            >
+              <Upload className="w-4 h-4" /> Upload file
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".txt,.csv,.tsv,.md,text/plain,text/csv"
+              className="hidden"
+              onChange={(e) => onFilePicked(e.target.files?.[0])}
+              data-testid="editor-file-input"
+            />
+          </div>
         </div>
       )}
 
