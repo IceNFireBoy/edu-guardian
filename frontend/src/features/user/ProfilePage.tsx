@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FaUser, FaSpinner, FaCog, FaChevronRight, FaExclamationTriangle, FaBrain, FaChartLine, FaFire, FaTrophy, FaStar, FaLightbulb, FaAward } from 'react-icons/fa';
+import { FaSpinner, FaCog, FaChevronRight, FaExclamationTriangle, FaTrophy, FaStar, FaAward } from 'react-icons/fa';
 import { useUser } from './useUser';
 import UserStatsCard from './components/UserStatsCard';
 import BadgeGrid from './components/BadgeGrid';

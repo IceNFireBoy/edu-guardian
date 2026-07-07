@@ -46,7 +46,14 @@ const FlipCard: React.FC<{ card: FlashcardItem; index: number }> = ({ card, inde
       onClick={() => setFlipped((f) => !f)}
       data-testid={`flashcard-${index}`}
       role="button"
+      tabIndex={0}
       aria-label={flipped ? 'Show question' : 'Show answer'}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setFlipped((f) => !f);
+        }
+      }}
     >
       <motion.div
         className="relative w-full h-full"

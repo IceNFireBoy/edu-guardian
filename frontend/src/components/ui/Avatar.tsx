@@ -28,7 +28,9 @@ export const resolveAvatarSrc = (src?: string | null): string | undefined =>
 export const avatarColor = (name: string): string => {
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
-    hash = (hash * 31 + name.charCodeAt(i)) | 0;
+    // Math.imul keeps the multiply in 32-bit space (same wraparound the old
+    // `| 0` idiom provided, without the bitwise-operator ambiguity)
+    hash = Math.imul(hash, 31) + (name.codePointAt(i) ?? 0);
   }
   const hue = Math.abs(hash) % 360;
   return `hsl(${hue}, 65%, 45%)`;

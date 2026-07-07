@@ -10,6 +10,10 @@
  * - Markdown tables (`| question | answer |`).
  *
  * Returns clean {question, answer} pairs; unparseable lines are skipped.
+ *
+ * This runs on user-uploaded files, so every regex here must be linear —
+ * no lazy dot-alls or unbounded backtracking (a crafted file could otherwise
+ * freeze the tab).
  */
 
 export interface ParsedCard {
@@ -22,7 +26,8 @@ const MAX_CARDS = 300;
 /** Strip Anki/HTML noise a field may carry. */
 const cleanField = (raw: string): string =>
   raw
-    .replace(/\{\{c\d+::(.*?)(?:::[^}]*)?\}\}/g, '$1') // cloze {{c1::text::hint}} -> text
+    // cloze {{c1::text::hint}} -> text; [^}] keeps the scan linear
+    .replace(/\{\{c\d+::([^}]*)\}\}/g, (_m, inner: string) => inner.split('::')[0])
     .replace(/\[sound:[^\]]*\]/g, '') // Anki audio tags
     .replace(/<br\s*\/?>/gi, ' ')
     .replace(/<[^>]+>/g, '') // any other HTML tags
@@ -72,65 +77,98 @@ const pushCard = (out: ParsedCard[], q: string, a: string): void => {
   }
 };
 
+const Q_LINE = /^\s*Q[:.]\s*(.*)$/i;
+const A_LINE = /^\s*A[:.]\s*(.*)$/i;
+
+/**
+ * `Q: ... / A: ...` blocks, multiline answers supported. A simple line scan
+ * (instead of a multiline lazy regex) so pathological input stays O(n).
+ */
+const parseQABlocks = (text: string): ParsedCard[] => {
+  const out: ParsedCard[] = [];
+  let question: string[] | null = null;
+  let answer: string[] | null = null;
+
+  const flush = () => {
+    if (question && answer) pushCard(out, question.join('\n'), answer.join('\n'));
+    question = null;
+    answer = null;
+  };
+
+  for (const line of text.split('\n')) {
+    const qMatch = Q_LINE.exec(line);
+    if (qMatch) {
+      flush();
+      question = [qMatch[1]];
+      continue;
+    }
+    const aMatch = A_LINE.exec(line);
+    if (aMatch && question) {
+      answer = [aMatch[1]];
+      continue;
+    }
+    if (answer) answer.push(line);
+    else if (question) question.push(line);
+  }
+  flush();
+  return out;
+};
+
+type DeclaredSeparator = 'tab' | 'comma' | null;
+
+/** Anki header-driven separator (e.g. "#separator:tab" / "#separator:Comma"). */
+const detectDeclaredSeparator = (text: string): DeclaredSeparator => {
+  const header = /^#\s*separator:\s*(\S+)/im.exec(text);
+  if (!header) return null;
+  const s = header[1].toLowerCase();
+  if (s.includes('tab')) return 'tab';
+  if (s.includes('comma')) return 'comma';
+  return null;
+};
+
+/** Markdown table row; returns true if the line was one (even a separator row). */
+const parseMarkdownTableRow = (line: string, out: ParsedCard[]): boolean => {
+  if (!line.startsWith('|') || !line.endsWith('|')) return false;
+  const cells = line.slice(1, -1).split('|').map((c) => c.trim());
+  if (cells.length >= 2 && !/^:?-{2,}:?$/.test(cells[0])) {
+    pushCard(out, cells[0], cells[1]);
+  }
+  return true;
+};
+
+/** One tab / pipe / comma separated line, in that priority order. */
+const parseDelimitedLine = (line: string, sep: DeclaredSeparator, out: ParsedCard[]): void => {
+  if (sep === 'tab' || (sep === null && line.includes('\t'))) {
+    const cells = line.split('\t');
+    if (cells.length >= 2) pushCard(out, cells[0], cells[1]);
+    return;
+  }
+  if (line.includes('|')) {
+    const parts = line.split(/\s*\|\s*/);
+    if (parts.length >= 2) pushCard(out, parts[0], parts.slice(1).join(' '));
+    return;
+  }
+  if (sep === 'comma' || line.includes(',')) {
+    const cells = splitCsvLine(line);
+    if (cells.length >= 2) pushCard(out, cells[0], cells.slice(1).join(', '));
+  }
+};
+
 export const parseFlashcards = (input: string): ParsedCard[] => {
   const text = (input || '').replace(/\r\n?/g, '\n').trim();
   if (!text) return [];
+
+  const qaCards = parseQABlocks(text);
+  if (qaCards.length > 0) return qaCards;
+
   const out: ParsedCard[] = [];
-
-  // --- Q:/A: block format (multiline answers supported) ---
-  if (/^\s*Q[:.]/im.test(text) && /^\s*A[:.]/im.test(text)) {
-    const blocks = text.split(/\n(?=\s*Q[:.])/i);
-    for (const block of blocks) {
-      const match = block.match(/^\s*Q[:.]\s*([\s\S]*?)^\s*A[:.]\s*([\s\S]*?)$/im);
-      if (match) pushCard(out, match[1], match[2]);
-    }
-    if (out.length > 0) return out;
-  }
-
-  // --- Anki header-driven separator (e.g. "#separator:tab" / "#separator:Comma") ---
-  let declaredSep: 'tab' | 'comma' | null = null;
-  const sepHeader = text.match(/^#\s*separator:\s*(\S+)/im);
-  if (sepHeader) {
-    const s = sepHeader[1].toLowerCase();
-    if (s.includes('tab')) declaredSep = 'tab';
-    else if (s.includes('comma')) declaredSep = 'comma';
-  }
-
+  const declaredSep = detectDeclaredSeparator(text);
   for (const rawLine of text.split('\n')) {
     const line = rawLine.trim();
     if (!line || line.startsWith('#')) continue; // Anki metadata/comments
-
-    // Markdown table row
-    if (line.startsWith('|') && line.endsWith('|')) {
-      const cells = line.slice(1, -1).split('|').map((c) => c.trim());
-      if (cells.length >= 2 && !/^:?-{2,}:?$/.test(cells[0])) {
-        pushCard(out, cells[0], cells[1]);
-      }
-      continue;
-    }
-
-    // Tab-separated (Anki default)
-    if (declaredSep === 'tab' || (declaredSep === null && line.includes('\t'))) {
-      const cells = line.split('\t');
-      if (cells.length >= 2) pushCard(out, cells[0], cells[1]);
-      continue;
-    }
-
-    // Pipe format
-    if (line.includes('|')) {
-      const parts = line.split(/\s*\|\s*/);
-      if (parts.length >= 2) pushCard(out, parts[0], parts.slice(1).join(' '));
-      continue;
-    }
-
-    // CSV (declared, or detected by a comma)
-    if (declaredSep === 'comma' || line.includes(',')) {
-      const cells = splitCsvLine(line);
-      if (cells.length >= 2) pushCard(out, cells[0], cells.slice(1).join(', '));
-      continue;
-    }
+    if (parseMarkdownTableRow(line, out)) continue;
+    parseDelimitedLine(line, declaredSep, out);
   }
-
   return out;
 };
 

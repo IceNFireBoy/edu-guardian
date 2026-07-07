@@ -4,6 +4,10 @@
  * sites — makes them easy to review, diff, and refine over time.
  */
 
+/** Optional "Subject context: …" preamble for prompts that accept one. */
+const contextLine = (context: string): string =>
+  context ? `Subject context: ${context}\n\n` : '';
+
 export const PROMPTS = {
   summary: {
     system:
@@ -28,7 +32,7 @@ export const PROMPTS = {
       'Return ONLY a JSON array. Each item must have "question", "answer", and "difficulty" ' +
       '("easy" | "medium" | "hard"). No prose, no markdown fences.',
     user: (text: string, count: number, context = '') =>
-      `${context ? `Subject context: ${context}\n\n` : ''}` +
+      contextLine(context) +
       `Create exactly ${count} high-quality flashcards covering the most important, ` +
       `testable concepts in this material (skip boilerplate and headings):\n\n${text}`,
   },
@@ -45,7 +49,7 @@ export const PROMPTS = {
       'Return ONLY a JSON array. Each item must have "question", "options" (array of 4 strings), ' +
       '"correctIndex" (0-3), and "explanation". No prose, no markdown fences.',
     user: (text: string, count: number, context = '') =>
-      `${context ? `Subject context: ${context}\n\n` : ''}` +
+      contextLine(context) +
       `Write exactly ${count} multiple-choice questions that genuinely test understanding ` +
       `(not surface recall of phrasing) of this material:\n\n${text}`,
   },

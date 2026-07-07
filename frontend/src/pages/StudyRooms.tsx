@@ -37,6 +37,28 @@ const currentUserName = (): string => {
 
 const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
+const ChatLine: React.FC<{ entry: ChatEntry }> = ({ entry }) => {
+  if (entry.kind === 'system') {
+    return <p className="text-center text-xs text-gray-400">{entry.text}</p>;
+  }
+  if (entry.mine) {
+    return (
+      <div className="max-w-[80%] ml-auto px-3 py-2 rounded-lg text-sm bg-primary text-white">
+        {entry.text}
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-end gap-2 max-w-[85%]">
+      <Avatar alt={entry.user || '?'} size="xs" />
+      <div className="px-3 py-2 rounded-lg text-sm bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+        <span className="block text-[10px] opacity-70">{entry.user}</span>
+        {entry.text}
+      </div>
+    </div>
+  );
+};
+
 /**
  * Real-time study rooms: enter a shared room code to chat with classmates and
  * run a Pomodoro timer that stays in sync for everyone. Degrades gracefully —
@@ -208,26 +230,9 @@ const StudyRooms: React.FC = () => {
         </header>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {chat.map((c, i) =>
-            c.kind === 'system' ? (
-              <p key={i} className="text-center text-xs text-gray-400">{c.text}</p>
-            ) : c.mine ? (
-              <div
-                key={i}
-                className="max-w-[80%] ml-auto px-3 py-2 rounded-lg text-sm bg-primary text-white"
-              >
-                {c.text}
-              </div>
-            ) : (
-              <div key={i} className="flex items-end gap-2 max-w-[85%]">
-                <Avatar alt={c.user || '?'} size="xs" />
-                <div className="px-3 py-2 rounded-lg text-sm bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-100">
-                  <span className="block text-[10px] opacity-70">{c.user}</span>
-                  {c.text}
-                </div>
-              </div>
-            )
-          )}
+          {chat.map((c, i) => (
+            <ChatLine key={`${c.ts}-${i}`} entry={c} />
+          ))}
           <div ref={chatEndRef} />
         </div>
 

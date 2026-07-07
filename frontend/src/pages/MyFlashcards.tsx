@@ -251,6 +251,15 @@ const MyFlashcards: React.FC = () => {
                     className="mx-auto max-w-md h-56 cursor-pointer select-none"
                     style={{ perspective: 1200 }}
                     onClick={() => setRevealed(true)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Reveal the answer"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setRevealed(true);
+                      }
+                    }}
                   >
                     <motion.div
                       className="relative w-full h-full"

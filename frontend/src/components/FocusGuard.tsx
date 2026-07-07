@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { EyeOff, ShieldAlert } from 'lucide-react';
 import { getDevFlags, DEV_FLAGS_EVENT, DevFlags } from '../utils/devFlags';
@@ -18,6 +18,9 @@ const FocusGuard: React.FC = () => {
   const [away, setAway] = useState(false);
   const [switches, setSwitches] = useState(0);
   const [showReturnBanner, setShowReturnBanner] = useState(false);
+  // Mirrors `away` so the event handlers can gate on the current value without
+  // nesting updater callbacks (blur + visibilitychange often fire together).
+  const awayRef = useRef(false);
 
   // React instantly to the Settings toggle
   useEffect(() => {
@@ -25,6 +28,7 @@ const FocusGuard: React.FC = () => {
       const flags = (e as CustomEvent<DevFlags>).detail ?? getDevFlags();
       setEnabled(flags.focusGuard);
       if (!flags.focusGuard) {
+        awayRef.current = false;
         setAway(false);
         setSwitches(0);
       }
@@ -37,19 +41,17 @@ const FocusGuard: React.FC = () => {
     if (!enabled) return;
 
     const goAway = () => {
-      setAway((was) => {
-        if (!was) setSwitches((n) => n + 1);
-        return true;
-      });
+      if (awayRef.current) return;
+      awayRef.current = true;
+      setAway(true);
+      setSwitches((n) => n + 1);
     };
     const comeBack = () => {
-      setAway((was) => {
-        if (was) {
-          setShowReturnBanner(true);
-          setTimeout(() => setShowReturnBanner(false), 3500);
-        }
-        return false;
-      });
+      if (!awayRef.current) return;
+      awayRef.current = false;
+      setAway(false);
+      setShowReturnBanner(true);
+      setTimeout(() => setShowReturnBanner(false), 3500);
     };
 
     const onVisibility = () => (document.hidden ? goAway() : comeBack());

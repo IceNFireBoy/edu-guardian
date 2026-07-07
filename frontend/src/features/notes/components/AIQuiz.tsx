@@ -72,6 +72,15 @@ const AIQuiz: React.FC<AIQuizProps> = ({ noteId }) => {
   const q = questions[index];
   const answered = picked !== null;
   const score = questions.filter((qq, i) => answers[i] === qq.correctIndex).length;
+  const scoreRatio = score / Math.max(questions.length, 1);
+
+  let ringClass = 'stroke-red-500';
+  if (scoreRatio >= 0.7) ringClass = 'stroke-green-500';
+  else if (scoreRatio >= 0.4) ringClass = 'stroke-yellow-500';
+
+  let resultsMessage = 'Good effort — send your misses to the review deck and they will stick.';
+  if (score === questions.length) resultsMessage = 'Perfect score! 🎉';
+  else if (scoreRatio >= 0.7) resultsMessage = 'Nice work — a little review and you own this.';
 
   const pick = (oi: number) => {
     if (answered) return;
@@ -215,10 +224,10 @@ const AIQuiz: React.FC<AIQuizProps> = ({ noteId }) => {
               <circle cx="50" cy="50" r="42" fill="none" strokeWidth="10" className="stroke-gray-100 dark:stroke-slate-700" />
               <motion.circle
                 cx="50" cy="50" r="42" fill="none" strokeWidth="10" strokeLinecap="round"
-                className={score / questions.length >= 0.7 ? 'stroke-green-500' : score / questions.length >= 0.4 ? 'stroke-yellow-500' : 'stroke-red-500'}
+                className={ringClass}
                 strokeDasharray={2 * Math.PI * 42}
                 initial={{ strokeDashoffset: 2 * Math.PI * 42 }}
-                animate={{ strokeDashoffset: 2 * Math.PI * 42 * (1 - score / Math.max(questions.length, 1)) }}
+                animate={{ strokeDashoffset: 2 * Math.PI * 42 * (1 - scoreRatio) }}
                 transition={{ duration: 0.8, ease: 'easeOut' }}
               />
             </svg>
@@ -226,13 +235,7 @@ const AIQuiz: React.FC<AIQuizProps> = ({ noteId }) => {
               {score}/{questions.length}
             </span>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {score === questions.length
-              ? 'Perfect score! 🎉'
-              : score / questions.length >= 0.7
-                ? 'Nice work — a little review and you own this.'
-                : 'Good effort — send your misses to the review deck and they will stick.'}
-          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{resultsMessage}</p>
           <div className="flex justify-center gap-2 flex-wrap">
             <button
               onClick={addWrongToDeck}
@@ -253,7 +256,7 @@ const AIQuiz: React.FC<AIQuizProps> = ({ noteId }) => {
             {questions.map((qq, i) => {
               const right = answers[i] === qq.correctIndex;
               return (
-                <div key={i} className="flex items-start gap-2 text-xs">
+                <div key={`${qq.question.slice(0, 40)}-${i}`} className="flex items-start gap-2 text-xs">
                   {right ? (
                     <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
                   ) : (
